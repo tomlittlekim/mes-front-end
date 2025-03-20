@@ -105,17 +105,16 @@ const AppHeader = () => {
         <Divider orientation="vertical" flexItem className="header-divider" />
         
         <div className="header-actions">
-          {tabs && tabs.length > 1 && (
-            <Tooltip title="모든 탭 닫기">
-              <IconButton 
-                onClick={handleCloseAllTabs} 
-                size="small" 
-                className="header-action-button"
-              >
-                <CloseAllIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+          <Tooltip title="모든 탭 닫기">
+            <IconButton 
+              onClick={handleCloseAllTabs} 
+              size="small" 
+              className="header-action-button"
+              disabled={tabs.length <= 1}
+            >
+              <CloseAllIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           
           <Tooltip title={`${theme === 'dark' ? '라이트' : '다크'} 모드로 전환`}>
             <IconButton 

@@ -4,6 +4,8 @@
   padding: 14px 0 0 0;
   border-bottom: 1px solid var(--border-color);
   transition: border-color var(--transition-speed);
+  width: 100%;
+  overflow: hidden;
 }
 
 /* 다크모드에서 헤더 경계선 */
@@ -15,6 +17,7 @@ body.dark .app-header {
   flex: 1;
   overflow: hidden;
   padding-left: 0;
+  width: calc(100% - 160px); /* 버튼 영역 공간 확보 (더 넓게) */
 }
 
 /* 탭 래퍼 */
@@ -23,7 +26,9 @@ body.dark .app-header {
   display: flex;
   min-height: 42px;
   margin-left: 16px;
-  max-width: 900px;
+  margin-right: 16px; /* 오른쪽 여백 */
+  width: calc(100% - 32px); /* 양쪽 여백 고려 */
+  max-width: 100%;
 }
 
 /* 커스텀 탭 컨테이너 */
@@ -40,6 +45,8 @@ body.dark .app-header {
   margin-top: 8px;
   margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  flex-wrap: nowrap;
 }
 
 /* PEMS 도메인 탭 컨테이너 */
@@ -84,7 +91,8 @@ body.dark.pems .custom-tabs {
   justify-content: center;
   font-weight: 500;
   border-radius: 6px;
-  flex: 1;
+  flex: 0 0 auto; /* 고정 너비로 변경 */
+  min-width: 120px; /* 최소 너비 설정 */
   margin: 0 2px;
   font-size: 15px;
 }
@@ -133,6 +141,8 @@ body.dark.pems .custom-tab.active {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  justify-content: center;
 }
 
 .tab-icon {
@@ -166,7 +176,7 @@ body.dark.pems .custom-tab.active {
 /* 헤더 구분선 */
 .header-divider {
   height: 36px;
-  margin: 0 16px;
+  margin: 0 12px; /* 양쪽 여백 줄임 */
 }
 
 /* 다크모드에서 구분선 */
@@ -178,8 +188,18 @@ body.dark .header-divider {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 40px 0 8px;
+  gap: 8px; /* 버튼 간격 줄임 */
+  padding: 0 16px 0 12px; /* 왼쪽 패딩 줄임 */
+  flex-shrink: 0; /* 너비 축소 방지 */
+  background-color: transparent;
+  z-index: 10;
+  position: relative;
+  width: 160px; /* 버튼 영역 너비 증가 */
+  justify-content: flex-end; /* 오른쪽 정렬 */
+}
+
+body.dark .header-actions {
+  background-color: transparent;
 }
 
 /* 헤더 액션 버튼 스타일 */
@@ -190,7 +210,13 @@ body.dark .header-divider {
   padding: 8px !important;
 }
 
-.header-action-button:hover {
+/* 비활성화된 버튼 스타일 */
+.header-action-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.header-action-button:hover:not(:disabled) {
   color: var(--accent-color, #007bff);
   background-color: rgba(0, 123, 255, 0.08) !important;
 }
@@ -223,19 +249,27 @@ body.pems.light .header-action-button:hover {
   
   .tabs-container {
     padding-left: 0;
+    width: calc(100% - 120px); /* 모바일에서는 버튼 영역 너비 줄임 */
   }
   
   .tab-wrapper {
     margin-left: 8px;
-    max-width: 100%;
+    margin-right: 8px;
+    width: calc(100% - 16px);
   }
   
   .header-divider {
-    margin: 0 8px;
+    margin: 0 6px; /* 간격 더 줄임 */
+    display: block;
   }
   
   .header-actions {
-    gap: 8px;
-    padding: 0 15px 0 8px;
+    gap: 4px; /* 간격 더 줄임 */
+    padding: 0 8px 0 6px; /* 패딩도 줄임 */
+    width: 120px; /* 모바일에서 버튼 영역 너비 조정 */
+  }
+  
+  .custom-tab {
+    min-width: 100px;
   }
 }

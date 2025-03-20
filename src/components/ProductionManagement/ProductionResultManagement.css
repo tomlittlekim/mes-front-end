@@ -1,0 +1,28 @@
+.status-wait {
+  color: #ff9800 !important;
+}
+
+.status-inprogress {
+  color: #2196f3 !important;
+}
+
+.status-completed {
+  color: #4caf50 !important;
+}
+
+.priority-urgent {
+  color: #f44336 !important;
+  font-weight: bold;
+}
+
+.priority-high {
+  color: #ff9800 !important;
+}
+
+.priority-medium {
+  color: #2196f3 !important;
+}
+
+.priority-low {
+  color: #4caf50 !important;
+} 
