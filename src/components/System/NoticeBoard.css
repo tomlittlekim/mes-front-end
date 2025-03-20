@@ -1,0 +1,13 @@
+.notice-title {
+  font-weight: 600;
+}
+
+.notice-detail-container {
+  max-height: 450px;
+  overflow-y: auto;
+}
+
+.notice-content {
+  white-space: pre-line;
+  line-height: 1.6;
+} 

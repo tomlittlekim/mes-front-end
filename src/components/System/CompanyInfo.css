@@ -1,0 +1,58 @@
+/* 회사정보 페이지 스타일 */
+
+/* 로고 업로드 버튼 스타일 */
+.logo-upload-button {
+  margin-top: 10px;
+}
+
+/* 회사 로고 이미지 스타일 */
+.company-logo {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  border-radius: 5px;
+  border: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+}
+
+/* 회사 로고 이미지 스타일 - 다크모드 */
+body.dark .company-logo {
+  border-color: #333;
+  background-color: #222;
+}
+
+/* 회사 정보 섹션 스타일 */
+.info-section {
+  margin-bottom: 20px;
+}
+
+.info-section-title {
+  font-weight: 500;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+/* 회사 정보 섹션 스타일 - 다크모드 */
+body.dark .info-section-title {
+  border-bottom-color: #333;
+}
+
+/* PEMS 테마 스타일 */
+body.pems .company-logo {
+  border-color: #f5e8d7;
+  background-color: #fcf8f3;
+}
+
+body.dark.pems .company-logo {
+  border-color: #3d2814;
+  background-color: #2d1e0f;
+}
+
+body.pems .info-section-title {
+  border-bottom-color: #f5e8d7;
+}
+
+body.dark.pems .info-section-title {
+  border-bottom-color: #3d2814;
+} 

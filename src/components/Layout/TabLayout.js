@@ -1,5 +1,6 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
 import { useTabs } from '../../contexts/TabContext';
+import { Element, scroller } from 'react-scroll';
 import DashboardPage from '../../pages/DashboardPage';
 import CommonCodePage from '../../pages/CommonCodePage';
 import FactoryManagementPage from '../../pages/FactoryManagementPage';
@@ -19,6 +20,13 @@ import InventoryStatusPage from '../../pages/InventoryStatusPage';
 import InventoryHistoryPage from '../../pages/InventoryHistoryPage';
 import ProductionPlanPage from '../../pages/ProductionPlanPage';
 import WorkOrderPage from '../../pages/WorkOrderPage';
+import ProductionResultPage from '../../pages/ProductionResultPage';
+import ProductionResultInquiryPage from '../../pages/ProductionResultInquiryPage';
+import DefectInquiryPage from '../../pages/DefectInquiryPage';
+import NoticeBoardPage from '../../pages/NoticeBoardPage';
+import AuthorityManagementPage from '../../pages/AuthorityManagementPage';
+import UserManagementPage from '../../pages/UserManagementPage';
+import CompanyInfoPage from '../../pages/CompanyInfoPage';
 import './TabLayout.css';
 
 // 각 페이지가 유효한 컴포넌트인지 확인
@@ -42,6 +50,13 @@ const MemoizedInventoryStatus = typeof InventoryStatusPage === 'function' ? memo
 const MemoizedInventoryHistory = typeof InventoryHistoryPage === 'function' ? memo(InventoryHistoryPage) : InventoryHistoryPage;
 const MemoizedProductionPlan = typeof ProductionPlanPage === 'function' ? memo(ProductionPlanPage) : ProductionPlanPage;
 const MemoizedWorkOrder = typeof WorkOrderPage === 'function' ? memo(WorkOrderPage) : WorkOrderPage;
+const MemoizedProductionResult = typeof ProductionResultPage === 'function' ? memo(ProductionResultPage) : ProductionResultPage;
+const MemoizedProductionResultInquiry = typeof ProductionResultInquiryPage === 'function' ? memo(ProductionResultInquiryPage) : ProductionResultInquiryPage;
+const MemoizedDefectInquiry = typeof DefectInquiryPage === 'function' ? memo(DefectInquiryPage) : DefectInquiryPage;
+const MemoizedNoticeBoard = typeof NoticeBoardPage === 'function' ? memo(NoticeBoardPage) : NoticeBoardPage;
+const MemoizedAuthorityManagement = typeof AuthorityManagementPage === 'function' ? memo(AuthorityManagementPage) : AuthorityManagementPage;
+const MemoizedUserManagement = typeof UserManagementPage === 'function' ? memo(UserManagementPage) : UserManagementPage;
+const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(CompanyInfoPage) : CompanyInfoPage;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 렌더링하는 함수
 const TabPanel = memo(({ tabId }) => {
@@ -81,10 +96,24 @@ const TabPanel = memo(({ tabId }) => {
       return <MemoizedInventoryStatus />;
     case 'mi-stock-history':
       return <MemoizedInventoryHistory />;
-    case 'pm-plan':
+    case 'mm-plan':
       return <MemoizedProductionPlan />;
-    case 'pm-workorder':
+    case 'mm-workorder':
       return <MemoizedWorkOrder />;
+    case 'mm-result-in':
+      return <MemoizedProductionResult />;
+    case 'mm-result':
+      return <MemoizedProductionResultInquiry />;
+    case 'mm-defect':
+      return <MemoizedDefectInquiry />;
+    case 'sy-notice':
+      return <MemoizedNoticeBoard />;
+    case 'sy-authority':
+      return <MemoizedAuthorityManagement />;
+    case 'sy-user':
+      return <MemoizedUserManagement />;
+    case 'sy-company':
+      return <MemoizedCompanyInfo />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
       return <div>탭 컨텐츠를 찾을 수 없습니다</div>;
@@ -94,31 +123,35 @@ const TabPanel = memo(({ tabId }) => {
 // 개별 탭 컨텐츠 컴포넌트 - 메모이제이션 적용
 const TabContent = memo(({ tabId, isActive, children }) => {
   return (
-    <div 
+    <Element 
+      name={`tab-content-${tabId}`}
       key={tabId} 
-      style={{ display: isActive ? 'block' : 'none' }}
+      className={`tab-content-item ${isActive ? 'active' : 'inactive'}`}
     >
       {children}
-    </div>
+    </Element>
   );
 });
 
 const TabLayout = () => {
-  const { activeTab, tabContents, saveTabContent } = useTabs();
+  const { activeTab, tabContents, saveTabContent, scrollToTab } = useTabs();
   // 렌더링된 탭 컴포넌트를 저장
   const [renderedTabs, setRenderedTabs] = useState({});
 
-  // 현재 활성화된 탭이 아직 렌더링되지 않았을 때만 렌더링
+  // 현재 열려있는 모든 탭을 사전에 렌더링
   useEffect(() => {
-    if (activeTab && !renderedTabs[activeTab]) {
-      const newTabContent = <TabPanel tabId={activeTab} />;
-      setRenderedTabs(prev => ({
-        ...prev,
-        [activeTab]: newTabContent
-      }));
-      saveTabContent(activeTab, true);
-    }
-  }, [activeTab, renderedTabs, saveTabContent]);
+    // 현재 열려있는 모든 탭을 renderedTabs에 추가
+    Object.keys(tabContents).forEach(tabId => {
+      if (!renderedTabs[tabId]) {
+        const newTabContent = <TabPanel tabId={tabId} />;
+        setRenderedTabs(prev => ({
+          ...prev,
+          [tabId]: newTabContent
+        }));
+        saveTabContent(tabId, true);
+      }
+    });
+  }, [tabContents, renderedTabs, saveTabContent]);
 
   // 더 이상 열려있지 않은 탭들의 렌더링 상태 제거
   useEffect(() => {
@@ -134,9 +167,21 @@ const TabLayout = () => {
     });
   }, [tabContents]);
 
+  // activeTab이 변경될 때 해당 탭으로 스크롤
+  useEffect(() => {
+    if (activeTab) {
+      // 지연시켜 실행하여 DOM이 완전히 렌더링된 후 스크롤되도록 함
+      const timer = setTimeout(() => {
+        scrollToTab(activeTab);
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, scrollToTab]);
+
   return (
-    <div className="tab-layout">
-      <div className="tab-content">
+    <Element className="tab-layout" name="tab-layout">
+      <Element className="tab-content" name="tab-content" id="tab-content">
         {/* 모든 탭 컨텐츠를 렌더링하되 현재 활성화된 탭만 표시 */}
         {Object.keys(renderedTabs).map(tabId => (
           <TabContent 
@@ -147,8 +192,8 @@ const TabLayout = () => {
             {renderedTabs[tabId]}
           </TabContent>
         ))}
-      </div>
-    </div>
+      </Element>
+    </Element>
   );
 };
 

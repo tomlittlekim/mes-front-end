@@ -166,7 +166,9 @@ const MuiDataGridWrapper = ({
           height: `${height}px`, 
           width: '100%',
           minHeight: '300px',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
           <DataGrid
             rows={rows}
@@ -189,6 +191,8 @@ const MuiDataGridWrapper = ({
             sx={{
               border: 'none',
               color: getTextColor(),
+              height: '100%',
+              flexGrow: 1,
               '& .MuiDataGrid-cell': {
                 borderBottom: `1px solid ${getBorderColor()}`
               },

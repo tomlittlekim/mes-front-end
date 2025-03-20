@@ -29,6 +29,48 @@ body.dark .app-header {
   margin-right: 16px; /* 오른쪽 여백 */
   width: calc(100% - 32px); /* 양쪽 여백 고려 */
   max-width: 100%;
+  align-items: center; /* 스크롤 버튼 정렬을 위해 추가 */
+}
+
+/* 스크롤 버튼 컨테이너 */
+.tab-scroll-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  height: 100%;
+  width: 32px;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tab-scroll-buttons.visible {
+  opacity: 1;
+}
+
+.tab-scroll-buttons:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tab-scroll-buttons.left {
+  left: 0;
+}
+
+.tab-scroll-buttons.right {
+  right: 0;
+}
+
+/* 다크모드에서 스크롤 버튼 색상 조정 */
+body.dark .tab-scroll-buttons {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+body.dark .tab-scroll-buttons:hover {
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 /* 커스텀 탭 컨테이너 */
@@ -47,6 +89,7 @@ body.dark .app-header {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   width: 100%;
   flex-wrap: nowrap;
+  scroll-behavior: smooth; /* 부드러운 스크롤 효과 추가 */
 }
 
 /* PEMS 도메인 탭 컨테이너 */
