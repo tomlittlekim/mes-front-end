@@ -7,7 +7,7 @@ export const TabProvider = ({ children }) => {
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState('main');
   const [tabContents, setTabContents] = useState({
-    main: { id: 'main', name: '메인', isLoaded: false }
+    main: { id: 'main', name: '메인', isLoaded: false, domState: null }
   });
 
   // 초기 로딩 시 메인 탭 생성
@@ -163,18 +163,33 @@ export const TabProvider = ({ children }) => {
     setActiveTab(tabId);
   }, []);
 
-  // 탭 컨텐츠 저장 함수
+  // 탭 컨텐츠 저장 함수 - 개선된 버전
   const saveTabContent = useCallback((tabId, isLoaded) => {
-    if (tabContents[tabId]) {
-      setTabContents(prev => ({
+    setTabContents(prev => {
+      // 이미 동일한 상태라면 불필요한 업데이트 방지
+      if (prev[tabId]?.isLoaded === isLoaded) {
+        return prev;
+      }
+      
+      return {
         ...prev,
         [tabId]: {
           ...prev[tabId],
           isLoaded
         }
-      }));
+      };
+    });
+    
+    // 탭이 로드된 후 리사이즈 이벤트 발생으로 그리드 초기화 지원
+    if (isLoaded) {
+      // 짧은 지연 후 이벤트 발생
+      setTimeout(() => {
+        const resizeEvent = new Event('resize');
+        window.dispatchEvent(resizeEvent);
+        console.log(`TabContent for ${tabId} saved as loaded, triggering resize`);
+      }, 150);
     }
-  }, [tabContents]);
+  }, []);
 
   // 탭 컨텐츠 가져오기 함수
   const getTabContent = useCallback((tabId) => {

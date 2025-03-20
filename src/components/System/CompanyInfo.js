@@ -20,6 +20,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { styled } from '@mui/material/styles';
+import { ThemeContext } from '../../contexts/ThemeContext';
 
 // 이미지 업로드를 위한 스타일 컴포넌트
 const VisuallyHiddenInput = styled('input')({
@@ -34,7 +35,7 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 });
 
-const CompanyInfo = () => {
+const CompanyInfo = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();

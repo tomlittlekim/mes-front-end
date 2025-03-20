@@ -1,10 +1,10 @@
 import React from 'react';
 import OrderRegistration from '../components/OrderRegistration/OrderRegistration';
 
-const OrderRegistrationPage = () => {
+const OrderRegistrationPage = (props) => {
   return (
     <>
-      <OrderRegistration />
+      <OrderRegistration tabId={props.tabId || 'sm-order'} />
     </>
   );
 };

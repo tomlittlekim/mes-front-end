@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useCallback } from 'react';
+import React, { useState, useEffect, memo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useTabs } from '../../contexts/TabContext';
 import { Element, scroller } from 'react-scroll';
 import DashboardPage from '../../pages/DashboardPage';
@@ -58,122 +58,219 @@ const MemoizedAuthorityManagement = typeof AuthorityManagementPage === 'function
 const MemoizedUserManagement = typeof UserManagementPage === 'function' ? memo(UserManagementPage) : UserManagementPage;
 const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(CompanyInfoPage) : CompanyInfoPage;
 
-// 각 탭 ID에 따라 적절한 컴포넌트를 렌더링하는 함수
-const TabPanel = memo(({ tabId }) => {
-  // 탭 ID에 따라 적절한 컴포넌트 렌더링
+// 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
+const getTabComponent = (tabId) => {
+  // 탭 ID에 따라 적절한 컴포넌트 반환
   switch(tabId) {
     case 'main':
-      return <MemoizedDashboard />;
+      return <MemoizedDashboard tabId={tabId} />;
     case 'ci-common':
-      return <MemoizedCommonCode />;
+      return <MemoizedCommonCode tabId={tabId} />;
     case 'ci-factory':
-      return <MemoizedFactoryManagement />;
+      return <MemoizedFactoryManagement tabId={tabId} />;
     case 'ci-line':
-      return <MemoizedLineManagement />;
+      return <MemoizedLineManagement tabId={tabId} />;
     case 'ci-equipment':
-      return <MemoizedEquipmentManagement />;
+      return <MemoizedEquipmentManagement tabId={tabId} />;
     case 'ci-customer':
-      return <MemoizedCustomerManagement />;
+      return <MemoizedCustomerManagement tabId={tabId} />;
     case 'ci-warehouse':
-      return <MemoizedWarehouseManagement />;
+      return <MemoizedWarehouseManagement tabId={tabId} />;
     case 'pi-wip':
-      return <MemoizedMaterialManagement />;
+      return <MemoizedMaterialManagement tabId={tabId} />;
     case 'pi-half-product':
-      return <MemoizedHalfProductManagement />;
+      return <MemoizedHalfProductManagement tabId={tabId} />;
     case 'pi-product':
-      return <MemoizedProductManagement />;
+      return <MemoizedProductManagement tabId={tabId} />;
     case 'pi-bom':
-      return <MemoizedBomManagement />;
+      return <MemoizedBomManagement tabId={tabId} />;
     case 'sm-order':
-      return <MemoizedOrderRegistration />;
+      return <MemoizedOrderRegistration tabId={tabId} />;
     case 'sm-sales':
-      return <MemoizedShipmentManagement />;
+      return <MemoizedShipmentManagement tabId={tabId} />;
     case 'mi-inbound':
-      return <MemoizedReceivingManagement />;
+      return <MemoizedReceivingManagement tabId={tabId} />;
     case 'mi-outbound':
-      return <MemoizedOutboundManagement />;
+      return <MemoizedOutboundManagement tabId={tabId} />;
     case 'mi-stock':
-      return <MemoizedInventoryStatus />;
+      return <MemoizedInventoryStatus tabId={tabId} />;
     case 'mi-stock-history':
-      return <MemoizedInventoryHistory />;
+      return <MemoizedInventoryHistory tabId={tabId} />;
     case 'mm-plan':
-      return <MemoizedProductionPlan />;
+      return <MemoizedProductionPlan tabId={tabId} />;
     case 'mm-workorder':
-      return <MemoizedWorkOrder />;
+      return <MemoizedWorkOrder tabId={tabId} />;
     case 'mm-result-in':
-      return <MemoizedProductionResult />;
+      return <MemoizedProductionResult tabId={tabId} />;
     case 'mm-result':
-      return <MemoizedProductionResultInquiry />;
+      return <MemoizedProductionResultInquiry tabId={tabId} />;
     case 'mm-defect':
-      return <MemoizedDefectInquiry />;
+      return <MemoizedDefectInquiry tabId={tabId} />;
     case 'sy-notice':
-      return <MemoizedNoticeBoard />;
+      return <MemoizedNoticeBoard tabId={tabId} />;
     case 'sy-authority':
-      return <MemoizedAuthorityManagement />;
+      return <MemoizedAuthorityManagement tabId={tabId} />;
     case 'sy-user':
-      return <MemoizedUserManagement />;
+      return <MemoizedUserManagement tabId={tabId} />;
     case 'sy-company':
-      return <MemoizedCompanyInfo />;
+      return <MemoizedCompanyInfo tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
       return <div>탭 컨텐츠를 찾을 수 없습니다</div>;
   }
-});
+};
 
-// 개별 탭 컨텐츠 컴포넌트 - 메모이제이션 적용
-const TabContent = memo(({ tabId, isActive, children }) => {
+// 개별 탭 컨텐츠 컴포넌트 - 각 탭을 isolation: isolate로 완전히 독립적인 stacking context로 만듦
+const TabContent = memo(({ tabId, isActive, children, onRef }) => {
+  // 탭 컨텐츠의 DOM 참조를 저장
+  const contentRef = useRef(null);
+  
+  // 컴포넌트가 마운트되었을 때 ref 콜백 호출
+  useEffect(() => {
+    if (contentRef.current && onRef) {
+      onRef(contentRef.current);
+    }
+  }, [onRef]);
+  
   return (
     <Element 
       name={`tab-content-${tabId}`}
-      key={tabId} 
-      className={`tab-content-item ${isActive ? 'active' : 'inactive'}`}
+      className="tab-content-item"
+      style={{ 
+        visibility: isActive ? 'visible' : 'hidden', // display 대신 visibility 사용
+        position: isActive ? 'relative' : 'absolute', // 비활성 탭은 absolute로 공간에서 제외
+        zIndex: isActive ? 1 : -1, // 활성 탭만 보이도록 z-index 조정
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        isolation: 'isolate',
+        overflow: 'auto',
+        minHeight: '500px',
+        top: 0,
+        left: 0
+      }}
+      data-tab-id={tabId}
+      ref={contentRef}
     >
       {children}
     </Element>
   );
 });
 
-const TabLayout = () => {
+const TabLayout = (props) => {
   const { activeTab, tabContents, saveTabContent, scrollToTab } = useTabs();
-  // 렌더링된 탭 컴포넌트를 저장
-  const [renderedTabs, setRenderedTabs] = useState({});
+  // 각 탭 컴포넌트의 참조를 저장하는 상태
+  const [tabComponents, setTabComponents] = useState({});
+  
+  // DOM 참조를 저장하는 객체 (단순한 refs 저장용)
+  const tabRefs = useRef({});
+  
+  // 탭 컨텐츠의 DOM 참조를 저장하는 콜백 - 단순화
+  const handleTabRef = useCallback((tabId) => (ref) => {
+    if (ref && ref instanceof Element) {
+      tabRefs.current[tabId] = ref;
+    }
+  }, []);
 
-  // 현재 열려있는 모든 탭을 사전에 렌더링
+  // 탭 상태 관리 마운트 시 효과 (단순화) - 언마운트 시에만 실행
   useEffect(() => {
-    // 현재 열려있는 모든 탭을 renderedTabs에 추가
-    Object.keys(tabContents).forEach(tabId => {
-      if (!renderedTabs[tabId]) {
-        const newTabContent = <TabPanel tabId={tabId} />;
-        setRenderedTabs(prev => ({
-          ...prev,
-          [tabId]: newTabContent
-        }));
-        saveTabContent(tabId, true);
-      }
-    });
-  }, [tabContents, renderedTabs, saveTabContent]);
-
-  // 더 이상 열려있지 않은 탭들의 렌더링 상태 제거
-  useEffect(() => {
-    // tabContents에 없는 탭은 renderedTabs에서도 제거
-    setRenderedTabs(prev => {
-      const newRenderedTabs = { ...prev };
-      Object.keys(newRenderedTabs).forEach(tabId => {
-        if (!tabContents[tabId]) {
-          delete newRenderedTabs[tabId];
+    return () => {
+      // 컴포넌트가 언마운트될 때 상태 저장 (단순히 isLoaded 상태만 관리)
+      Object.keys(tabRefs.current).forEach(tabId => {
+        if (tabRefs.current[tabId]) {
+          saveTabContent(tabId, true);
         }
       });
-      return newRenderedTabs;
+    };
+  }, [saveTabContent]);
+
+  // 새 탭이 열릴 때 해당 탭의 컴포넌트 생성 - 개선된 로직
+  useEffect(() => {
+    let hasNewComponent = false;
+    
+    Object.keys(tabContents).forEach(tabId => {
+      // 아직 해당 탭의 컴포넌트가 없다면 생성
+      if (!tabComponents[tabId]) {
+        hasNewComponent = true;
+        console.log(`Creating component for tab: ${tabId}`);
+        
+        // 모든 경우에 새 컴포넌트 생성 방식 사용
+        const component = getTabComponent(tabId);
+        setTabComponents(prev => ({
+          ...prev,
+          [tabId]: component
+        }));
+      }
+    });
+    
+    // 컴포넌트가 실제로 생성되었을 때만 saveTabContent 호출
+    if (hasNewComponent) {
+      // 상태 업데이트 후 실행되도록 setTimeout 사용 (지연 시간 증가)
+      const timer = setTimeout(() => {
+        // tabComponents 의존성 제거를 위해 현재 탭 컨텐츠로 직접 처리
+        Object.keys(tabContents).forEach(tabId => {
+          // 단순히 탭이 존재하는지만 확인하고 상태 저장
+          saveTabContent(tabId, true);
+        });
+        
+        // 명시적으로 두 번의 리사이즈 이벤트 발생
+        // 1. 첫 번째: 빠른 DOM 업데이트 이후
+        const resizeEvent1 = new Event('resize');
+        window.dispatchEvent(resizeEvent1);
+        
+        // 2. 두 번째: 지연 후 완전한 렌더링 보장
+        setTimeout(() => {
+          const resizeEvent2 = new Event('resize');
+          window.dispatchEvent(resizeEvent2);
+          
+          // 로깅
+          console.log('Grid size recalculation triggered for new tabs');
+        }, 300);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [tabContents, saveTabContent]);
+
+  // 닫힌 탭의 컴포넌트 참조 제거 (메모리 관리)
+  useEffect(() => {
+    setTabComponents(prev => {
+      const newComponents = { ...prev };
+      Object.keys(newComponents).forEach(tabId => {
+        if (!tabContents[tabId]) {
+          console.log(`Removing component for tab: ${tabId}`);
+          delete newComponents[tabId];
+        }
+      });
+      return newComponents;
     });
   }, [tabContents]);
 
-  // activeTab이 변경될 때 해당 탭으로 스크롤
+  // activeTab이 변경될 때 해당 탭으로 스크롤하고 크기 재계산 (개선된 버전)
   useEffect(() => {
     if (activeTab) {
       // 지연시켜 실행하여 DOM이 완전히 렌더링된 후 스크롤되도록 함
       const timer = setTimeout(() => {
         scrollToTab(activeTab);
-      }, 200);
+        
+        // 다중 리사이즈 이벤트로 안정적인 그리드 초기화 보장
+        // 첫 번째 이벤트 - 즉시
+        const resizeEvent1 = new Event('resize');
+        window.dispatchEvent(resizeEvent1);
+        
+        // 두 번째 이벤트 - 약간 지연
+        setTimeout(() => {
+          const resizeEvent2 = new Event('resize');
+          window.dispatchEvent(resizeEvent2);
+          console.log(`Tab ${activeTab} activated, grid size recalculated`);
+        }, 200);
+        
+        // 세 번째 이벤트 - 더 긴 지연으로 DOM이 완전히 로드된 후 확실히 재계산
+        setTimeout(() => {
+          const resizeEvent3 = new Event('resize');
+          window.dispatchEvent(resizeEvent3);
+        }, 500);
+      }, 100);
       
       return () => clearTimeout(timer);
     }
@@ -182,14 +279,15 @@ const TabLayout = () => {
   return (
     <Element className="tab-layout" name="tab-layout">
       <Element className="tab-content" name="tab-content" id="tab-content">
-        {/* 모든 탭 컨텐츠를 렌더링하되 현재 활성화된 탭만 표시 */}
-        {Object.keys(renderedTabs).map(tabId => (
+        {/* 각 탭 컴포넌트 렌더링 */}
+        {Object.keys(tabComponents).map(tabId => (
           <TabContent 
             key={tabId}
             tabId={tabId}
             isActive={activeTab === tabId}
+            onRef={handleTabRef(tabId)}
           >
-            {renderedTabs[tabId]}
+            {tabComponents[tabId]}
           </TabContent>
         ))}
       </Element>

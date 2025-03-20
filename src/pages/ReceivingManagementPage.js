@@ -1,10 +1,10 @@
 import React from 'react';
 import ReceivingManagement from '../components/InventoryManagement/ReceivingManagement';
 
-const ReceivingManagementPage = () => {
+const ReceivingManagementPage = (props) => {
   return (
     <>
-      <ReceivingManagement />
+      <ReceivingManagement tabId={props.tabId || 'mi-inbound'} />
     </>
   );
 };

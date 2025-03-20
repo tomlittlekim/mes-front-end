@@ -17,11 +17,11 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
-const CommonCodeManagement = () => {
+const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
@@ -315,19 +315,20 @@ const CommonCodeManagement = () => {
       <Grid container spacing={2}>
         {/* 코드 그룹 그리드 */}
         <Grid item xs={12} md={6}>
-          <MuiDataGridWrapper
+          <EnhancedDataGridWrapper
             title="코드 그룹"
             rows={codeGroups}
             columns={codeGroupColumns}
             buttons={codeGroupButtons}
             height={400}
             onRowClick={handleCodeGroupSelect}
+            tabId={props.tabId + "-codegroup"}
           />
         </Grid>
         
         {/* 코드 그리드 */}
         <Grid item xs={12} md={6}>
-          <MuiDataGridWrapper
+          <EnhancedDataGridWrapper
             title={`코드 목록 ${selectedCodeGroup ? '- ' + selectedCodeGroup.name : ''}`}
             rows={filteredCodes}
             columns={codeColumns}
@@ -336,6 +337,7 @@ const CommonCodeManagement = () => {
             gridProps={{
               editMode: 'row'
             }}
+            tabId={props.tabId + "-codes"}
           />
         </Grid>
       </Grid>

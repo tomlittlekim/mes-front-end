@@ -55,7 +55,7 @@ const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
   );
 });
 
-const AppHeader = () => {
+const AppHeader = (props) => {
   const { activeTab, closeAllTabs, closeTab, tabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
   const { domain, toggleDomain } = useDomain();
@@ -84,10 +84,16 @@ const AppHeader = () => {
   const checkScroll = useCallback(() => {
     if (tabsContainerRef.current) {
       const container = tabsContainerRef.current;
-      const hasLeftScroll = container.scrollLeft > 0;
-      const hasRightScroll = container.scrollWidth > container.clientWidth && 
-                             container.scrollLeft < container.scrollWidth - container.clientWidth;
       
+      // 왼쪽 스크롤 가능 여부 (0보다 크면 스크롤 가능)
+      const hasLeftScroll = container.scrollLeft > 5;
+      
+      // 오른쪽 스크롤 가능 여부 (전체 너비에서 현재 스크롤 위치와 표시 영역을 뺀 값이 있으면 스크롤 가능)
+      const hasRightScroll = 
+        container.scrollWidth > container.clientWidth && 
+        container.scrollLeft < container.scrollWidth - container.clientWidth - 5;
+      
+      // 현재 상태와 다를 때만 상태 업데이트
       setShowLeftScroll(hasLeftScroll);
       setShowRightScroll(hasRightScroll);
     }
@@ -97,14 +103,24 @@ const AppHeader = () => {
   const handleScrollLeft = useCallback(() => {
     if (tabsContainerRef.current) {
       tabsContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+      
+      // 스크롤 후 버튼 상태 업데이트를 위한 타이머 설정
+      setTimeout(() => {
+        checkScroll();
+      }, 300);
     }
-  }, []);
+  }, [checkScroll]);
   
   const handleScrollRight = useCallback(() => {
     if (tabsContainerRef.current) {
       tabsContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+      
+      // 스크롤 후 버튼 상태 업데이트를 위한 타이머 설정
+      setTimeout(() => {
+        checkScroll();
+      }, 300);
     }
-  }, []);
+  }, [checkScroll]);
   
   // 활성 탭으로 스크롤 이동
   const scrollToActiveTab = useCallback(() => {
@@ -113,28 +129,47 @@ const AppHeader = () => {
       const activeTabElement = container.querySelector(`.custom-tab.active`);
       
       if (activeTabElement) {
-        // 활성 탭의 중앙으로 스크롤
+        // 활성 탭의 위치 계산
         const containerWidth = container.clientWidth;
         const tabWidth = activeTabElement.offsetWidth;
         const tabLeft = activeTabElement.offsetLeft;
+        const scrollLeft = container.scrollLeft;
         
-        const scrollTo = tabLeft - (containerWidth / 2) + (tabWidth / 2);
-        container.scrollTo({ left: scrollTo, behavior: 'smooth' });
+        // 탭이 보이는 영역의 범위
+        const visibleLeft = scrollLeft;
+        const visibleRight = scrollLeft + containerWidth;
+        
+        // 탭의 시작과 끝 위치
+        const tabStart = tabLeft;
+        const tabEnd = tabLeft + tabWidth;
+        
+        // 탭이 보이는 영역을 벗어났을 때만 스크롤 조정
+        if (tabStart < visibleLeft || tabEnd > visibleRight) {
+          // 활성 탭이 중앙에 오도록 스크롤 위치 계산
+          const scrollTo = tabLeft - (containerWidth / 2) + (tabWidth / 2);
+          container.scrollTo({ left: Math.max(0, scrollTo), behavior: 'smooth' });
+          
+          // 스크롤 후 화살표 버튼 상태 업데이트
+          setTimeout(() => {
+            checkScroll();
+          }, 300);
+        }
       }
     }
-  }, [activeTab]);
+  }, [activeTab, checkScroll]);
   
   // 탭 변경 감지 및 스크롤 체크
   useEffect(() => {
     // 활성 탭으로 스크롤
-    scrollToActiveTab();
-    
-    // 약간의 딜레이 후 스크롤 버튼 가시성 업데이트
-    const timer = setTimeout(() => {
-      checkScroll();
-    }, 300);
-    
-    return () => clearTimeout(timer);
+    if (activeTab) {
+      // 약간의 딜레이 후 스크롤 실행 (DOM 업데이트 후)
+      const timer = setTimeout(() => {
+        scrollToActiveTab();
+        checkScroll();
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }
   }, [activeTab, tabs, scrollToActiveTab, checkScroll]);
   
   // 스크롤 이벤트 리스너
@@ -145,12 +180,14 @@ const AppHeader = () => {
         checkScroll();
       };
       
-      container.addEventListener('scroll', handleScrollEvent);
+      // 스크롤 이벤트 리스너 등록
+      container.addEventListener('scroll', handleScrollEvent, { passive: true });
       window.addEventListener('resize', handleScrollEvent);
       
       // 초기 스크롤 체크
       checkScroll();
       
+      // 컴포넌트 언마운트 시 이벤트 리스너 제거
       return () => {
         container.removeEventListener('scroll', handleScrollEvent);
         window.removeEventListener('resize', handleScrollEvent);

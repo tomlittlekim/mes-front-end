@@ -11,16 +11,18 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  Button,
+  FormHelperText
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
-const FactoryManagement = () => {
+const FactoryManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
@@ -338,19 +340,20 @@ const FactoryManagement = () => {
         <Grid container spacing={2}>
           {/* 공장 목록 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title="공장 목록"
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
               height={450}
               onRowClick={handleFactorySelect}
+              tabId={props.tabId + "-factories"}
             />
           </Grid>
           
           {/* 공장 상세 정보 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title={`공장 상세 정보 ${selectedFactory ? '- ' + selectedFactory.name : ''}`}
               rows={factoryDetail || []}
               columns={detailColumns}
@@ -359,6 +362,7 @@ const FactoryManagement = () => {
               gridProps={{
                 editMode: 'row'
               }}
+              tabId={props.tabId + "-factoryDetails"}
             />
           </Grid>
         </Grid>

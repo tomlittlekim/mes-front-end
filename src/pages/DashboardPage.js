@@ -3,7 +3,7 @@ import DashboardContainer from '../containers/DashboardContainer';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useDomain, DOMAINS } from '../contexts/DomainContext';
 
-const DashboardPage = () => {
+const DashboardPage = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();

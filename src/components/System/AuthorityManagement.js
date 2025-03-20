@@ -28,7 +28,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
-const AuthorityManagement = () => {
+const AuthorityManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();

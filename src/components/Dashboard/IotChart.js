@@ -17,7 +17,7 @@ const sampleData = [
   { name: '9', 온도: 45, 압력: 30 },
 ];
 
-const IotChart = () => {
+const IotChart = (props) => {
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';

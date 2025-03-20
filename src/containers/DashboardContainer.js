@@ -7,7 +7,7 @@ import { Grid, Box, Card, CardContent, useTheme } from '@mui/material';
 import { useDomain, DOMAINS } from '../contexts/DomainContext';
 
 // 여기서는 실제 API 호출을 대신하여 목업 데이터를 사용합니다
-const DashboardContainer = () => {
+const DashboardContainer = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();

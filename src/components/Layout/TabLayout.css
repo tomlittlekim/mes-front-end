@@ -4,15 +4,17 @@
   flex: 1;
   width: 100%;
   height: 100%;
-  min-height: 100px;
+  min-height: 500px;
   position: relative;
+  overflow: hidden;
 }
 
 .tab-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   padding: 0;
   height: 100%;
+  min-height: 500px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -24,33 +26,75 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 100px;
+  min-height: 500px;
   position: relative;
-  overflow-y: auto;
+  overflow: auto;
 }
 
-/* 새로 추가된 스타일 */
+/* 기본 탭 컨텐츠 스타일 */
 .tab-content-item {
+  /* 스타일은 인라인으로 관리됨 */
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 100px;
+  min-height: 500px;
+}
+
+/* 전역 MUI 데이터그리드 스타일 재정의 */
+.isolated-grid-container {
+  isolation: isolate;
   position: relative;
-  overflow-y: auto;
+  height: 100% !important;
+  min-height: 500px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  visibility: visible !important;
 }
 
-.tab-content-item.active {
-  visibility: visible;
-  z-index: 1;
-}
-
-.tab-content-item.inactive {
-  visibility: hidden;
+/* 비활성 탭의 그리드 스타일 */
+[style*="visibility: hidden"] .isolated-grid-container {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -10;
+}
+
+/* 탭 레이아웃 컨테이너 스타일 업데이트 */
+#tab-content {
+  position: relative;
+  min-height: 500px;
+  height: 100%;
+}
+
+/* MUI DataGrid 컴포넌트가 제대로 초기화되도록 강제 설정 */
+.MuiDataGrid-root {
+  height: 100% !important;
+  min-height: 400px !important;
+  width: 100% !important;
+  overflow: hidden;
+}
+
+.MuiDataGrid-main {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* 초기화되지 않은 그리드에 대한 폴백 높이 설정 */
+.MuiDataGrid-virtualScroller {
+  height: auto !important;
+  min-height: 350px !important;
+}
+
+/* 선택된 행 카운트 요소 고정 스타일 */
+.MuiDataGrid-selectedRowCount {
+  z-index: 100 !important;
+  position: relative !important;
+}
+
+/* 데이터 그리드 푸터 스타일 */
+.MuiDataGrid-footerContainer {
+  z-index: 90 !important;
+  position: relative !important;
 } 

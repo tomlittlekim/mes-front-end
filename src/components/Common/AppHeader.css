@@ -39,38 +39,52 @@ body.dark .app-header {
   justify-content: center;
   position: absolute;
   height: 100%;
-  width: 32px;
+  width: 24px;
   background-color: rgba(255, 255, 255, 0.9);
   z-index: 10;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s ease-in-out;
   cursor: pointer;
   border-radius: 4px;
+  top: 0;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  visibility: hidden; /* 숨겨진 상태에서는 완전히 숨김 */
 }
 
 .tab-scroll-buttons.visible {
   opacity: 1;
+  visibility: visible; /* 보일 때만 인터랙션 가능 */
 }
 
 .tab-scroll-buttons:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.07);
 }
 
 .tab-scroll-buttons.left {
   left: 0;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.8));
 }
 
 .tab-scroll-buttons.right {
   right: 0;
+  background-image: linear-gradient(to left, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.8));
 }
 
 /* 다크모드에서 스크롤 버튼 색상 조정 */
 body.dark .tab-scroll-buttons {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(30, 30, 30, 0.8);
+}
+
+body.dark .tab-scroll-buttons.left {
+  background-image: linear-gradient(to right, rgba(30, 30, 30, 0.8), rgba(30, 30, 30, 0.6));
+}
+
+body.dark .tab-scroll-buttons.right {
+  background-image: linear-gradient(to left, rgba(30, 30, 30, 0.8), rgba(30, 30, 30, 0.6));
 }
 
 body.dark .tab-scroll-buttons:hover {
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(50, 50, 50, 0.9);
 }
 
 /* 커스텀 탭 컨테이너 */
