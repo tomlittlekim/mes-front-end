@@ -1,0 +1,28 @@
+/* 입고관리 화면 스타일 */
+.receiving-management-container {
+  padding: 20px;
+}
+
+/* 데이트피커 간격 조정 */
+.date-range-picker {
+  display: flex;
+  align-items: center;
+}
+
+/* 그리드 내부 스타일 커스터마이징 */
+.MuiDataGrid-row:hover {
+  background-color: rgba(25, 118, 210, 0.08);
+}
+
+.MuiDataGrid-row.Mui-selected {
+  background-color: rgba(25, 118, 210, 0.15);
+}
+
+/* 다크모드 스타일 조정 */
+.dark-mode .MuiDataGrid-root {
+  color: #b3c5e6;
+}
+
+.dark-mode .MuiDataGrid-cell {
+  border-bottom: 1px solid #2d4764;
+} 

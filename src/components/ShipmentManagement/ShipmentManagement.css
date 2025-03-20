@@ -1,0 +1,86 @@
+/* 날짜 선택 관련 스타일 */
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-separator {
+  font-weight: bold;
+  color: var(--text-secondary);
+}
+
+/* 탭 컨테이너 스타일 */
+.tab-container {
+  display: flex;
+  margin-bottom: 20px;
+  background-color: var(--card-color);
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-speed);
+}
+
+.tab-item {
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  border-right: 1px solid var(--border-color);
+}
+
+body.dark .tab-item {
+  color: #ffffff;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+body.dark .tab-item.active {
+  color: var(--accent-color);
+}
+
+.tab-item:hover {
+  color: var(--accent-color);
+}
+
+.tab-item.active {
+  color: var(--accent-color);
+  border-bottom: 2px solid var(--accent-color);
+}
+
+/* 하단 정보 영역 스타일 */
+.bottom-info {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: var(--card-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-speed);
+}
+
+.info-text {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.info-text:last-child {
+  margin-bottom: 0;
+}
+
+.info-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-color);
+  margin-right: 8px;
+}
+
+/* 출하관리 전용 스타일 */
+.editable-cell {
+  background-color: rgba(25, 118, 210, 0.1);
+} 

@@ -1,0 +1,125 @@
+.sidebar {
+  width: 280px;
+  background-color: #0a0c14; /* 항상 어두운 배경 유지 */
+  border-right: 1px solid #1e2430;
+  padding: 20px 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-title {
+  padding: 15px 20px 20px;
+  margin: 10px 15px 20px;
+  text-align: center;
+}
+
+.sidebar-title {
+  color: #ffffff;
+}
+
+.sidebar-title h2.imos-logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: white !important; /* 항상 흰색으로 표시 */
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.menu-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.menu-title {
+  display: flex;
+  align-items: center;
+}
+
+.icon {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+}
+
+.expand-icon {
+  font-size: 10px;
+}
+
+li.active > .menu-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-weight: 500;
+}
+
+.submenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.submenu li a {
+  display: block;
+  padding: 8px 10px 8px 50px;
+  color: #aaa;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.submenu li a:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.submenu li.active a,
+.submenu li a.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 70px;
+    overflow: hidden;
+  }
+
+  .sidebar-title {
+    display: none;
+  }
+
+  .menu-name, .expand-icon, .submenu {
+    display: none;
+  }
+
+  .icon {
+    margin-right: 0;
+  }
+
+  .menu-item {
+    padding: 15px 0;
+    justify-content: center;
+  }
+}
