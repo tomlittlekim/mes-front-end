@@ -54,7 +54,7 @@ const TabLabel = memo(({ tabId, tabName, onClose }) => {
 });
 
 const AppHeader = () => {
-  const { activeTab, closeTabs, closeTab, openTabs, setActiveTab } = useTabs();
+  const { activeTab, closeAllTabs, closeTab, tabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
   const { domain, toggleDomain } = useDomain();
   const muiTheme = useMuiTheme();
@@ -69,46 +69,48 @@ const AppHeader = () => {
   }, [closeTab]);
 
   const handleCloseAllTabs = useCallback(() => {
-    closeTabs();
-  }, [closeTabs]);
+    closeAllTabs();
+  }, [closeAllTabs]);
 
   return (
     <div className="app-header">
       <Box sx={{ 
-        borderBottom: 1, 
-        borderColor: 'divider',
-        flexGrow: 1,
+        width: '100%',
         display: 'flex',
-        alignItems: 'center'
+        alignItems: 'center',
+        justifyContent: 'space-between'
       }}>
-        {openTabs.length > 0 && (
-          <Tabs 
-            value={activeTab} 
-            onChange={handleTabChange} 
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="탭 내비게이션"
-            className="tab-container"
-          >
-            {openTabs.map((tab) => (
-              <Tab 
-                key={tab.id} 
-                label={
-                  <TabLabel 
-                    tabId={tab.id} 
-                    tabName={tab.name} 
-                    onClose={(e) => handleCloseTab(e, tab.id)} 
-                  />
-                } 
-                value={tab.id}
-                className="app-tab"
-              />
-            ))}
-          </Tabs>
-        )}
+        <div className="tabs-container" style={{ flex: 1, overflow: 'hidden' }}>
+          {tabs && tabs.length > 0 && (
+            <Tabs 
+              value={activeTab} 
+              onChange={handleTabChange} 
+              variant="scrollable"
+              scrollButtons="auto"
+              aria-label="탭 내비게이션"
+              className="tab-container"
+              sx={{ maxWidth: 'calc(100% - 120px)' }}
+            >
+              {tabs.map((tab) => (
+                <Tab 
+                  key={tab.id} 
+                  label={
+                    <TabLabel 
+                      tabId={tab.id} 
+                      tabName={tab.name} 
+                      onClose={(e) => handleCloseTab(e, tab.id)} 
+                    />
+                  } 
+                  value={tab.id}
+                  className="app-tab"
+                />
+              ))}
+            </Tabs>
+          )}
+        </div>
         
         <div className="header-actions">
-          {openTabs.length > 1 && (
+          {tabs && tabs.length > 1 && (
             <Tooltip title="모든 탭 닫기">
               <IconButton onClick={handleCloseAllTabs} size="small">
                 <CloseAllIcon fontSize="small" />

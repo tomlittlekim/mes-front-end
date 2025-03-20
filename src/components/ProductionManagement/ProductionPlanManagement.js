@@ -22,10 +22,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import CachedIcon from '@mui/icons-material/Cached';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const ProductionPlanManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
@@ -45,6 +47,28 @@ const ProductionPlanManagement = () => {
   const [planList, setPlanList] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [planDetail, setPlanDetail] = useState(null);
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
 
   // 초기화 함수
   const handleReset = () => {
@@ -494,19 +518,19 @@ const ProductionPlanManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 생산계획관리 화면에서는 제품별 생산계획을 효율적으로 관리할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
-            • 생산계획목록에서 특정 계획을 선택하면 해당 계획의 상세 정보를 확인할 수 있습니다.
+          <Typography variant="body2" color={getTextColor()}>
+            • 계획을 등록하고 작업지시를 생성하여 공정별 생산 일정을 관리할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
-            • 생산계획 등록, 수정, 삭제 기능과 일정 재계산을 통해 효율적인 생산 일정을 수립할 수 있습니다.
+          <Typography variant="body2" color={getTextColor()}>
+            • 제품명을 선택하면 해당 제품의 생산계획 상세내역을 확인할 수 있습니다.
           </Typography>
         </Stack>
       </Box>

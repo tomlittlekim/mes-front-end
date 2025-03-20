@@ -19,11 +19,35 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const CommonCodeManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
+  
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
   
   // React Hook Form 설정
   const { control, handleSubmit, reset } = useForm({
@@ -213,7 +237,7 @@ const CommonCodeManagement = () => {
         display: 'flex', 
         alignItems: 'center', 
         mb: 3,
-        borderBottom: `1px solid ${isDarkMode ? '#2d4764' : '#e0e0e0'}`,
+        borderBottom: `1px solid ${getBorderColor()}`,
         pb: 1
       }}>
         <Typography 
@@ -221,7 +245,7 @@ const CommonCodeManagement = () => {
           component="h2" 
           sx={{ 
             fontWeight: 600,
-            color: isDarkMode ? '#b3c5e6' : 'inherit'
+            color: getTextColor()
           }}
         >
           공통코드관리
@@ -318,15 +342,15 @@ const CommonCodeManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(),
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 공통코드관리에서는 시스템에서 사용하는 코드 그룹 및 코드 정보를 등록, 수정, 삭제할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 코드 그룹을 선택하면 해당 그룹에 속한 코드 목록을 확인하고 관리할 수 있습니다.
           </Typography>
         </Stack>

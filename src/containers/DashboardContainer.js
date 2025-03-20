@@ -4,16 +4,30 @@ import KpiChart from '../components/Dashboard/KpiChart';
 import IotChart from '../components/Dashboard/IotChart';
 import ApiStatus from '../components/Dashboard/ApiStatus';
 import { Grid, Box, Card, CardContent, useTheme } from '@mui/material';
+import { useDomain, DOMAINS } from '../contexts/DomainContext';
 
 // 여기서는 실제 API 호출을 대신하여 목업 데이터를 사용합니다
 const DashboardContainer = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // 다크모드 색상 설정
-  const darkBlueBackground = '#102a43';
-  const darkBorderColor = '#2d4764';
+  // 도메인별 배경색 가져오기
+  const getCardBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#2d1e0f' : '#ffffff';
+    }
+    return isDarkMode ? '#102a43' : '#ffffff';
+  };
+  
+  // 도메인별 테두리 색상 가져오기
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#2d4764' : '#e0e0e0';
+  };
 
   // 대시보드 데이터
   const dashboardData = {
@@ -58,7 +72,8 @@ const DashboardContainer = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff'
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`
           }}>
             <CardContent sx={{ 
               p: 2,
@@ -72,7 +87,8 @@ const DashboardContainer = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff'
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`
           }}>
             <CardContent sx={{ 
               p: 2,
@@ -86,7 +102,8 @@ const DashboardContainer = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff'
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`
           }}>
             <CardContent sx={{ 
               p: 2,
@@ -100,7 +117,8 @@ const DashboardContainer = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff'
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`
           }}>
             <CardContent sx={{ 
               p: 2,
@@ -117,7 +135,8 @@ const DashboardContainer = () => {
         <Grid item xs={12} md={6}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff',
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`,
             height: '100%'
           }}>
             <CardContent sx={{ 
@@ -135,7 +154,8 @@ const DashboardContainer = () => {
         <Grid item xs={12} md={6}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff',
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`,
             height: '100%'
           }}>
             <CardContent sx={{ 
@@ -154,7 +174,8 @@ const DashboardContainer = () => {
         <Grid item xs={12}>
           <Card sx={{ 
             boxShadow: 3,
-            bgcolor: isDarkMode ? darkBlueBackground : '#ffffff'
+            bgcolor: getCardBgColor(),
+            border: `1px solid ${getBorderColor()}`
           }}>
             <CardContent sx={{ 
               p: 2,

@@ -22,10 +22,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const ShipmentManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
@@ -45,6 +47,28 @@ const ShipmentManagement = () => {
   const [shipmentList, setShipmentList] = useState([]);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [shipmentDetail, setShipmentDetail] = useState(null);
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
 
   // 초기화 함수
   const handleReset = () => {
@@ -440,18 +464,18 @@ const ShipmentManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 출하관리 화면에서는 상단 주문정보와 하단 출하처리된 목록을 조회할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 출하처리는 금회출하수량 입력만 가능하며, 필요시 수량을 조정하여 저장할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 출하처리가 완료되면 상단 출하상태와 미출하수량이 자동 계산되어 업데이트됩니다.
           </Typography>
         </Stack>

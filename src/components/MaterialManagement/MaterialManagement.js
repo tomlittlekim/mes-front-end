@@ -20,10 +20,12 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const MaterialManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
@@ -41,6 +43,28 @@ const MaterialManagement = () => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [materialList, setMaterialList] = useState([]);
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
 
   // 초기화 함수
   const handleReset = () => {
@@ -323,18 +347,18 @@ const MaterialManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 원/부자재관리에서는 제품 생산에 필요한 원자재와 부자재 정보를 관리합니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 행추가 버튼을 클릭하여 새로운 자재를 등록할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 각 행을 직접 수정한 후 저장 버튼을 클릭하여 변경사항을 저장할 수 있습니다.
           </Typography>
         </Stack>

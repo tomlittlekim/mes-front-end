@@ -20,10 +20,12 @@ import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const InventoryStatusManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
@@ -41,6 +43,28 @@ const InventoryStatusManagement = () => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [inventoryList, setInventoryList] = useState([]);
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
 
   // 초기화 함수
   const handleReset = () => {
@@ -288,19 +312,19 @@ const InventoryStatusManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 자재/재고현황에서는 창고별 모든 자재 및 제품의 실시간 재고 현황을 조회할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 기초수량, 입고수량, 출고수량, 조정수량을 기반으로 현 재고를 확인하고 안전재고와 비교할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
-            • 조회 결과는 인쇄하거나 엑셀로 내보내기가 가능합니다.
+          <Typography variant="body2" color={getTextColor()}>
+            • 모든 항목은 엑셀로 내보내기가 가능하며 인쇄하여 실물 문서로 관리할 수도 있습니다.
           </Typography>
         </Stack>
       </Box>

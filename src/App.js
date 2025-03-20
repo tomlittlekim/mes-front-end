@@ -7,29 +7,95 @@ import AppLayout from './components/Layout/AppLayout';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { useTheme } from './contexts/ThemeContext';
+import { useDomain, DOMAINS } from './contexts/DomainContext';
 
 // MUI 테마 설정 컴포넌트
 const ThemeConfigurator = ({ children }) => {
   const { theme } = useTheme();
+  const { domain } = useDomain();
+  
+  // 도메인별 색상 설정
+  const getPrimaryColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return theme === 'dark' ? '#e67e22' : '#d35400';
+    }
+    return '#1976d2'; // IMOS 기본 색상
+  };
+  
+  const getBackgroundColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return theme === 'dark' ? '#1c1207' : '#fcf8f4';
+    }
+    return theme === 'dark' ? '#0c1929' : '#f5f5f5'; // IMOS 색상
+  };
+  
+  const getCardColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return theme === 'dark' ? '#2d1e0f' : '#ffffff';
+    }
+    return theme === 'dark' ? '#102a43' : '#ffffff'; // IMOS 색상
+  };
+  
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return theme === 'dark' ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return theme === 'dark' ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)'; // IMOS 색상
+  };
   
   // MUI 테마 생성
   const muiTheme = createTheme({
     palette: {
       mode: theme === 'dark' ? 'dark' : 'light',
       primary: {
-        main: '#1976d2',
+        main: getPrimaryColor(),
       },
       background: {
-        default: theme === 'dark' ? '#0c1929' : '#f5f5f5',
-        paper: theme === 'dark' ? '#102a43' : '#ffffff',
+        default: getBackgroundColor(),
+        paper: getCardColor(),
       },
+      text: {
+        primary: getTextColor(),
+      },
+      ...(domain === DOMAINS.PEMS && {
+        success: {
+          main: theme === 'dark' ? '#66bb6a' : '#388e3c',
+        },
+        error: {
+          main: theme === 'dark' ? '#f44336' : '#d32f2f',
+        },
+        warning: {
+          main: theme === 'dark' ? '#ffb74d' : '#f57c00',
+        },
+      }),
     },
     components: {
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: theme === 'dark' ? '#0c1929' : '#f5f5f5',
-            color: theme === 'dark' ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)',
+            backgroundColor: getBackgroundColor(),
+            color: getTextColor(),
+          },
+        },
+      },
+      MuiDataGrid: {
+        styleOverrides: {
+          root: {
+            borderColor: domain === DOMAINS.PEMS 
+              ? (theme === 'dark' ? '#3d2814' : '#f5e8d7')
+              : (theme === 'dark' ? '#1e2430' : '#e2e8f0'),
+          },
+          columnHeader: {
+            backgroundColor: domain === DOMAINS.PEMS
+              ? (theme === 'dark' ? '#3d2814' : '#f5e8d7')
+              : (theme === 'dark' ? '#1a365d' : '#f0f4f9'),
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backgroundColor: getCardColor(),
           },
         },
       },

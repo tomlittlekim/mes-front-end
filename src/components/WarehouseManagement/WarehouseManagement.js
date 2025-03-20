@@ -20,10 +20,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const WarehouseManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
@@ -42,6 +44,28 @@ const WarehouseManagement = () => {
   const [warehouseList, setWarehouseList] = useState([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [warehouseDetail, setWarehouseDetail] = useState(null);
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
 
   // 초기화 함수
   const handleReset = () => {
@@ -362,16 +386,19 @@ const WarehouseManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 창고관리에서는 공장 및 창고 정보를 등록, 수정, 삭제할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
-            • 창고별로 세부 구역 정보 및 재고 현황을 관리하여 자재 관리의 효율성을 높일 수 있습니다.
+          <Typography variant="body2" color={getTextColor()}>
+            • 창고를 선택하면 해당 창고의 상세 정보를 관리할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 창고 등록 시 창고코드, 창고명, 위치, 관리자 등의 정보를 입력해야 합니다.
           </Typography>
         </Stack>
       </Box>

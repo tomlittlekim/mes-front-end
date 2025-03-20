@@ -17,6 +17,7 @@ import {
   useTheme 
 } from '@mui/material';
 import ViewListIcon from '@mui/icons-material/ViewList';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 // 커스텀 툴바 (DENSITY 버튼 제거)
 function CustomToolbar() {
@@ -52,12 +53,58 @@ const MuiDataGridWrapper = ({
   gridProps = {}
 }) => {
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // 다크모드 색상 설정
-  const darkHeaderBg = '#1a365d';
-  const darkBorderColor = '#2d4764';
-  const darkTextColor = '#b3c5e6';
+  // 도메인별 색상 설정
+  const getHeaderBg = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#fcf2e6';
+    }
+    return isDarkMode ? '#1a365d' : '#f0f7ff';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#2d4764' : '#e0e0e0';
+  };
+  
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : theme.palette.text.primary;
+    }
+    return isDarkMode ? '#b3c5e6' : theme.palette.text.primary;
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#2d1e0f' : '#ffffff';
+    }
+    return isDarkMode ? '#102a43' : '#ffffff';
+  };
+  
+  const getColumnHeaderBg = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#2d1e0f' : '#fcf2e6';
+    }
+    return isDarkMode ? '#1e3a5f' : '#f9fafc';
+  };
+  
+  const getRowHoverColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(231, 126, 34, 0.15)' : 'rgba(211, 84, 0, 0.08)';
+    }
+    return isDarkMode ? '#234876' : theme.palette.action.hover;
+  };
+  
+  const getRowSelectedColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(231, 126, 34, 0.25)' : 'rgba(211, 84, 0, 0.15)';
+    }
+    return isDarkMode ? '#1e4976' : theme.palette.action.selected;
+  };
 
   return (
     <Card 
@@ -66,7 +113,7 @@ const MuiDataGridWrapper = ({
         boxShadow: 3,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: isDarkMode ? '#102a43' : '#ffffff'
+        bgcolor: getBgColor()
       }}
     >
       <CardHeader
@@ -75,7 +122,7 @@ const MuiDataGridWrapper = ({
             <ViewListIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
             <Typography 
               variant="h6" 
-              sx={{ color: isDarkMode ? darkTextColor : 'inherit' }}
+              sx={{ color: getTextColor() }}
             >
               {title}
             </Typography>
@@ -101,8 +148,8 @@ const MuiDataGridWrapper = ({
         sx={{ 
           p: 1, 
           paddingRight: 2,
-          borderBottom: `1px solid ${isDarkMode ? darkBorderColor : '#e0e0e0'}`,
-          bgcolor: isDarkMode ? darkHeaderBg : '#f0f7ff' 
+          borderBottom: `1px solid ${getBorderColor()}`,
+          bgcolor: getHeaderBg()
         }}
       />
       <CardContent 
@@ -141,13 +188,13 @@ const MuiDataGridWrapper = ({
             }}
             sx={{
               border: 'none',
-              color: isDarkMode ? darkTextColor : 'inherit',
+              color: getTextColor(),
               '& .MuiDataGrid-cell': {
-                borderBottom: `1px solid ${isDarkMode ? darkBorderColor : '#f0f0f0'}`
+                borderBottom: `1px solid ${getBorderColor()}`
               },
               '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: isDarkMode ? '#1e3a5f' : '#f9fafc',
-                borderBottom: `1px solid ${isDarkMode ? darkBorderColor : '#e0e0e0'}`
+                backgroundColor: getColumnHeaderBg(),
+                borderBottom: `1px solid ${getBorderColor()}`
               },
               '& .MuiDataGrid-columnHeader, .MuiDataGrid-cell': {
                 padding: '0 8px'
@@ -159,20 +206,20 @@ const MuiDataGridWrapper = ({
                 paddingLeft: '14px'
               },
               '& .MuiDataGrid-row.Mui-selected': {
-                backgroundColor: isDarkMode ? '#1e4976 !important' : theme.palette.action.selected
+                backgroundColor: `${getRowSelectedColor()} !important`
               },
               '& .MuiDataGrid-row:hover': {
-                backgroundColor: isDarkMode ? '#234876 !important' : theme.palette.action.hover
+                backgroundColor: `${getRowHoverColor()} !important`
               },
               '& .MuiDataGrid-footerContainer': {
-                borderTop: `1px solid ${isDarkMode ? darkBorderColor : '#e0e0e0'}`,
-                backgroundColor: isDarkMode ? '#1e3a5f' : '#f9fafc'
+                borderTop: `1px solid ${getBorderColor()}`,
+                backgroundColor: getColumnHeaderBg()
               },
               '& .MuiTablePagination-root': {
-                color: isDarkMode ? darkTextColor : 'inherit'
+                color: getTextColor()
               },
               '& .MuiCheckbox-root': {
-                color: isDarkMode ? darkTextColor : 'inherit'
+                color: getTextColor()
               }
             }}
             {...gridProps}

@@ -1,15 +1,28 @@
 import React from 'react';
 import DashboardContainer from '../containers/DashboardContainer';
 import { Box, Typography, useTheme } from '@mui/material';
+import { useDomain, DOMAINS } from '../contexts/DomainContext';
 
 const DashboardPage = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // 다크모드 색상 설정
-  const darkTextColor = '#b3c5e6';
-  const darkBorderColor = '#2d4764';
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#2d4764' : '#e0e0e0';
+  };
 
   return (
     <>
@@ -21,7 +34,7 @@ const DashboardPage = () => {
           display: 'flex', 
           alignItems: 'center', 
           mb: 3,
-          borderBottom: `1px solid ${isDarkMode ? darkBorderColor : '#e0e0e0'}`,
+          borderBottom: `1px solid ${getBorderColor()}`,
           pb: 1
         }}>
           <Typography 
@@ -29,7 +42,7 @@ const DashboardPage = () => {
             component="h2" 
             sx={{ 
               fontWeight: 600,
-              color: isDarkMode ? darkTextColor : 'inherit'
+              color: getTextColor()
             }}
           >
             대시보드

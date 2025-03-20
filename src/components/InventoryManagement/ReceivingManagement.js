@@ -21,10 +21,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const ReceivingManagement = () => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
@@ -44,6 +46,28 @@ const ReceivingManagement = () => {
   const [receivingList, setReceivingList] = useState([]);
   const [selectedReceiving, setSelectedReceiving] = useState(null);
   const [receivingDetail, setReceivingDetail] = useState(null);
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
 
   // 초기화 함수
   const handleReset = () => {
@@ -423,19 +447,19 @@ const ReceivingManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 입고관리 화면에서는 원자재, 부자재 등의 입고 정보를 효율적으로 관리할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
-            • 입고목록에서 특정 입고건을 선택하면 해당 입고의 상세 정보를 확인하고 편집할 수 있습니다.
+          <Typography variant="body2" color={getTextColor()}>
+            • 구매발주 정보를 바탕으로 입고 처리하며, 품질검사 결과에 따라 입고 상태가 변경됩니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
-            • 검수결과 등록 및 입고 창고 지정을 통해 자재의 품질관리와 위치관리가 가능합니다.
+          <Typography variant="body2" color={getTextColor()}>
+            • 입고 처리 후 자동으로 재고가 증가하며, 추적성을 위해 로트 정보도 함께 관리됩니다.
           </Typography>
         </Stack>
       </Box>

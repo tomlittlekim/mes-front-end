@@ -1,8 +1,7 @@
 .app-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 14px 40px;
+  padding: 14px 40px 0 40px;
   border-bottom: 1px solid var(--border-color);
   transition: border-color var(--transition-speed);
 }
@@ -12,10 +11,13 @@ body.dark .app-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.header-tabs {
+.tabs-container {
   flex: 1;
-  display: flex;
-  align-items: center;
+  overflow: hidden;
+}
+
+.tab-container {
+  min-height: 48px;
 }
 
 .tab-label {
@@ -80,20 +82,24 @@ body.dark .theme-toggle:hover {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
-.user-profile {
-  display: flex;
-  align-items: center;
-  margin-left: 8px;
+/* PEMS 도메인 특화 스타일 */
+body.pems .MuiTabs-indicator {
+  background-color: var(--accent-color) !important;
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--accent-color);
-  transition: background-color var(--transition-speed);
+body.pems.dark .close-all-tabs-btn:hover,
+body.pems.dark .theme-toggle:hover {
+  color: var(--accent-color);
+  background-color: rgba(231, 126, 34, 0.15);
+}
+
+body.pems.light .close-all-tabs-btn:hover,
+body.pems.light .theme-toggle:hover {
+  color: var(--accent-color);
+  background-color: rgba(211, 84, 0, 0.08);
 }
 
 /* Material UI 탭 스타일 오버라이드 */
