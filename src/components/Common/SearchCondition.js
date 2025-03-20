@@ -72,7 +72,7 @@ const SearchCondition = ({
     if (domain === DOMAINS.PEMS) {
       return 'primary';
     }
-    return 'secondary';
+    return 'primary';
   };
   
   // PEMS 도메인 초기화 버튼 스타일
@@ -96,7 +96,11 @@ const SearchCondition = ({
       borderRadius: 1.5,
       px: 2,
       py: 0.8,
+      borderColor: isDarkMode ? '#1976d2' : '#1976d2',
+      color: isDarkMode ? '#ffffff' : '#1976d2',
       '&:hover': {
+        borderColor: isDarkMode ? '#2196f3' : '#2196f3',
+        backgroundColor: isDarkMode ? 'rgba(25, 118, 210, 0.1)' : 'rgba(25, 118, 210, 0.05)',
         boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
       }
     };

@@ -21,9 +21,9 @@ body.dark .app-header {
 .tab-wrapper {
   position: relative;
   display: flex;
-  min-height: 36px;
-  padding-top: 6px;
+  min-height: 42px;
   margin-left: 16px;
+  max-width: 900px;
 }
 
 /* 커스텀 탭 컨테이너 */
@@ -34,15 +34,34 @@ body.dark .app-header {
   scrollbar-width: thin;
   position: relative;
   z-index: 1;
+  background-color: rgba(25, 118, 210, 0.08); /* iMOS 테마 - 연한 파란색 배경 */
+  border-radius: 8px;
+  padding: 4px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* PEMS 도메인 탭 컨테이너 */
+body.pems .custom-tabs {
+  background-color: rgba(230, 126, 34, 0.08); /* PEMS 테마 - 연한 오렌지색 배경 */
+}
+
+body.dark .custom-tabs {
+  background-color: rgba(25, 118, 210, 0.15); /* 다크모드 iMOS - 더 진한 파란색 배경 */
+}
+
+body.dark.pems .custom-tabs {
+  background-color: rgba(230, 126, 34, 0.15); /* 다크모드 PEMS - 더 진한 오렌지색 배경 */
 }
 
 .custom-tabs::-webkit-scrollbar {
-  height: 6px;
+  height: 4px;
 }
 
 .custom-tabs::-webkit-scrollbar-thumb {
   background-color: var(--border-color);
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .custom-tabs::-webkit-scrollbar-track {
@@ -52,67 +71,62 @@ body.dark .app-header {
 /* 커스텀 탭 */
 .custom-tab {
   position: relative;
-  padding: 8px 16px 10px;
-  margin-right: 6px;
+  padding: 10px 20px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  color: var(--text-primary);
-  background-color: rgba(0, 0, 0, 0.03);
-  border: 1px solid var(--border-color);
-  border-bottom: none;
+  transition: all 0.25s ease;
+  color: #555;
+  background-color: transparent;
+  border: none;
   text-align: center;
-  height: 36px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  border-radius: 6px;
+  flex: 1;
+  margin: 0 2px;
+  font-size: 15px;
+}
+
+body.dark .custom-tab {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* 비활성화 탭 효과 */
-.custom-tab:not(.active) {
-  opacity: 0.75;
+.custom-tab:not(.active):hover {
+  background-color: rgba(0, 0, 0, 0.03);
+  color: #333;
 }
 
-.custom-tab:hover:not(.active) {
-  opacity: 0.9;
-  background-color: rgba(0, 0, 0, 0.05);
+body.dark .custom-tab:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
 }
 
-/* 활성화된 탭 (기본 IMOS - 네이비 계열) - 라이트모드 */
+/* 활성화된 탭 (기본 IMOS) - 라이트모드 */
 .custom-tab.active {
-  background-color: #1976d2;
-  color: white;
+  background-color: white;
+  color: #1976d2;
   opacity: 1;
   z-index: 5;
-  height: 40px;
-  margin-top: -4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* PEMS 활성화된 탭 (오렌지 계열) - 라이트모드 */
+/* PEMS 활성화된 탭 - 라이트모드 */
 body.pems .custom-tab.active {
-  background-color: #e67e22;
+  color: #e67e22;
 }
 
 /* 다크모드에서 탭 스타일 */
-body.dark .custom-tab {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-}
-
-body.dark .custom-tab:hover:not(.active) {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 body.dark .custom-tab.active {
-  background-color: #1976d2;
-  color: white;
+  background-color: #222;
+  color: #2196f3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 body.dark.pems .custom-tab.active {
-  background-color: #e67e22;
+  color: #f39c12;
 }
 
 .tab-label {
@@ -142,6 +156,7 @@ body.dark.pems .custom-tab.active {
   cursor: pointer;
   margin-left: 8px;
   color: inherit;
+  font-size: 16px;
 }
 
 .tab-close-btn:hover {
@@ -212,6 +227,7 @@ body.pems.light .header-action-button:hover {
   
   .tab-wrapper {
     margin-left: 8px;
+    max-width: 100%;
   }
   
   .header-divider {

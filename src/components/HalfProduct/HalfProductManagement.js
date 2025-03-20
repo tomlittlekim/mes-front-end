@@ -226,7 +226,10 @@ const HalfProductManagement = () => {
                 variant="outlined"
                 size="small"
                 fullWidth
-                placeholder="제품ID를 입력하세요"
+                placeholder="제품 ID를 입력하세요"
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             )}
           />
@@ -243,6 +246,9 @@ const HalfProductManagement = () => {
                 size="small"
                 fullWidth
                 placeholder="제품명을 입력하세요"
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             )}
           />
@@ -253,11 +259,13 @@ const HalfProductManagement = () => {
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label">사용여부</InputLabel>
+                <InputLabel id="useYn-label" shrink>사용여부</InputLabel>
                 <Select
                   {...field}
                   labelId="useYn-label"
                   label="사용여부"
+                  displayEmpty
+                  notched
                 >
                   <MenuItem value="">전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
@@ -280,7 +288,11 @@ const HalfProductManagement = () => {
                     slotProps={{
                       textField: {
                         size: "small",
-                        fullWidth: true
+                        fullWidth: true,
+                        InputLabelProps: {
+                          shrink: true,
+                        },
+                        placeholder: "시작일을 선택하세요"
                       }
                     }}
                   />
@@ -296,7 +308,11 @@ const HalfProductManagement = () => {
                     slotProps={{
                       textField: {
                         size: "small",
-                        fullWidth: true
+                        fullWidth: true,
+                        InputLabelProps: {
+                          shrink: true,
+                        },
+                        placeholder: "종료일을 선택하세요"
                       }
                     }}
                   />
