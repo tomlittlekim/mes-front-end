@@ -2,6 +2,7 @@ import React from 'react';
 import './App.css';
 import { TabProvider } from './contexts/TabContext';
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext';
+import { DomainProvider } from './contexts/DomainContext';
 import AppLayout from './components/Layout/AppLayout';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -45,15 +46,17 @@ const ThemeConfigurator = ({ children }) => {
 
 function App() {
   return (
-    <CustomThemeProvider>
-      <ThemeConfigurator>
-        <TabProvider>
-          <div className="App">
-            <AppLayout />
-          </div>
-        </TabProvider>
-      </ThemeConfigurator>
-    </CustomThemeProvider>
+    <DomainProvider>
+      <CustomThemeProvider>
+        <ThemeConfigurator>
+          <TabProvider>
+            <div className="App">
+              <AppLayout />
+            </div>
+          </TabProvider>
+        </ThemeConfigurator>
+      </CustomThemeProvider>
+    </DomainProvider>
   );
 }
 

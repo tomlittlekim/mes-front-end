@@ -1,0 +1,39 @@
+/* PEMS 테마 스타일 */
+:root {
+  --system-name: 'PEMS';
+}
+
+/* PEMS 로고 스타일 */
+.pems-logo {
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* PEMS 다크 모드 */
+body.dark.pems {
+  --background-color: #1c1207;
+  --sidebar-color: #2d1e0f;
+  --card-color: #2d1e0f;
+  --border-color: #3d2814;
+  --text-primary: #ffffff;
+  --text-secondary: #f0e6d9;
+  --text-muted: #d4b594;
+  --accent-color: #e67e22;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+  --border-color-visible: rgba(255, 255, 255, 0.3);
+}
+
+/* PEMS 라이트 모드 */
+body.light.pems {
+  --background-color: #fcf8f4;
+  --sidebar-color: #2d1e0f; /* 사이드바는 항상 어두운 색상 유지 */
+  --card-color: #ffffff;
+  --border-color: #f5e8d7;
+  --text-primary: #2d1e0f;
+  --text-secondary: #5a412d;
+  --text-muted: #8c7357;
+  --accent-color: #d35400;
+  --danger-color: #dc2626;
+  --warning-color: #d97706;
+} 

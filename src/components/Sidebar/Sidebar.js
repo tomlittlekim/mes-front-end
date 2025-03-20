@@ -1,9 +1,11 @@
 import React from 'react';
 import './Sidebar.css';
 import { useTabs } from '../../contexts/TabContext';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem }) => {
   const { activeTab } = useTabs();
+  const { domain, domainName } = useDomain();
 
   // expandedItems props가 없을 경우 기본값으로 ['main'] 사용
   const handleToggle = (id) => {
@@ -18,10 +20,15 @@ const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem })
     }
   };
 
+  // 도메인에 따라 로고 클래스 반환
+  const getLogoClass = () => {
+    return domain === DOMAINS.PEMS ? 'pems-logo system-logo' : 'imos-logo system-logo';
+  };
+
   return (
       <div className="sidebar">
         <div className="sidebar-title">
-          <h2 className="imos-logo">iMOS</h2>
+          <h2 className={getLogoClass()}>{domainName}</h2>
         </div>
         <nav className="sidebar-nav">
           <ul className="sidebar-menu">

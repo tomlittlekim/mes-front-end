@@ -1,10 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useDomain, DOMAINS } from './DomainContext';
 
 // 테마 컨텍스트 생성
 const ThemeContext = createContext();
 
 // 테마 제공자 컴포넌트
 export const ThemeProvider = ({ children }) => {
+  const { domain } = useDomain();
+  
   // localStorage에서 테마 설정 불러오기 (기본값은 시스템 설정 기반)
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -63,10 +66,10 @@ export const ThemeProvider = ({ children }) => {
     };
   }, []);
 
-  // 테마 변경 시 body에 클래스 추가/제거
+  // 테마와 도메인 변경 시 body에 클래스 추가/제거
   useEffect(() => {
-    document.body.className = theme;
-  }, [theme]);
+    document.body.className = `${theme} ${domain}`;
+  }, [theme, domain]);
 
   return (
       <ThemeContext.Provider value={{ theme, toggleTheme }}>

@@ -1,7 +1,7 @@
 .sidebar {
   width: 280px;
-  background-color: #0a0c14; /* 항상 어두운 배경 유지 */
-  border-right: 1px solid #1e2430;
+  background-color: var(--sidebar-color);
+  border-right: 1px solid var(--border-color);
   padding: 20px 0;
   height: 100vh;
   overflow-y: auto;
@@ -17,7 +17,7 @@
   color: #ffffff;
 }
 
-.sidebar-title h2.imos-logo {
+.sidebar-title h2.system-logo {
   font-size: 22px;
   font-weight: 700;
   color: white !important; /* 항상 흰색으로 표시 */
@@ -98,6 +98,24 @@ li.active > .menu-item {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
   font-weight: 500;
+}
+
+/* PEMS 도메인 사이드바 특화 스타일 */
+body.pems .sidebar {
+  background-color: var(--sidebar-color);
+}
+
+body.pems .sidebar-title {
+  background-color: var(--sidebar-color);
+}
+
+body.pems li.active > .menu-item {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.pems .submenu li.active a,
+body.pems .submenu li a.active {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 @media (max-width: 768px) {

@@ -1,12 +1,14 @@
 import React, { memo, useCallback } from 'react';
 import './AppHeader.css';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { useTabs } from '../../contexts/TabContext';
 import { Tabs, Tab, Box, IconButton, Tooltip, useTheme as useMuiTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloseAllIcon from '@mui/icons-material/ClearAll';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import DomainIcon from '@mui/icons-material/DomainVerification';
 
 // 탭 레이블 컴포넌트를 memo로 최적화
 const TabLabel = memo(({ tabId, tabName, onClose }) => {
@@ -52,90 +54,91 @@ const TabLabel = memo(({ tabId, tabName, onClose }) => {
 });
 
 const AppHeader = () => {
+  const { activeTab, closeTabs, closeTab, openTabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
+  const { domain, toggleDomain } = useDomain();
   const muiTheme = useMuiTheme();
-  const { tabs, activeTab, closeTab, setActiveTab, closeAllTabs } = useTabs();
-  
-  const handleTabChange = useCallback((event, newValue) => {
+
+  const handleTabChange = useCallback((e, newValue) => {
     setActiveTab(newValue);
   }, [setActiveTab]);
-  
-  const handleTabClose = useCallback((e, tabId) => {
-    e.stopPropagation();
+
+  const handleCloseTab = useCallback((e, tabId) => {
+    e.stopPropagation(); // 클릭 이벤트 전파 방지
     closeTab(tabId);
   }, [closeTab]);
 
+  const handleCloseAllTabs = useCallback(() => {
+    closeTabs();
+  }, [closeTabs]);
+
   return (
-    <div className="app-header" style={{ 
-      backgroundColor: muiTheme.palette.background.paper,
-      color: muiTheme.palette.text.primary,
-      borderBottom: `1px solid ${muiTheme.palette.divider}`
-    }}>
-      <div className="header-tabs">
-        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+    <div className="app-header">
+      <Box sx={{ 
+        borderBottom: 1, 
+        borderColor: 'divider',
+        flexGrow: 1,
+        display: 'flex',
+        alignItems: 'center'
+      }}>
+        {openTabs.length > 0 && (
           <Tabs 
             value={activeTab} 
-            onChange={handleTabChange}
+            onChange={handleTabChange} 
             variant="scrollable"
             scrollButtons="auto"
-            className="tab-header"
-            aria-label="application tabs"
-            sx={{ flexGrow: 1 }}
+            aria-label="탭 내비게이션"
+            className="tab-container"
           >
-            {tabs.map(tab => (
+            {openTabs.map((tab) => (
               <Tab 
                 key={tab.id} 
-                value={tab.id} 
                 label={
                   <TabLabel 
                     tabId={tab.id} 
                     tabName={tab.name} 
-                    onClose={(e) => handleTabClose(e, tab.id)}
+                    onClose={(e) => handleCloseTab(e, tab.id)} 
                   />
                 } 
+                value={tab.id}
+                className="app-tab"
               />
             ))}
           </Tabs>
-          <Tooltip title="모든 탭 닫기">
+        )}
+        
+        <div className="header-actions">
+          {openTabs.length > 1 && (
+            <Tooltip title="모든 탭 닫기">
+              <IconButton onClick={handleCloseAllTabs} size="small">
+                <CloseAllIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          <Tooltip title={`${theme === 'dark' ? '라이트' : '다크'} 모드로 전환`}>
             <IconButton 
-              onClick={closeAllTabs} 
-              className="close-all-tabs-btn"
+              onClick={toggleTheme} 
               size="small"
-              aria-label="모든 탭 닫기"
+              color="inherit"
             >
-              <CloseAllIcon fontSize="small" />
+              {theme === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
             </IconButton>
           </Tooltip>
-        </Box>
-      </div>
-      <div className="header-actions">
-        <Tooltip title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}>
-          <IconButton
-            className="theme-toggle"
-            onClick={toggleTheme}
-            size="small"
-            color="inherit"
-            aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-            sx={{ 
-              ml: 1, 
-              border: `1px solid ${muiTheme.palette.divider}`,
-              borderRadius: '50%',
-              padding: '5px',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {theme === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
-          </IconButton>
-        </Tooltip>
-        <div className="user-profile">
-          <div className="avatar" style={{ 
-            backgroundColor: theme === 'dark' ? '#2d4764' : '#e0e0e0',
-            color: theme === 'dark' ? '#ffffff' : '#000000'
-          }}></div>
+          
+          <Tooltip title={`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}>
+            <IconButton 
+              onClick={toggleDomain} 
+              size="small"
+              color="inherit"
+            >
+              <DomainIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </div>
-      </div>
+      </Box>
     </div>
   );
 };
 
-export default memo(AppHeader);
+export default AppHeader;
