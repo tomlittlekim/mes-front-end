@@ -29,24 +29,6 @@ const ReceivingManagement = () => {
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      productId: '',
-      productName: '',
-      productType: '',
-      supplier: '',
-      fromDate: null,
-      toDate: null
-    }
-  });
-
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [receivingList, setReceivingList] = useState([]);
-  const [selectedReceiving, setSelectedReceiving] = useState(null);
-  const [receivingDetail, setReceivingDetail] = useState(null);
-
   // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
@@ -68,6 +50,24 @@ const ReceivingManagement = () => {
     }
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
+  
+  // React Hook Form 설정
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
+      productId: '',
+      productName: '',
+      productType: '',
+      supplier: '',
+      fromDate: null,
+      toDate: null
+    }
+  });
+
+  // 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+  const [receivingList, setReceivingList] = useState([]);
+  const [selectedReceiving, setSelectedReceiving] = useState(null);
+  const [receivingDetail, setReceivingDetail] = useState(null);
 
   // 초기화 함수
   const handleReset = () => {

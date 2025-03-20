@@ -26,23 +26,6 @@ const CustomerManagement = () => {
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      customerCode: '',
-      customerName: '',
-      representativeName: '',
-      useYn: '',
-      business: ''
-    }
-  });
-
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [customerList, setCustomerList] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [customerDetail, setCustomerDetail] = useState(null);
-
   // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
@@ -64,6 +47,23 @@ const CustomerManagement = () => {
     }
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
+  
+  // React Hook Form 설정
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
+      customerCode: '',
+      customerName: '',
+      representativeName: '',
+      useYn: '',
+      business: ''
+    }
+  });
+
+  // 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+  const [customerList, setCustomerList] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerDetail, setCustomerDetail] = useState(null);
 
   // 초기화 함수
   const handleReset = () => {
@@ -424,4 +424,4 @@ const CustomerManagement = () => {
   );
 };
 
-export default CustomerManagement; 
+export default CustomerManagement;

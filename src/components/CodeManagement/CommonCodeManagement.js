@@ -353,6 +353,9 @@ const CommonCodeManagement = () => {
           <Typography variant="body2" color={getTextColor()}>
             • 코드 그룹을 선택하면 해당 그룹에 속한 코드 목록을 확인하고 관리할 수 있습니다.
           </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 코드는 시스템 전반에서 사용되므로 코드 값과 명칭을 명확하게 입력하고 관리해야 합니다.
+          </Typography>
         </Stack>
       </Box>
     </Box>

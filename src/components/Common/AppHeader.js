@@ -3,7 +3,7 @@ import './AppHeader.css';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { useTabs } from '../../contexts/TabContext';
-import { Tabs, Tab, Box, IconButton, Tooltip, useTheme as useMuiTheme } from '@mui/material';
+import { Box, IconButton, Tooltip, useTheme as useMuiTheme, Divider } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloseAllIcon from '@mui/icons-material/ClearAll';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
@@ -11,7 +11,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import DomainIcon from '@mui/icons-material/DomainVerification';
 
 // 탭 레이블 컴포넌트를 memo로 최적화
-const TabLabel = memo(({ tabId, tabName, onClose }) => {
+const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
   // 탭 아이콘 정보 가져오기 함수
   const getTabIcon = (id) => {
     // 메인 탭인 경우
@@ -39,7 +39,7 @@ const TabLabel = memo(({ tabId, tabName, onClose }) => {
   };
 
   return (
-    <div className="tab-label">
+    <div className={`tab-label ${isActive ? 'active' : ''}`}>
       <span className="tab-icon">{getTabIcon(tabId)}</span>
       <span>{tabName}</span>
       {tabId !== 'main' && (
@@ -59,8 +59,8 @@ const AppHeader = () => {
   const { domain, toggleDomain } = useDomain();
   const muiTheme = useMuiTheme();
 
-  const handleTabChange = useCallback((e, newValue) => {
-    setActiveTab(newValue);
+  const handleTabChange = useCallback((tabId) => {
+    setActiveTab(tabId);
   }, [setActiveTab]);
 
   const handleCloseTab = useCallback((e, tabId) => {
@@ -77,42 +77,41 @@ const AppHeader = () => {
       <Box sx={{ 
         width: '100%',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
+        alignItems: 'center'
       }}>
-        <div className="tabs-container" style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="tabs-container">
           {tabs && tabs.length > 0 && (
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange} 
-              variant="scrollable"
-              scrollButtons="auto"
-              aria-label="탭 내비게이션"
-              className="tab-container"
-              sx={{ maxWidth: 'calc(100% - 120px)' }}
-            >
-              {tabs.map((tab) => (
-                <Tab 
-                  key={tab.id} 
-                  label={
+            <div className="tab-wrapper">
+              <div className="custom-tabs">
+                {tabs.map((tab) => (
+                  <div 
+                    key={tab.id} 
+                    className={`custom-tab ${activeTab === tab.id ? 'active' : ''}`}
+                    onClick={() => handleTabChange(tab.id)}
+                  >
                     <TabLabel 
                       tabId={tab.id} 
                       tabName={tab.name} 
-                      onClose={(e) => handleCloseTab(e, tab.id)} 
+                      onClose={(e) => handleCloseTab(e, tab.id)}
+                      isActive={activeTab === tab.id}
                     />
-                  } 
-                  value={tab.id}
-                  className="app-tab"
-                />
-              ))}
-            </Tabs>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
+        
+        <Divider orientation="vertical" flexItem className="header-divider" />
         
         <div className="header-actions">
           {tabs && tabs.length > 1 && (
             <Tooltip title="모든 탭 닫기">
-              <IconButton onClick={handleCloseAllTabs} size="small">
+              <IconButton 
+                onClick={handleCloseAllTabs} 
+                size="small" 
+                className="header-action-button"
+              >
                 <CloseAllIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -123,6 +122,7 @@ const AppHeader = () => {
               onClick={toggleTheme} 
               size="small"
               color="inherit"
+              className="header-action-button"
             >
               {theme === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
             </IconButton>
@@ -133,6 +133,7 @@ const AppHeader = () => {
               onClick={toggleDomain} 
               size="small"
               color="inherit"
+              className="header-action-button"
             >
               <DomainIcon fontSize="small" />
             </IconButton>

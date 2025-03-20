@@ -11,13 +11,15 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  Checkbox
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
@@ -82,35 +84,15 @@ const HalfProductManagement = () => {
     
     // API 호출 대신 더미 데이터 사용
     const dummyData = [
-      { id: '20001', type: '잉크믹스', name: '반제품_보라 믹스', spec: '정품 잉크 믹스', unit: 'L', price: 1, quantity: 1, warehouse: '생산창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '20002', type: '잉크믹스', name: '반제품_빨강 믹스', spec: '정품 잉크 믹스', unit: 'L', price: 1, quantity: 1, warehouse: '생산창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '20003', type: '코팅종이', name: '반제품_코팅 모조지70g', spec: '91.4cm(폭) 코팅종이', unit: 'M', price: 10, quantity: 10, warehouse: '생산창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '20004', type: '포장재', name: '반제품_포장 비닐', spec: '100cm(폭) 롤 형태 비닐', unit: 'EA', price: 100, quantity: 100, warehouse: '생산창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '20005', type: '미표시', name: '미표시', spec: '미표시', unit: '미표시', price: 0, quantity: 0, warehouse: '미지정', useYn: 'N', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' }
+      { id: 1, code: 'HP001', name: '알루미늄 프레임 45T', standard: '45x45x100', unit: 'EA', price: 3000, safetyStock: 100, warehouseId: 'WH001', warehouseName: '본사창고', useYn: 'Y', createDate: '2023-03-15', updateDate: '2023-05-20' },
+      { id: 2, code: 'HP002', name: '스틸 파이프 외경 25mm', standard: 'Φ25 x 2t', unit: 'M', price: 1500, safetyStock: 200, warehouseId: 'WH001', warehouseName: '본사창고', useYn: 'Y', createDate: '2023-03-15', updateDate: '2023-04-10' },
+      { id: 3, code: 'HP003', name: 'PCB 기판 TYPE-A', standard: '150 x 200 mm', unit: 'EA', price: 7500, safetyStock: 50, warehouseId: 'WH002', warehouseName: '자재창고', useYn: 'Y', createDate: '2023-03-16', updateDate: '2023-05-15' },
+      { id: 4, code: 'HP004', name: '인쇄회로 베이스보드', standard: '200 x 300 mm', unit: 'EA', price: 12000, safetyStock: 30, warehouseId: 'WH002', warehouseName: '자재창고', useYn: 'N', createDate: '2023-03-18', updateDate: '2023-04-25' },
+      { id: 5, code: 'HP005', name: '케이스 타입 B', standard: '300 x 400 x 150 mm', unit: 'EA', price: 8500, safetyStock: 80, warehouseId: 'WH003', warehouseName: '2공장창고', useYn: 'Y', createDate: '2023-03-20', updateDate: '2023-05-08' }
     ];
     
     setInventoryList(dummyData);
-  };
-
-  // 행 추가 버튼 클릭 핸들러
-  const handleAdd = () => {
-    const newInventory = {
-      id: `NEW_${Date.now()}`,
-      type: '',
-      name: '',
-      spec: '',
-      unit: '',
-      price: 0,
-      quantity: 0,
-      warehouse: '',
-      useYn: 'Y',
-      registUser: '시스템',
-      registDate: new Date().toISOString().split('T')[0],
-      updateUser: '시스템',
-      updateDate: new Date().toISOString().split('T')[0]
-    };
-    
-    setInventoryList([...inventoryList, newInventory]);
+    setIsLoading(false);
   };
 
   // 저장 버튼 클릭 핸들러
@@ -146,12 +128,32 @@ const HalfProductManagement = () => {
     });
   };
 
+  // 등록 버튼 클릭 핸들러
+  const handleAdd = () => {
+    // 신규 항목 추가 로직
+    const newItem = {
+      id: Date.now(),
+      code: '',
+      name: '',
+      standard: '',
+      unit: '',
+      price: 0,
+      safetyStock: 0,
+      warehouseId: '',
+      warehouseName: '',
+      useYn: 'Y',
+      createDate: new Date().toISOString().split('T')[0],
+      updateDate: new Date().toISOString().split('T')[0]
+    };
+    
+    setInventoryList([...inventoryList, newItem]);
+  };
+
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
       handleSearch({});
-      setIsLoading(false);
     }, 100);
     
     return () => clearTimeout(timer);
@@ -159,31 +161,29 @@ const HalfProductManagement = () => {
 
   // 반제품 목록 그리드 컬럼 정의
   const inventoryColumns = [
-    { field: 'type', headerName: '제품유형', width: 100 },
-    { field: 'id', headerName: '제품 ID', width: 100 },
-    { field: 'name', headerName: '제품명', width: 180, flex: 1 },
-    { field: 'spec', headerName: '규격', width: 150 },
-    { field: 'unit', headerName: '단위', width: 70 },
-    { field: 'price', headerName: '단가', width: 80, type: 'number' },
-    { field: 'quantity', headerName: '기본수량', width: 100, type: 'number' },
-    { field: 'warehouse', headerName: '보관창고', width: 120 },
+    { field: 'code', headerName: '반제품코드', width: 120, editable: true },
+    { field: 'name', headerName: '반제품명', width: 200, flex: 1, editable: true },
+    { field: 'standard', headerName: '규격', width: 150, editable: true },
+    { field: 'unit', headerName: '단위', width: 80, editable: true },
+    { field: 'price', headerName: '단가', width: 100, type: 'number', editable: true },
+    { field: 'safetyStock', headerName: '안전재고', width: 100, type: 'number', editable: true },
+    { field: 'warehouseName', headerName: '보관창고', width: 150, editable: true },
     { 
       field: 'useYn', 
       headerName: '사용여부', 
       width: 100,
       type: 'singleSelect',
       valueOptions: ['Y', 'N'],
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
+      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
+      editable: true 
     },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
+    { field: 'createDate', headerName: '등록일', width: 120 },
     { field: 'updateDate', headerName: '수정일', width: 120 }
   ];
 
   // 반제품 목록 그리드 버튼
   const inventoryGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: null },
+    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> },
     { label: '행추가', onClick: handleAdd, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
@@ -277,16 +277,15 @@ const HalfProductManagement = () => {
                   <DatePicker
                     {...field}
                     label="등록일(시작)"
-                    inputFormat="yyyy-MM-dd"
-                    mask="____-__-__"
-                    onChange={(date) => field.onChange(date)}
-                    renderInput={(params) => 
-                      <TextField {...params} size="small" sx={{ minWidth: '140px' }} />
-                    }
+                    slotProps={{
+                      textField: {
+                        size: "small",
+                        fullWidth: true
+                      }
+                    }}
                   />
                 )}
               />
-              <span>~</span>
               <Controller
                 name="toDate"
                 control={control}
@@ -294,12 +293,12 @@ const HalfProductManagement = () => {
                   <DatePicker
                     {...field}
                     label="등록일(종료)"
-                    inputFormat="yyyy-MM-dd"
-                    mask="____-__-__"
-                    onChange={(date) => field.onChange(date)}
-                    renderInput={(params) => 
-                      <TextField {...params} size="small" sx={{ minWidth: '140px' }} />
-                    }
+                    slotProps={{
+                      textField: {
+                        size: "small",
+                        fullWidth: true
+                      }
+                    }}
                   />
                 )}
               />
@@ -309,19 +308,22 @@ const HalfProductManagement = () => {
       </SearchCondition>
       
       {/* 그리드 영역 */}
-      <Box sx={{ mt: 2, mb: 2, height: 'calc(100vh - 310px)', width: '100%' }}>
-        <MuiDataGridWrapper
-          loading={isLoading}
-          rows={inventoryList}
-          columns={inventoryColumns}
-          pageSize={10}
-          rowsPerPageOptions={[10, 20, 50]}
-          checkboxSelection
-          disableSelectionOnClick
-          buttons={inventoryGridButtons}
-          isEditable={true}
-        />
-      </Box>
+      {!isLoading && (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <MuiDataGridWrapper
+              title="반제품 정보"
+              rows={inventoryList}
+              columns={inventoryColumns}
+              buttons={inventoryGridButtons}
+              height={500}
+              gridProps={{
+                editMode: 'row'
+              }}
+            />
+          </Grid>
+        </Grid>
+      )}
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 

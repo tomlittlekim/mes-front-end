@@ -1,7 +1,7 @@
 .app-header {
   display: flex;
   align-items: center;
-  padding: 14px 40px 0 40px;
+  padding: 14px 0 0 0;
   border-bottom: 1px solid var(--border-color);
   transition: border-color var(--transition-speed);
 }
@@ -14,10 +14,105 @@ body.dark .app-header {
 .tabs-container {
   flex: 1;
   overflow: hidden;
+  padding-left: 0;
 }
 
-.tab-container {
-  min-height: 48px;
+/* 탭 래퍼 */
+.tab-wrapper {
+  position: relative;
+  display: flex;
+  min-height: 36px;
+  padding-top: 6px;
+  margin-left: 16px;
+}
+
+/* 커스텀 탭 컨테이너 */
+.custom-tabs {
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 0;
+  scrollbar-width: thin;
+  position: relative;
+  z-index: 1;
+}
+
+.custom-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.custom-tabs::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 6px;
+}
+
+.custom-tabs::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* 커스텀 탭 */
+.custom-tab {
+  position: relative;
+  padding: 8px 16px 10px;
+  margin-right: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  color: var(--text-primary);
+  background-color: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  text-align: center;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+/* 비활성화 탭 효과 */
+.custom-tab:not(.active) {
+  opacity: 0.75;
+}
+
+.custom-tab:hover:not(.active) {
+  opacity: 0.9;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 활성화된 탭 (기본 IMOS - 네이비 계열) - 라이트모드 */
+.custom-tab.active {
+  background-color: #0c4da2;
+  color: white;
+  opacity: 1;
+  z-index: 5;
+  height: 40px;
+  margin-top: -4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* PEMS 활성화된 탭 (오렌지 계열) - 라이트모드 */
+body.pems .custom-tab.active {
+  background-color: #d35400;
+}
+
+/* 다크모드에서 탭 스타일 */
+body.dark .custom-tab {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+body.dark .custom-tab:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .custom-tab.active {
+  background-color: #0c4da2;
+  color: white;
+}
+
+body.dark.pems .custom-tab.active {
+  background-color: #d35400;
 }
 
 .tab-label {
@@ -45,94 +140,86 @@ body.dark .app-header {
   opacity: 0.7;
   transition: opacity 0.2s;
   cursor: pointer;
+  margin-left: 8px;
+  color: inherit;
 }
 
 .tab-close-btn:hover {
   opacity: 1;
-  color: var(--accent-color, #007bff);
 }
 
-/* 공통 아이콘 버튼 스타일 */
-.close-all-tabs-btn,
-.theme-toggle {
-  margin: 0 4px;
-  color: var(--text-primary);
-  transition: color 0.2s, background-color 0.2s;
+/* 헤더 구분선 */
+.header-divider {
+  height: 36px;
+  margin: 0 16px;
 }
 
-.close-all-tabs-btn:hover,
-.theme-toggle:hover {
-  color: var(--accent-color, #007bff);
-  background-color: rgba(0, 123, 255, 0.08);
+/* 다크모드에서 구분선 */
+body.dark .header-divider {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* 다크모드 아이콘 버튼 스타일 */
-body.dark .close-all-tabs-btn,
-body.dark .theme-toggle {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-body.dark .close-all-tabs-btn:hover,
-body.dark .theme-toggle:hover {
-  color: var(--accent-color, #007bff);
-  background-color: rgba(0, 123, 255, 0.15);
-}
-
+/* 헤더 액션 영역 */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 12px;
+  padding: 0 40px 0 8px;
+}
+
+/* 헤더 액션 버튼 스타일 */
+.header-action-button {
+  color: var(--text-primary);
+  transition: color 0.2s, background-color 0.2s;
+  border-radius: 8px !important;
+  padding: 8px !important;
+}
+
+.header-action-button:hover {
+  color: var(--accent-color, #007bff);
+  background-color: rgba(0, 123, 255, 0.08) !important;
+}
+
+/* 다크모드 아이콘 버튼 스타일 */
+body.dark .header-action-button {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+body.dark .header-action-button:hover {
+  color: var(--accent-color, #007bff);
+  background-color: rgba(0, 123, 255, 0.15) !important;
 }
 
 /* PEMS 도메인 특화 스타일 */
-body.pems .MuiTabs-indicator {
-  background-color: var(--accent-color) !important;
-}
-
-body.pems.dark .close-all-tabs-btn:hover,
-body.pems.dark .theme-toggle:hover {
+body.pems.dark .header-action-button:hover {
   color: var(--accent-color);
-  background-color: rgba(231, 126, 34, 0.15);
+  background-color: rgba(231, 126, 34, 0.15) !important;
 }
 
-body.pems.light .close-all-tabs-btn:hover,
-body.pems.light .theme-toggle:hover {
+body.pems.light .header-action-button:hover {
   color: var(--accent-color);
-  background-color: rgba(211, 84, 0, 0.08);
-}
-
-/* Material UI 탭 스타일 오버라이드 */
-.MuiTabs-indicator {
-  background-color: var(--accent-color, #007bff) !important;
-}
-
-.MuiTab-root {
-  border-right: 1px solid var(--border-color) !important;
-}
-
-/* 마지막 탭에도 경계선 유지 */
-/*.MuiTab-root:last-child {
-  border-right: none !important;
-}*/
-
-.MuiTab-root.Mui-selected {
-  color: var(--accent-color, #007bff) !important;
-}
-
-/* 다크모드에서 Material UI 탭 텍스트 색상 */
-body.dark .MuiTab-root {
-  color: #ffffff !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
-}
-
-/* 활성화된 탭은 원래 색상 유지 */
-body.dark .MuiTab-root.Mui-selected {
-  color: var(--accent-color, #007bff) !important;
+  background-color: rgba(211, 84, 0, 0.08) !important;
 }
 
 @media (max-width: 768px) {
   .app-header {
-    padding: 14px 15px;
+    padding: 14px 0 0 0;
+  }
+  
+  .tabs-container {
+    padding-left: 0;
+  }
+  
+  .tab-wrapper {
+    margin-left: 8px;
+  }
+  
+  .header-divider {
+    margin: 0 8px;
+  }
+  
+  .header-actions {
+    gap: 8px;
+    padding: 0 15px 0 8px;
   }
 }
