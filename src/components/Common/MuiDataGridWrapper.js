@@ -259,8 +259,12 @@ const MuiDataGridWrapper = ({
           <DataGrid
             columns={columns || defaultColumns}
             rows={rows || []}
-            pageSize={10}
-            rowsPerPageOptions={[5, 10, 25, 50, 100]}
+            pageSizeOptions={[5, 10, 25, 50, 100]}
+            pagination={true}
+            paginationModel={{
+              pageSize: 10,
+              page: 0
+            }}
             density="compact"
             disableColumnMenu={false}
             checkboxSelection={gridProps?.checkboxSelection}
@@ -312,10 +316,7 @@ const MuiDataGridWrapper = ({
               }
             }}
             initialState={{
-              ...gridProps?.initialState,
-              pagination: {
-                pageSize: 10,
-              },
+              ...gridProps?.initialState
             }}
             experimentalFeatures={{
               ...virtualizationOptions,

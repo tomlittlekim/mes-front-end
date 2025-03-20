@@ -97,4 +97,8 @@
 .MuiDataGrid-footerContainer {
   z-index: 90 !important;
   position: relative !important;
+  display: flex !important;
+  visibility: visible !important;
+  min-height: 52px !important;
+  border-top: 1px solid #e0e0e0;
 } 

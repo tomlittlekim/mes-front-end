@@ -82,22 +82,15 @@ const EnhancedDataGridWrapper = (props) => {
   }, [gridProps, updateSelection]);
   
   // 페이지 변경 핸들러
-  const handlePageChange = useCallback((page) => {
-    updateGridState({ page });
+  const handlePaginationModelChange = useCallback((newModel) => {
+    updateGridState({ 
+      page: newModel.page,
+      pageSize: newModel.pageSize
+    });
     
-    // 원래 onPageChange 핸들러가 있다면 호출
-    if (gridProps.onPageChange) {
-      gridProps.onPageChange(page);
-    }
-  }, [gridProps, updateGridState]);
-  
-  // 페이지 크기 변경 핸들러
-  const handlePageSizeChange = useCallback((pageSize) => {
-    updateGridState({ pageSize });
-    
-    // 원래 onPageSizeChange 핸들러가 있다면 호출
-    if (gridProps.onPageSizeChange) {
-      gridProps.onPageSizeChange(pageSize);
+    // 원래 onPaginationModelChange 핸들러가 있다면 호출
+    if (gridProps.onPaginationModelChange) {
+      gridProps.onPaginationModelChange(newModel);
     }
   }, [gridProps, updateGridState]);
   
@@ -131,14 +124,16 @@ const EnhancedDataGridWrapper = (props) => {
   // 그리드 속성 병합
   const enhancedGridProps = {
     ...gridProps,
-    onSelectionModelChange: handleSelectionModelChange,
-    selectionModel: selectedRows,
-    onPageChange: handlePageChange,
-    onPageSizeChange: handlePageSizeChange,
+    pagination: true,
+    onRowSelectionModelChange: handleSelectionModelChange,
+    rowSelectionModel: selectedRows,
+    onPaginationModelChange: handlePaginationModelChange,
+    paginationModel: {
+      page: gridState.page,
+      pageSize: gridState.pageSize
+    },
     onSortModelChange: handleSortModelChange,
     onFilterModelChange: handleFilterModelChange,
-    page: gridState.page,
-    pageSize: gridState.pageSize,
     sortModel: gridState.sortModel,
     filterModel: gridState.filterModel
   };
