@@ -36,18 +36,16 @@ export const DomainProvider = ({ children }) => {
 
   // 초기 도메인 설정 - 실제로는 nginx의 설정값을 가져와야 함
   useEffect(() => {
-    // 이 부분은 실제 구현 시 서버에서 값을 가져오는 로직으로 대체해야 함
-    // 예: API 호출 또는 window 객체에 설정된 값 사용
-    
-    // 테스트를 위한 임시 로직
-    const hostname = window.location.hostname;
-    if (hostname.includes('pems')) {
-      setDomain(DOMAINS.PEMS);
-    } else {
-      setDomain(DOMAINS.IMOS);
-    }
-    
-    // TODO: nginx 설정값을 가져오는 로직 구현
+      fetch(window.location.href, { method: 'HEAD' })
+          .then(response => {
+              const domainType = response.headers.get("X-Domain-Type");
+              if (domainType === "PEMS") {
+                  setDomain(DOMAINS.PEMS);
+              } else {
+                  setDomain(DOMAINS.IMOS);
+              }
+          })
+          .catch(error => console.error("Failed to fetch domain type:", error));
   }, []);
 
   // 도메인이 변경될 때마다 페이지 타이틀 업데이트
