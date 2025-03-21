@@ -1,10 +1,10 @@
 import React from 'react';
 import ProductManagement from '../components/ProductManagement/ProductManagement';
 
-const ProductManagementPage = () => {
+const ProductManagementPage = (props) => {
   return (
     <>
-      <ProductManagement />
+      <ProductManagement tabId={props.tabId || 'pi-product'} />
     </>
   );
 };

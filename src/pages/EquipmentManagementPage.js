@@ -1,10 +1,10 @@
 import React from 'react';
 import EquipmentManagement from '../components/EquipmentManagement/EquipmentManagement';
 
-const EquipmentManagementPage = () => {
+const EquipmentManagementPage = (props) => {
   return (
     <>
-      <EquipmentManagement />
+      <EquipmentManagement tabId={props.tabId || 'ci-equipment'} />
     </>
   );
 };

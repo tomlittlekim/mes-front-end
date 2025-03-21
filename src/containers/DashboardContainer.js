@@ -7,7 +7,7 @@ import { Grid, Box, Card, CardContent, useTheme } from '@mui/material';
 import { useDomain, DOMAINS } from '../contexts/DomainContext';
 
 // 여기서는 실제 API 호출을 대신하여 목업 데이터를 사용합니다
-const DashboardContainer = () => {
+const DashboardContainer = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
@@ -67,7 +67,7 @@ const DashboardContainer = () => {
   // }, []);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ pt: 1, pl: 2, pr: 2, pb: 3 }}>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ 

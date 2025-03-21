@@ -1,10 +1,10 @@
 import React from 'react';
 import CommonCodeManagement from '../components/CodeManagement/CommonCodeManagement';
 
-const CommonCodePage = () => {
+const CommonCodePage = (props) => {
   return (
     <>
-      <CommonCodeManagement />
+      <CommonCodeManagement tabId={props.tabId || 'ci-common'} />
     </>
   );
 };

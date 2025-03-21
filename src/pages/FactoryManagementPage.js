@@ -1,10 +1,10 @@
 import React from 'react';
 import FactoryManagement from '../components/FactoryManagement/FactoryManagement';
 
-const FactoryManagementPage = () => {
+const FactoryManagementPage = (props) => {
   return (
     <>
-      <FactoryManagement />
+      <FactoryManagement tabId={props.tabId || 'ci-factory'} />
     </>
   );
 };

@@ -2,17 +2,19 @@ import React from 'react';
 import SidebarContainer from '../../containers/SidebarContainer';
 import AppHeader from '../Common/AppHeader';
 import TabLayout from './TabLayout';
+import { Element, scroller } from 'react-scroll';
 import './AppLayout.css';
+import { Outlet } from 'react-router-dom';
 
-const AppLayout = () => {
+const AppLayout = (props) => {
   return (
       <div className="app-layout">
         <SidebarContainer />
         <main className="app-main">
           <AppHeader />
-          <div className="app-content">
+          <Element name="app-content" className="app-content">
             <TabLayout />
-          </div>
+          </Element>
         </main>
       </div>
   );

@@ -22,28 +22,12 @@ import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
-const InventoryStatusManagement = () => {
+const InventoryStatusManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      warehouseId: '',
-      itemId: '',
-      itemName: '',
-      itemType: '',
-      fromDate: null,
-      toDate: null
-    }
-  });
-
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [inventoryList, setInventoryList] = useState([]);
-
   // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
@@ -65,6 +49,22 @@ const InventoryStatusManagement = () => {
     }
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
+  
+  // React Hook Form 설정
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
+      warehouseId: '',
+      itemId: '',
+      itemName: '',
+      itemType: '',
+      fromDate: null,
+      toDate: null
+    }
+  });
+
+  // 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+  const [inventoryList, setInventoryList] = useState([]);
 
   // 초기화 함수
   const handleReset = () => {

@@ -1,0 +1,56 @@
+.permission-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.permission-table th,
+.permission-table td {
+  border: 1px solid rgba(224, 224, 224, 1);
+  padding: 8px;
+  text-align: center;
+}
+
+.permission-table th {
+  background-color: rgba(0, 0, 0, 0.04);
+  font-weight: 600;
+}
+
+.permission-table td:first-child {
+  text-align: left;
+  width: 30%;
+}
+
+/* 체크박스 중앙 정렬 */
+.permission-table td:not(:first-child) {
+  vertical-align: middle;
+}
+
+/* 다크모드에서의 테이블 스타일 */
+@media (prefers-color-scheme: dark) {
+  .permission-table th {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .permission-table th,
+  .permission-table td {
+    border-color: rgba(81, 81, 81, 1);
+  }
+}
+
+/* 체크된 행 하이라이트 */
+.permission-table tr.highlighted {
+  background-color: rgba(25, 118, 210, 0.08);
+}
+
+/* 반응형 테이블 */
+@media (max-width: 768px) {
+  .permission-table {
+    font-size: 0.75rem;
+  }
+  
+  .permission-table th,
+  .permission-table td {
+    padding: 4px;
+  }
+} 

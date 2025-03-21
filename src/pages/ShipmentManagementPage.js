@@ -1,10 +1,10 @@
 import React from 'react';
 import ShipmentManagement from '../components/ShipmentManagement/ShipmentManagement';
 
-const ShipmentManagementPage = () => {
+const ShipmentManagementPage = (props) => {
   return (
     <>
-      <ShipmentManagement />
+      <ShipmentManagement tabId={props.tabId || 'sm-sales'} />
     </>
   );
 };

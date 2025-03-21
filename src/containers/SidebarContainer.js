@@ -70,8 +70,8 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
       icon: '🏭',
       isActive: false,
       subItems: [
-        { id: 'pm-plan', name: '생산계획관리' },
-        { id: 'pm-workorder', name: '작업지시관리' },
+        { id: 'mm-plan', name: '생산계획관리' },
+        { id: 'mm-workorder', name: '작업지시관리' },
         { id: 'mm-result-in', name: '생산실적등록' },
         { id: 'mm-result', name: '생산실적조회' },
         { id: 'mm-defect', name: '불량조회' }
@@ -107,7 +107,7 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
       isActive: false,
       subItems: [
         { id: 'sy-notice', name: '공지사항' },
-        { id: 'sy-admin', name: '권한관리' },
+        { id: 'sy-authority', name: '권한관리' },
         { id: 'sy-user', name: '사용자관리' },
         { id: 'sy-company', name: '회사정보' }
       ]

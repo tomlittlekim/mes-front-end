@@ -90,6 +90,17 @@ const ThemeConfigurator = ({ children }) => {
               ? (theme === 'dark' ? '#3d2814' : '#f5e8d7')
               : (theme === 'dark' ? '#1a365d' : '#f0f4f9'),
           },
+          selectedRowCount: {
+            zIndex: 100,
+            position: 'static',
+            fontWeight: 500,
+            backgroundColor: 'inherit'
+          },
+          footerContainer: {
+            zIndex: 90,
+            position: 'relative',
+            backgroundColor: 'inherit'
+          },
         },
       },
       MuiCard: {

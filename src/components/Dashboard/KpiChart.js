@@ -16,7 +16,7 @@ const sampleData = [
   { name: '9', 생산성: 50, 품질: 35 },
 ];
 
-const KpiChart = () => {
+const KpiChart = (props) => {
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';

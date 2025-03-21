@@ -11,17 +11,21 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  Button,
+  FormHelperText
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
-const FactoryManagement = () => {
+const FactoryManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
 
   // React Hook Form 설정
@@ -213,6 +217,28 @@ const FactoryManagement = () => {
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
 
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getBgColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  };
+  
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
+
   return (
     <Box sx={{ p: 2, minHeight: '100vh' }}>
       <Box sx={{ 
@@ -314,19 +340,20 @@ const FactoryManagement = () => {
         <Grid container spacing={2}>
           {/* 공장 목록 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title="공장 목록"
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
               height={450}
               onRowClick={handleFactorySelect}
+              tabId={props.tabId + "-factories"}
             />
           </Grid>
           
           {/* 공장 상세 정보 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title={`공장 상세 정보 ${selectedFactory ? '- ' + selectedFactory.name : ''}`}
               rows={factoryDetail || []}
               columns={detailColumns}
@@ -335,6 +362,7 @@ const FactoryManagement = () => {
               gridProps={{
                 editMode: 'row'
               }}
+              tabId={props.tabId + "-factoryDetails"}
             />
           </Grid>
         </Grid>
@@ -342,16 +370,19 @@ const FactoryManagement = () => {
       
       {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
-        bgcolor: isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)', 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
-        border: `1px solid ${isDarkMode ? '#1e3a5f' : '#e0e0e0'}`
+        border: `1px solid ${getBorderColor()}`
       }}>
         <Stack spacing={1}>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 공장관리에서는 기업의 공장 시설 정보를 등록, 수정, 삭제할 수 있습니다.
           </Typography>
-          <Typography variant="body2" color={isDarkMode ? '#b3c5e6' : 'text.secondary'}>
+          <Typography variant="body2" color={getTextColor()}>
             • 공장 목록에서 공장을 선택하면 해당 공장의 상세 정보를 확인하고 관리할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 공장별 위치, 면적, 가동 상태 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.
           </Typography>
         </Stack>
       </Box>

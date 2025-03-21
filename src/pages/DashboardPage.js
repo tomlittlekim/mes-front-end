@@ -3,7 +3,7 @@ import DashboardContainer from '../containers/DashboardContainer';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useDomain, DOMAINS } from '../contexts/DomainContext';
 
-const DashboardPage = () => {
+const DashboardPage = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
@@ -25,32 +25,31 @@ const DashboardPage = () => {
   };
 
   return (
-    <>
+    <Box sx={{ 
+      minHeight: '100vh',
+      padding: 0
+    }}>
       <Box sx={{ 
-        p: 2, 
-        minHeight: '100vh'
+        mb: 3,
+        pt: 2,
+        pl: 2,
+        pr: 2
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          mb: 3,
-          borderBottom: `1px solid ${getBorderColor()}`,
-          pb: 1
-        }}>
-          <Typography 
-            variant="h5" 
-            component="h2" 
-            sx={{ 
-              fontWeight: 600,
-              color: getTextColor()
-            }}
-          >
-            대시보드
-          </Typography>
-        </Box>
-        <DashboardContainer />
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          sx={{ 
+            fontWeight: 600,
+            color: getTextColor(),
+            pb: 1,
+            borderBottom: `1px solid ${getBorderColor()}`
+          }}
+        >
+          대시보드
+        </Typography>
       </Box>
-    </>
+      <DashboardContainer />
+    </Box>
   );
 };
 

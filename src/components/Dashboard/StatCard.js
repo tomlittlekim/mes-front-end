@@ -2,13 +2,41 @@ import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 const StatCard = ({ title, value, trend, status }) => {
   const theme = useTheme();
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // 다크모드 색상 설정
-  const darkTextColor = '#b3c5e6';
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
+  const getSecondaryTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(240, 230, 217, 0.7)' : 'rgba(0, 0, 0, 0.6)';
+    }
+    return isDarkMode ? 'rgba(179, 197, 230, 0.7)' : 'rgba(0, 0, 0, 0.6)';
+  };
+  
+  const getSuccessColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f39c12' : '#d35400';
+    }
+    return theme.palette.success.main;
+  };
+  
+  const getErrorColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#e74c3c' : '#c0392b';
+    }
+    return theme.palette.error.main;
+  };
   
   const isPositive = status === 'up';
   
@@ -33,7 +61,7 @@ const StatCard = ({ title, value, trend, status }) => {
       p: 1,
       display: 'flex',
       flexDirection: 'column',
-      color: isDarkMode ? darkTextColor : 'inherit'
+      color: getTextColor()
     }}>
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
         {title}
@@ -43,28 +71,28 @@ const StatCard = ({ title, value, trend, status }) => {
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
         {isPositive ? (
-          <TrendingUpIcon sx={{ color: 'success.main', fontSize: 16, mr: 0.5 }} />
+          <TrendingUpIcon sx={{ color: getSuccessColor(), fontSize: 16, mr: 0.5 }} />
         ) : (
-          <TrendingDownIcon sx={{ color: 'error.main', fontSize: 16, mr: 0.5 }} />
+          <TrendingDownIcon sx={{ color: getErrorColor(), fontSize: 16, mr: 0.5 }} />
         )}
         <Typography 
           variant="caption" 
           sx={{ 
-            color: isPositive ? 'success.main' : 'error.main',
+            color: isPositive ? getSuccessColor() : getErrorColor(),
             fontWeight: 500,
             mr: 0.5 
           }}
         >
           {isPositive ? '+' : '-'}{trend}
         </Typography>
-        <Typography variant="caption" sx={{ color: isDarkMode ? 'rgba(179, 197, 230, 0.7)' : 'text.secondary' }}>
+        <Typography variant="caption" sx={{ color: getSecondaryTextColor() }}>
           지난 달 대비
         </Typography>
       </Box>
       <Typography 
         variant="caption" 
         sx={{ 
-          color: isDarkMode ? 'rgba(179, 197, 230, 0.6)' : 'text.secondary',
+          color: getSecondaryTextColor(),
           fontSize: '0.75rem',
           fontStyle: 'italic'
         }}

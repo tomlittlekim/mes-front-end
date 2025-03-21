@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useRef, useEffect } from 'react';
 import { 
   DataGrid, 
   GridToolbarContainer, 
@@ -14,21 +14,48 @@ import {
   CardContent, 
   CardHeader, 
   Stack, 
-  useTheme 
+  useTheme,
+  Toolbar
 } from '@mui/material';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
-// 커스텀 툴바 (DENSITY 버튼 제거)
-function CustomToolbar() {
+// 커스텀 툴바 컴포넌트 정의
+const CustomToolbar = () => {
+  const theme = useTheme();
+  const domain = useDomain().domain;
+  const isDarkMode = theme.palette.mode === 'dark';
+  
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+  
   return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarFilterButton />
-      <GridToolbarQuickFilter />
+    <GridToolbarContainer sx={{ padding: 1 }}>
+      <GridToolbarColumnsButton sx={{ color: getTextColor() }} />
+      <GridToolbarFilterButton sx={{ color: getTextColor() }} />
+      <GridToolbarQuickFilter 
+        quickFilterParser={(searchInput) =>
+          searchInput
+            .split(',')
+            .map((value) => value.trim())
+        }
+        sx={{
+          ml: 2,
+          "& .MuiInputBase-root": {
+            borderRadius: 1,
+            color: getTextColor(),
+            fontSize: "0.875rem"
+          },
+        }}
+        debounceMs={200}
+      />
     </GridToolbarContainer>
   );
-}
+};
 
 /**
  * MUI DataGrid 공통 래퍼 컴포넌트
@@ -41,188 +68,262 @@ function CustomToolbar() {
  * @param {number} props.height - 그리드 높이(px)
  * @param {function} props.onRowClick - 행 클릭 이벤트 핸들러
  * @param {Object} props.gridProps - 추가 DataGrid 속성
+ * @param {string} props.tabId - 탭 ID
  * @returns {JSX.Element}
  */
 const MuiDataGridWrapper = ({ 
-  title, 
+  title = '데이터', 
   rows = [], 
   columns = [], 
   buttons = [], 
-  height = 500, 
+  height = 500,
   onRowClick,
-  gridProps = {}
+  loading = false,
+  gridProps = {},
+  tabId
 }) => {
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // 도메인별 색상 설정
-  const getHeaderBg = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#fcf2e6';
-    }
-    return isDarkMode ? '#1a365d' : '#f0f7ff';
-  };
+  // 그리드 컨테이너 참조 추가
+  const gridContainerRef = useRef(null);
+  const gridRef = useRef(null);
   
-  const getBorderColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#f5e8d7';
-    }
-    return isDarkMode ? '#2d4764' : '#e0e0e0';
-  };
+  // 컴포넌트 마운트 시 그리드 크기 계산
+  useEffect(() => {
+    const triggerResize = () => {
+      // 윈도우 리사이즈 이벤트를 발생시켜 그리드 크기 재계산
+      const resizeEvent = new Event('resize');
+      window.dispatchEvent(resizeEvent);
+    };
+    
+    // 초기 마운트 시 타이머 설정
+    const initialTimer = setTimeout(() => {
+      triggerResize();
+    }, 0);
+    
+    // 약간 지연 후 다시 한번 크기 재계산
+    const secondTimer = setTimeout(() => {
+      triggerResize();
+    }, 300);
+    
+    // 클린업 함수
+    return () => {
+      clearTimeout(initialTimer);
+      clearTimeout(secondTimer);
+    };
+  }, [tabId, rows.length]); // 탭 ID나 행 데이터가 변경될 때 재실행
   
+  // 테마와 도메인에 따른 스타일 함수
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f0e6d9' : theme.palette.text.primary;
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
     }
-    return isDarkMode ? '#b3c5e6' : theme.palette.text.primary;
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
   
   const getBgColor = () => {
     if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#2d1e0f' : '#ffffff';
+      return isDarkMode ? '#211405' : '#fff';
     }
-    return isDarkMode ? '#102a43' : '#ffffff';
+    return isDarkMode ? '#0A1929' : '#fff';
   };
   
+  const getHeaderBg = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#2a1907' : '#f5e8d7';
+    }
+    return isDarkMode ? '#132f4c' : '#e6f0f9';
+  };
+
   const getColumnHeaderBg = () => {
     if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#2d1e0f' : '#fcf2e6';
+      return isDarkMode ? '#2a1907' : '#f5e8d7';
     }
-    return isDarkMode ? '#1e3a5f' : '#f9fafc';
+    return isDarkMode ? '#132f4c' : '#e6f0f9';
+  };
+  
+  const getBorderStyle = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '1px solid #3d2814' : '1px solid #f5e8d7';
+    }
+    return isDarkMode ? '1px solid #1e4976' : '1px solid #e6f0f9';
   };
   
   const getRowHoverColor = () => {
     if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(231, 126, 34, 0.15)' : 'rgba(211, 84, 0, 0.08)';
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
     }
-    return isDarkMode ? '#234876' : theme.palette.action.hover;
+    return isDarkMode ? '#1e4976' : '#e6f0f9';
   };
   
   const getRowSelectedColor = () => {
     if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(231, 126, 34, 0.25)' : 'rgba(211, 84, 0, 0.15)';
+      return isDarkMode ? '#3d2814' : theme.palette.action.selected;
     }
     return isDarkMode ? '#1e4976' : theme.palette.action.selected;
   };
 
+  // 그리드 컬럼 정의 기본값
+  const defaultColumns = [
+    { field: 'id', headerName: 'ID', width: 100 }
+  ];
+
+  // 가상화 성능 최적화 옵션
+  const virtualizationOptions = {
+    disableVirtualization: false,     // 가상화 활성화
+    rowBufferPx: 60                   // 더 많은 행 버퍼링
+  };
+
+  // 그리드 컴포넌트 렌더링
   return (
     <Card 
       sx={{ 
         width: '100%', 
-        boxShadow: 3,
+        height: height ? `${height}px` : '600px',
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: getBgColor()
+        overflow: 'hidden',
+        boxShadow: 2,
+        position: 'relative'
       }}
     >
+      {/* 그리드 헤더 영역 */}
       <CardHeader
         title={
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <ViewListIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-            <Typography 
-              variant="h6" 
-              sx={{ color: getTextColor() }}
-            >
-              {title}
-            </Typography>
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              color: getTextColor()
+            }}
+          >
+            <ViewListIcon fontSize="small" sx={{ mr: 1 }} />
+            <Typography variant="h6" color={getTextColor()}>{title}</Typography>
           </Box>
         }
         action={
-          <Stack direction="row" spacing={1}>
-            {buttons.map((button, index) => (
-              <Button
-                key={index}
-                variant="contained"
+          <Toolbar 
+            sx={{ mt: 0, pt: 0, minHeight: '40px !important' }}
+            component="div"
+          >
+            {buttons?.map((btn, idx) => (
+              <Button 
+                key={idx}
+                startIcon={btn.icon}
                 size="small"
-                color={button.color || "primary"}
-                onClick={button.onClick}
-                disabled={button.disabled}
-                startIcon={button.icon}
+                onClick={btn.onClick}
+                variant="contained"
+                color={btn.color || "primary"}
+                sx={{ mx: 0.5 }}
               >
-                {button.label}
+                {btn.label}
               </Button>
             ))}
-          </Stack>
+          </Toolbar>
         }
-        sx={{ 
-          p: 1, 
-          paddingRight: 2,
-          borderBottom: `1px solid ${getBorderColor()}`,
-          bgcolor: getHeaderBg()
+        sx={{
+          bgcolor: getHeaderBg(),
+          borderBottom: `1px solid ${getBorderStyle()}`,
+          p: 1
         }}
       />
+
+      {/* 그리드 본문 영역 */}
       <CardContent 
         sx={{ 
-          flexGrow: 1, 
+          flex: 1, 
           p: 0, 
-          '&:last-child': { 
-            pb: 0 
-          }
+          overflow: 'hidden',
+          bgcolor: getBgColor(),
+          '&:last-child': { pb: 0 },
+          minHeight: '400px',
+          height: `calc(${height}px - 56px)`,
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
-        <div style={{ 
-          display: 'flex', 
-          height: `${height}px`, 
-          width: '100%',
-          minHeight: '300px',
-          flexDirection: 'column'
-        }}>
+        <div 
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            position: 'relative',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          ref={gridContainerRef}
+          data-tab-id={tabId}
+        >
           <DataGrid
-            rows={rows}
-            columns={columns}
-            pageSize={10}
-            rowsPerPageOptions={[10, 25, 50, 100]}
-            checkboxSelection={gridProps.checkboxSelection}
-            disableSelectionOnClick
-            onRowClick={onRowClick}
+            columns={columns || defaultColumns}
+            rows={rows || []}
+            pageSizeOptions={[5, 10, 25, 50, 100]}
+            pagination={true}
+            paginationModel={{
+              pageSize: 10,
+              page: 0
+            }}
+            density="compact"
+            disableColumnMenu={false}
+            checkboxSelection={gridProps?.checkboxSelection}
             autoHeight={false}
+            getRowId={(row) => row.id || row.ID || row.code || row._id}
             components={{
-              Toolbar: CustomToolbar,
-              ...gridProps.components
+              ...gridProps?.components,
+              Toolbar: CustomToolbar
             }}
-            initialState={{
-              pagination: {
-                pageSize: 10,
-              },
-            }}
+            loading={loading}
+            ref={gridRef}
             sx={{
+              height: '100%',
+              width: '100%',
               border: 'none',
-              color: getTextColor(),
-              '& .MuiDataGrid-cell': {
-                borderBottom: `1px solid ${getBorderColor()}`
+              fontSize: '0.8rem',
+              flex: 1,
+              '.MuiDataGrid-main': {
+                flexGrow: 1,
+                height: '100% !important'
               },
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: getColumnHeaderBg(),
-                borderBottom: `1px solid ${getBorderColor()}`
-              },
-              '& .MuiDataGrid-columnHeader, .MuiDataGrid-cell': {
-                padding: '0 8px'
-              },
-              '& .MuiDataGrid-columnHeaderCheckbox, .MuiDataGrid-cellCheckbox': {
-                width: '70px !important',
-                minWidth: '70px !important',
-                maxWidth: '70px !important',
-                paddingLeft: '14px'
-              },
-              '& .MuiDataGrid-row.Mui-selected': {
-                backgroundColor: `${getRowSelectedColor()} !important`
-              },
-              '& .MuiDataGrid-row:hover': {
-                backgroundColor: `${getRowHoverColor()} !important`
-              },
-              '& .MuiDataGrid-footerContainer': {
-                borderTop: `1px solid ${getBorderColor()}`,
-                backgroundColor: getColumnHeaderBg()
-              },
-              '& .MuiTablePagination-root': {
+              '.MuiDataGrid-columnHeaders': {
+                bgcolor: getColumnHeaderBg(),
+                borderBottom: getBorderStyle(),
                 color: getTextColor()
               },
-              '& .MuiCheckbox-root': {
+              '.MuiDataGrid-row': {
+                borderBottom: getBorderStyle(),
                 color: getTextColor()
+              },
+              '.MuiDataGrid-cell': {
+                borderBottom: 'none',
+                color: getTextColor()
+              },
+              '.MuiTablePagination-root': {
+                color: getTextColor()
+              },
+              '.MuiSvgIcon-root': {
+                color: getTextColor()
+              },
+              '.MuiDataGrid-virtualScroller': {
+                bgcolor: getBgColor()
+              },
+              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+                outline: 'none'
+              },
+              '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {
+                outline: 'none'
               }
             }}
+            initialState={{
+              ...gridProps?.initialState
+            }}
+            experimentalFeatures={{
+              ...virtualizationOptions,
+              columnGrouping: true
+            }}
             {...gridProps}
+            onRowClick={onRowClick}
           />
         </div>
       </CardContent>
@@ -230,4 +331,4 @@ const MuiDataGridWrapper = ({
   );
 };
 
-export default MuiDataGridWrapper; 
+export default memo(MuiDataGridWrapper); 
