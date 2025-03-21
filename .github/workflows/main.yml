@@ -43,7 +43,7 @@ jobs:
       run: |
         echo "${{ secrets.SSH_AWS_KEY }}" > my_ec2_key.pem
         chmod 600 my_ec2_key.pem
-        ssh -o StrictHostKeyChecking=no -i my_ec2_key.pem ${{ secrets.SSH_AWS_USER }}@${{ secrets.SSH_AWS_IP }} << 'EOF'
+        ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i my_ec2_key.pem ${{ secrets.SSH_AWS_USER }}@${{ secrets.SSH_AWS_IP }} << 'EOF'
         
         echo "AWS SSH pem.key 접속 성공"
         whoami
@@ -56,4 +56,5 @@ jobs:
           --network imosNetwork \
           -p 80:80 \
           8pin/imos:nginx
+        docker system prune -a -f
         EOF
