@@ -251,7 +251,7 @@ const ProductionResultInquiry = (props) => {
         display: 'flex', 
         alignItems: 'center', 
         mb: 3,
-        borderBottom: `1px solid ${isDarkMode ? '#2d4764' : '#e0e0e0'}`,
+        borderBottom: `1px solid ${getBorderColor()}`,
         pb: 1
       }}>
         <Typography 
@@ -259,7 +259,7 @@ const ProductionResultInquiry = (props) => {
           component="h2" 
           sx={{ 
             fontWeight: 600,
-            color: isDarkMode ? '#b3c5e6' : 'inherit'
+            color: getTextColor()
           }}
         >
           생산실적조회
