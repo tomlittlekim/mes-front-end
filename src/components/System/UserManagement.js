@@ -303,13 +303,29 @@ const UserManagement = (props) => {
   };
 
   return (
-    <Box p={3}>
-      <Typography variant="h5" gutterBottom>사용자관리</Typography>
+    <Box sx={{ p: 0, minHeight: '100vh' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        mb: 2,
+        borderBottom: `1px solid ${getBorderColor()}`,
+        pb: 1
+      }}>
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          sx={{ 
+            fontWeight: 600,
+            color: getTextColor()
+          }}
+        >
+          사용자관리
+        </Typography>
+      </Box>
       
       {/* 검색 영역 */}
       <SearchCondition 
-        title="검색 조건" 
-        onSubmit={handleSubmit(handleSearch)}
+        onSearch={handleSubmit(handleSearch)}
         onReset={handleReset}
       >
         <Grid item xs={12} sm={6} md={3}>

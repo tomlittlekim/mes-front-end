@@ -160,8 +160,25 @@ const CompanyInfo = (props) => {
   };
 
   return (
-    <Box p={3}>
-      <Typography variant="h5" gutterBottom>회사정보</Typography>
+    <Box sx={{ p: 0, minHeight: '100vh' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        mb: 2,
+        borderBottom: `1px solid ${getBorderColor()}`,
+        pb: 1
+      }}>
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          sx={{ 
+            fontWeight: 600,
+            color: getTextColor()
+          }}
+        >
+          회사정보
+        </Typography>
+      </Box>
       
       {!isLoading && (
         <form onSubmit={handleSubmit(handleSave)}>

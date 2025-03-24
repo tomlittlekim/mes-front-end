@@ -111,8 +111,8 @@ const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem })
         position: 'sticky',
         bottom: 0
       }}>
-        <Typography variant="caption" sx={{ textAlign: 'center', display: 'block', opacity: 0.8 }}>
-          © 2025 {domainName} 시스템. All rights reserved.
+        <Typography variant="caption" sx={{ textAlign: 'center', display: 'block', opacity: 0.8, whiteSpace: 'pre-line' }}>
+          © 2025 {domainName} 시스템.{'\n'}All rights reserved.
         </Typography>
       </Box>
     </div>

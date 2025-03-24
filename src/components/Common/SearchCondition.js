@@ -110,7 +110,7 @@ const SearchCondition = ({
     <Paper 
       elevation={3} 
       sx={{ 
-        mb: 3, 
+        mb: 2, 
         borderRadius: 2,
         overflow: 'hidden',
         bgcolor: getBgColor(),

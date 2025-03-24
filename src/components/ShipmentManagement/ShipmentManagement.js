@@ -296,11 +296,11 @@ const ShipmentManagement = (props) => {
   ];
 
   return (
-    <Box sx={{ p: 2, minHeight: '100vh' }}>
+    <Box sx={{ p: 0, minHeight: '100vh' }}>
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        mb: 3,
+        mb: 2,
         borderBottom: `1px solid ${getBorderColor()}`,
         pb: 1
       }}>
