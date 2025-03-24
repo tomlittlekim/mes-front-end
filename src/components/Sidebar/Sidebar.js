@@ -33,14 +33,21 @@ const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem })
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
     }
-    return isDarkMode ? 'rgba(10, 35, 81, 0.5)' : 'rgba(232, 240, 253, 0.6)';
+    return isDarkMode ? 'rgba(16, 42, 67, 0.5)' : 'rgba(232, 240, 253, 0.6)';
   };
   
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
     }
-    return isDarkMode ? '#0d2b5e' : '#dae5f5';
+    return isDarkMode ? '#1a365d' : '#dae5f5';
+  };
+
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.7)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.7)';
   };
 
   return (
@@ -105,13 +112,20 @@ const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem })
       {/* 저작권 정보 추가 */}
       <Box className="sidebar-footer" sx={{ 
         mt: 'auto', 
-        p: 2, 
+        p: 1, 
         bgcolor: getBgColor(), 
         borderTop: `1px solid ${getBorderColor()}`,
         position: 'sticky',
         bottom: 0
       }}>
-        <Typography variant="caption" sx={{ textAlign: 'center', display: 'block', opacity: 0.8, whiteSpace: 'pre-line' }}>
+        <Typography variant="caption" sx={{ 
+          textAlign: 'center', 
+          display: 'block', 
+          opacity: 0.7, 
+          whiteSpace: 'pre-line',
+          fontSize: '0.7rem',
+          color: getTextColor()
+        }}>
           © 2025 {domainName} 시스템.{'\n'}All rights reserved.
         </Typography>
       </Box>

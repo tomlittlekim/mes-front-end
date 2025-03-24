@@ -152,4 +152,8 @@ body.pems .submenu li a.active {
 .sidebar-footer {
   width: 100%;
   box-sizing: border-box;
+  min-height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

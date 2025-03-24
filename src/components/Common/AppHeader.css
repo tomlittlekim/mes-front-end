@@ -25,11 +25,11 @@ body.dark .app-header {
   position: relative;
   display: flex;
   min-height: 42px;
-  margin-left: 16px;
-  margin-right: 16px; /* 오른쪽 여백 */
-  width: calc(100% - 32px); /* 양쪽 여백 고려 */
+  margin-left: 8px;
+  margin-right: 8px;
+  width: calc(100% - 16px);
   max-width: 100%;
-  align-items: center; /* 스크롤 버튼 정렬을 위해 추가 */
+  align-items: center;
 }
 
 /* 스크롤 버튼 컨테이너 */
@@ -95,15 +95,15 @@ body.dark .tab-scroll-buttons:hover {
   scrollbar-width: thin;
   position: relative;
   z-index: 1;
-  background-color: rgba(25, 118, 210, 0.08); /* iMOS 테마 - 연한 파란색 배경 */
+  background-color: rgba(25, 118, 210, 0.08);
   border-radius: 8px;
-  padding: 4px;
-  margin-top: 8px;
-  margin-bottom: 16px;
+  padding: 2px;
+  margin-top: 4px;
+  margin-bottom: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   width: 100%;
   flex-wrap: nowrap;
-  scroll-behavior: smooth; /* 부드러운 스크롤 효과 추가 */
+  scroll-behavior: smooth;
 }
 
 /* PEMS 도메인 탭 컨테이너 */
@@ -135,7 +135,7 @@ body.dark.pems .custom-tabs {
 /* 커스텀 탭 */
 .custom-tab {
   position: relative;
-  padding: 10px 20px;
+  padding: 10px 12px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.25s ease;
@@ -148,9 +148,9 @@ body.dark.pems .custom-tabs {
   justify-content: center;
   font-weight: 500;
   border-radius: 6px;
-  flex: 0 0 auto; /* 고정 너비로 변경 */
-  min-width: 120px; /* 최소 너비 설정 */
-  margin: 0 2px;
+  flex: 0 0 auto;
+  min-width: 100px;
+  margin: 0 1px;
   font-size: 15px;
 }
 
