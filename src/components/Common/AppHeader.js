@@ -58,7 +58,7 @@ const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
 const AppHeader = (props) => {
   const { activeTab, closeAllTabs, closeTab, tabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
-  const { domain, toggleDomain } = useDomain();
+  const { domain, toggleDomain, nginxEnv } = useDomain();
   const muiTheme = useMuiTheme();
   
   // 탭 컨테이너 ref
@@ -268,17 +268,19 @@ const AppHeader = (props) => {
               {theme === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
             </IconButton>
           </Tooltip>
-          
-          <Tooltip title={`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}>
-            <IconButton 
-              onClick={toggleDomain} 
-              size="small"
-              color="inherit"
-              className="header-action-button"
-            >
-              <DomainIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+
+          {nginxEnv === "" && (
+              <Tooltip title={`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}>
+                <IconButton
+                    onClick={toggleDomain}
+                    size="small"
+                    color="inherit"
+                    className="header-action-button"
+                >
+                  <DomainIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+          )}
         </div>
       </Box>
     </div>

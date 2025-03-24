@@ -25,6 +25,7 @@ const DOMAIN_CONFIG = {
 export const DomainProvider = ({ children }) => {
   // 기본값은 IMOS로 설정
   const [domain, setDomain] = useState(DOMAINS.IMOS);
+  const [nginxEnv, setNginxEnv] = useState("")
 
   // 페이지 타이틀 업데이트 함수
   const updatePageTitle = (domainType) => {
@@ -39,6 +40,8 @@ export const DomainProvider = ({ children }) => {
       fetch(window.location.href, { method: 'HEAD' })
           .then(response => {
               const domainType = response.headers.get("X-Domain-Type");
+              setNginxEnv(domainType);
+
               if (domainType === "PEMS") {
                   setDomain(DOMAINS.PEMS);
               } else {
@@ -68,7 +71,8 @@ export const DomainProvider = ({ children }) => {
       domain, 
       toggleDomain,
       getDomainConfig,
-      domainName: DOMAIN_CONFIG[domain].name 
+      domainName: DOMAIN_CONFIG[domain].name,
+      nginxEnv
     }}>
       {children}
     </DomainContext.Provider>
