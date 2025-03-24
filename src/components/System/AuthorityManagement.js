@@ -277,12 +277,12 @@ const AuthorityManagement = (props) => {
   ];
 
   return (
-    <Box sx={{ p: 2, minHeight: '100vh' }}>
+    <Box sx={{ p: 0, minHeight: '100vh' }}>
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        mb: 3,
-        borderBottom: `1px solid ${isDarkMode ? '#2d4764' : '#e0e0e0'}`,
+        mb: 2,
+        borderBottom: `1px solid ${getBorderColor()}`,
         pb: 1
       }}>
         <Typography 
@@ -290,7 +290,7 @@ const AuthorityManagement = (props) => {
           component="h2" 
           sx={{ 
             fontWeight: 600,
-            color: isDarkMode ? '#b3c5e6' : 'inherit'
+            color: getTextColor()
           }}
         >
           권한관리

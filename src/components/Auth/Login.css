@@ -1,0 +1,82 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 450px;
+  z-index: 2;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-header {
+  padding: 24px;
+  text-align: center;
+}
+
+.login-form {
+  padding: 24px 32px;
+}
+
+.system-name {
+  position: relative;
+  display: inline-block;
+}
+
+.system-name::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 3px;
+  background-color: currentColor;
+  border-radius: 2px;
+}
+
+/* PEMS 테마 특화 스타일 */
+body.pems .login-card {
+  box-shadow: 0 8px 24px rgba(210, 105, 30, 0.2);
+}
+
+/* IMOS 테마 특화 스타일 */
+body.imos .login-card {
+  box-shadow: 0 8px 24px rgba(25, 38, 98, 0.2);
+}
+
+/* 다크 모드 스타일 */
+body.dark .login-card {
+  background-color: rgba(18, 18, 18, 0.9);
+}
+
+/* 반응형 스타일 */
+@media (max-width: 600px) {
+  .login-card {
+    max-width: 100%;
+  }
+  
+  .login-form {
+    padding: 16px 24px;
+  }
+} 

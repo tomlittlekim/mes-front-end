@@ -1,11 +1,12 @@
 import React from 'react';
 import WorkOrderManagement from '../components/ProductionManagement/WorkOrderManagement';
+import PageLayout from '../components/Layout/PageLayout';
 
 const WorkOrderPage = (props) => {
   return (
-    <>
+    <PageLayout>
       <WorkOrderManagement tabId={props.tabId || 'mm-workorder'} />
-    </>
+    </PageLayout>
   );
 };
 

@@ -1,8 +1,13 @@
 import React from 'react';
 import DefectInquiry from '../components/ProductionManagement/DefectInquiry';
+import PageLayout from '../components/Layout/PageLayout';
 
 const DefectInquiryPage = (props) => {
-  return <DefectInquiry tabId={props.tabId || 'defect-inquiry'} />;
+  return (
+    <PageLayout>
+      <DefectInquiry tabId={props.tabId || 'defect-inquiry'} />
+    </PageLayout>
+  );
 };
 
 export default DefectInquiryPage; 

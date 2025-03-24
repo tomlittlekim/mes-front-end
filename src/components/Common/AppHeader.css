@@ -1,7 +1,7 @@
 .app-header {
   display: flex;
   align-items: center;
-  padding: 14px 0 0 0;
+  padding: 14px 0 14px 0;
   border-bottom: 1px solid var(--border-color);
   transition: border-color var(--transition-speed);
   width: 100%;
@@ -24,12 +24,12 @@ body.dark .app-header {
 .tab-wrapper {
   position: relative;
   display: flex;
-  min-height: 42px;
-  margin-left: 16px;
-  margin-right: 16px; /* 오른쪽 여백 */
-  width: calc(100% - 32px); /* 양쪽 여백 고려 */
+  min-height: 48px;
+  margin-left: 8px;
+  margin-right: 8px;
+  width: calc(100% - 16px);
   max-width: 100%;
-  align-items: center; /* 스크롤 버튼 정렬을 위해 추가 */
+  align-items: center;
 }
 
 /* 스크롤 버튼 컨테이너 */
@@ -92,18 +92,21 @@ body.dark .tab-scroll-buttons:hover {
   display: flex;
   overflow-x: auto;
   padding-bottom: 0;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   position: relative;
   z-index: 1;
-  background-color: rgba(25, 118, 210, 0.08); /* iMOS 테마 - 연한 파란색 배경 */
+  background-color: rgba(25, 118, 210, 0.08);
   border-radius: 8px;
   padding: 4px;
-  margin-top: 8px;
-  margin-bottom: 16px;
+  margin-top: 0;
+  margin-bottom: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   width: 100%;
   flex-wrap: nowrap;
-  scroll-behavior: smooth; /* 부드러운 스크롤 효과 추가 */
+  scroll-behavior: smooth;
+  min-height: 40px;
+  align-items: center;
 }
 
 /* PEMS 도메인 탭 컨테이너 */
@@ -120,22 +123,13 @@ body.dark.pems .custom-tabs {
 }
 
 .custom-tabs::-webkit-scrollbar {
-  height: 4px;
-}
-
-.custom-tabs::-webkit-scrollbar-thumb {
-  background-color: var(--border-color);
-  border-radius: 4px;
-}
-
-.custom-tabs::-webkit-scrollbar-track {
-  background-color: transparent;
+  display: none;
 }
 
 /* 커스텀 탭 */
 .custom-tab {
   position: relative;
-  padding: 10px 20px;
+  padding: 10px 12px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.25s ease;
@@ -148,9 +142,9 @@ body.dark.pems .custom-tabs {
   justify-content: center;
   font-weight: 500;
   border-radius: 6px;
-  flex: 0 0 auto; /* 고정 너비로 변경 */
-  min-width: 120px; /* 최소 너비 설정 */
-  margin: 0 2px;
+  flex: 0 0 auto;
+  min-width: 100px;
+  margin: 0 1px;
   font-size: 15px;
 }
 
@@ -329,4 +323,20 @@ body.pems.light .header-action-button:hover {
   .custom-tab {
     min-width: 100px;
   }
+}
+
+.user-icon {
+  position: relative;
+}
+
+.user-icon::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #4caf50;
+  border-radius: 50%;
+  bottom: 1px;
+  right: 2px;
+  border: 1px solid var(--background-color);
 }
