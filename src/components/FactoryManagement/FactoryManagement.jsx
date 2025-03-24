@@ -52,6 +52,43 @@ const FactoryManagement = (props) => {
     { id: 'FAC005', name: '광주공장', code: 'G001', useYn: 'Y', address: '광주광역시 북구 첨단과기로 123', phone: '062-678-9012', manager: '정민지' }
   ]);
 
+  // 행 업데이트 처리 함수
+  const processRowUpdate = (newRow) => {
+    // 수정된 행 정보 로깅
+    console.log('수정된 행:', newRow);
+    
+    // 만약 factoryDetail에 수정된 행이 있다면 업데이트
+    if (factoryDetail && factoryDetail.length > 0) {
+      const updatedDetail = factoryDetail.map(item => 
+        item.id === newRow.id ? { ...newRow, updateDate: new Date().toISOString().split('T')[0], updateUser: '시스템' } : item
+      );
+      setFactoryDetail(updatedDetail);
+    }
+    
+    // 행 수정 성공 메시지 (실제 구현에서는 API 호출 후 처리)
+    Swal.fire({
+      icon: 'success',
+      title: '수정 완료',
+      text: '셀 수정이 완료되었습니다.',
+      confirmButtonText: '확인',
+      timer: 1500
+    });
+    
+    // 수정된 행 반환 (중요: DataGrid가 이 반환값으로 행을 업데이트함)
+    return { ...newRow, updateDate: new Date().toISOString().split('T')[0], updateUser: '시스템' };
+  };
+  
+  // 행 업데이트 에러 처리 함수
+  const handleProcessRowUpdateError = (error) => {
+    console.error('행 업데이트 중 오류 발생:', error);
+    Swal.fire({
+      icon: 'error',
+      title: '오류',
+      text: '데이터 수정 중 오류가 발생했습니다.',
+      confirmButtonText: '확인'
+    });
+  };
+
   // 검색 조건 변경 핸들러
   const handleSearch = (data) => {
     console.log('Search with:', data);
@@ -88,6 +125,37 @@ const FactoryManagement = (props) => {
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
+    // 수정된 공장 상세 정보가 없는 경우
+    if (!factoryDetail || factoryDetail.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '저장할 데이터가 없습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+    
+    // 여기서 API 호출을 통해 서버에 데이터 저장
+    // 예: axios.post('/api/factories', factoryDetail[0])
+    
+    // 공장 목록 업데이트
+    const updatedFactory = factoryDetail[0];
+    const updatedList = factoryList.map(factory => 
+      factory.id === updatedFactory.id ? {
+        ...factory,
+        name: updatedFactory.name,
+        code: updatedFactory.code,
+        address: updatedFactory.address,
+        phone: updatedFactory.phone,
+        manager: updatedFactory.manager,
+        useYn: updatedFactory.useYn
+      } : factory
+    );
+    
+    setFactoryList(updatedList);
+    
+    // 성공 메시지 표시
     Swal.fire({
       icon: 'success',
       title: '성공',
@@ -360,7 +428,9 @@ const FactoryManagement = (props) => {
               buttons={detailGridButtons}
               height={450}
               gridProps={{
-                editMode: 'row'
+                editMode: 'row',
+                processRowUpdate: processRowUpdate,
+                onProcessRowUpdateError: handleProcessRowUpdateError
               }}
               tabId={props.tabId + "-factoryDetails"}
             />
