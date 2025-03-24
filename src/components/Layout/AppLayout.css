@@ -16,15 +16,66 @@
 }
 
 .app-content {
-  padding: 20px 20px;
+  padding: 20px 20px 20px 20px;
   flex: 1;
   display: flex; /* Flexbox 추가 */
   flex-direction: column; /* 세로 방향 정렬 */
   height: calc(100vh - 64px); /* 헤더 높이 제외 */
   min-height: 600px;
   overflow-y: auto; /* hidden에서 auto로 변경하여 스크롤 활성화 */
-  overflow-x: hidden; /* 가로 스크롤은 숨김 */
-  position: relative; /* react-scroll이 작동하기 위한 포지션 설정 */
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  position: relative;
+}
+
+/* PEMS 도메인 스크롤바 스타일 */
+body.pems .app-content {
+  scrollbar-color: rgba(252, 235, 212, 0.6) transparent;
+  padding-right: 0;
+}
+
+body.pems .app-content::-webkit-scrollbar {
+  width: 6px;
+  position: absolute;
+  right: 0;
+}
+
+body.pems .app-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.pems .app-content::-webkit-scrollbar-thumb {
+  background-color: rgba(252, 235, 212, 0.6);
+  border-radius: 3px;
+}
+
+body.pems .app-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(252, 235, 212, 0.8);
+}
+
+/* IMOS 도메인 스크롤바 스타일 */
+body.imos .app-content {
+  scrollbar-color: rgba(232, 240, 253, 0.6) transparent;
+  padding-right: 0;
+}
+
+body.imos .app-content::-webkit-scrollbar {
+  width: 6px;
+  position: absolute;
+  right: 0;
+}
+
+body.imos .app-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.imos .app-content::-webkit-scrollbar-thumb {
+  background-color: rgba(232, 240, 253, 0.6);
+  border-radius: 3px;
+}
+
+body.imos .app-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(232, 240, 253, 0.8);
 }
 
 @media (max-width: 768px) {
