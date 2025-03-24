@@ -4,10 +4,17 @@ import { TabProvider } from './contexts/TabContext';
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext';
 import { DomainProvider } from './contexts/DomainContext';
 import AppLayout from './components/Layout/AppLayout';
+import Login from './components/Auth/Login';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { useTheme } from './contexts/ThemeContext';
 import { useDomain, DOMAINS } from './contexts/DomainContext';
+import { 
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom';
 
 // MUI 테마 설정 컴포넌트
 const ThemeConfigurator = ({ children }) => {
@@ -122,14 +129,24 @@ const ThemeConfigurator = ({ children }) => {
 };
 
 function App() {
+  // localStorage에서 인증 상태 확인
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+
   return (
     <DomainProvider>
       <CustomThemeProvider>
         <ThemeConfigurator>
           <TabProvider>
-            <div className="App">
-              <AppLayout />
-            </div>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={
+                  !isAuthenticated ? <Login /> : <Navigate to="/" />
+                } />
+                <Route path="/*" element={
+                  isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
+                } />
+              </Routes>
+            </BrowserRouter>
           </TabProvider>
         </ThemeConfigurator>
       </CustomThemeProvider>

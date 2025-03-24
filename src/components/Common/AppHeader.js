@@ -3,7 +3,19 @@ import './AppHeader.css';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { useTabs } from '../../contexts/TabContext';
-import { Box, IconButton, Tooltip, useTheme as useMuiTheme, Divider } from '@mui/material';
+import { 
+  Box, 
+  IconButton, 
+  Tooltip, 
+  useTheme as useMuiTheme, 
+  Divider, 
+  Menu, 
+  MenuItem, 
+  ListItemIcon, 
+  ListItemText,
+  Avatar,
+  Typography
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloseAllIcon from '@mui/icons-material/ClearAll';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
@@ -11,6 +23,12 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import DomainIcon from '@mui/icons-material/DomainVerification';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import SettingsIcon from '@mui/icons-material/Settings';
+import PersonIcon from '@mui/icons-material/Person';
+import Swal from 'sweetalert2';
+import SyncIcon from '@mui/icons-material/Sync';
 
 // 탭 레이블 컴포넌트를 memo로 최적화
 const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
@@ -58,14 +76,60 @@ const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
 const AppHeader = (props) => {
   const { activeTab, closeAllTabs, closeTab, tabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
-  const { domain, toggleDomain } = useDomain();
+  const { domain, toggleDomain, canToggleDomain, domainName } = useDomain();
   const muiTheme = useMuiTheme();
+  
+  // 사용자 메뉴 상태
+  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const userMenuOpen = Boolean(userMenuAnchor);
+  
+  // 현재 로그인한 사용자 정보
+  const username = localStorage.getItem('username') || '사용자';
   
   // 탭 컨테이너 ref
   const tabsContainerRef = useRef(null);
   // 스크롤 버튼 표시 여부
   const [showLeftScroll, setShowLeftScroll] = useState(false);
   const [showRightScroll, setShowRightScroll] = useState(false);
+
+  // 사용자 메뉴 열기
+  const handleUserMenuOpen = (event) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
+
+  // 사용자 메뉴 닫기
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  // 로그아웃 핸들러
+  const handleLogout = useCallback(() => {
+    handleUserMenuClose(); // 메뉴 닫기
+    
+    Swal.fire({
+      title: '로그아웃',
+      text: '정말 로그아웃 하시겠습니까?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: muiTheme.palette.primary.main,
+      cancelButtonColor: muiTheme.palette.grey[500],
+      confirmButtonText: '로그아웃',
+      cancelButtonText: '취소'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 로그아웃 처리
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('username');
+        window.location.href = '/login';
+      }
+    });
+  }, [muiTheme.palette.primary.main, muiTheme.palette.grey]);
+
+  // 도메인 전환 핸들러
+  const handleDomainToggle = () => {
+    handleUserMenuClose(); // 메뉴 닫기
+    toggleDomain();
+  };
 
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId);
@@ -269,20 +333,87 @@ const AppHeader = (props) => {
             </IconButton>
           </Tooltip>
           
-          <Tooltip title={`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}>
+          <Tooltip title={`${username} 계정`}>
             <IconButton 
-              onClick={toggleDomain} 
+              onClick={handleUserMenuOpen}
               size="small"
               color="inherit"
-              className="header-action-button"
+              className="header-action-button user-icon"
+              aria-controls={userMenuOpen ? 'user-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={userMenuOpen ? 'true' : undefined}
             >
-              <DomainIcon fontSize="small" />
+              <AccountCircleIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          
+          {/* 사용자 메뉴 */}
+          <Menu
+            id="user-menu"
+            anchorEl={userMenuAnchor}
+            open={userMenuOpen}
+            onClose={handleUserMenuClose}
+            MenuListProps={{
+              'aria-labelledby': 'user-button',
+            }}
+            PaperProps={{
+              elevation: 3,
+              sx: {
+                minWidth: 220,
+                mt: 1,
+                '& .MuiMenuItem-root': {
+                  px: 2,
+                  py: 1.5,
+                },
+              },
+            }}
+          >
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="subtitle1">{username}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {domain === DOMAINS.PEMS ? 'PEMS 도메인' : 'iMOS 도메인'}
+              </Typography>
+            </Box>
+            
+            <Divider />
+            
+            <MenuItem onClick={handleUserMenuClose}>
+              <ListItemIcon>
+                <PersonIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>내 프로필</ListItemText>
+            </MenuItem>
+            
+            {/* 개발 환경에서만 도메인 전환 메뉴 표시 */}
+            {canToggleDomain && (
+              <MenuItem onClick={handleDomainToggle}>
+                <ListItemIcon>
+                  <DomainIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}</ListItemText>
+              </MenuItem>
+            )}
+            
+            <MenuItem onClick={handleUserMenuClose}>
+              <ListItemIcon>
+                <SettingsIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>설정</ListItemText>
+            </MenuItem>
+            
+            <Divider />
+            
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>로그아웃</ListItemText>
+            </MenuItem>
+          </Menu>
         </div>
       </Box>
     </div>
   );
 };
 
-export default AppHeader;
+export default memo(AppHeader);
