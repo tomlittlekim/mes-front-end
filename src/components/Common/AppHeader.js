@@ -385,7 +385,7 @@ const AppHeader = (props) => {
             </MenuItem>
 
             {/* 개발 환경에서만 도메인 전환 메뉴 표시 */}
-            {nginxEnv === "" && (
+            {(!nginxEnv || nginxEnv === '') && (
               <MenuItem onClick={handleDomainToggle}>
                 <ListItemIcon>
                   <DomainIcon fontSize="small" />
