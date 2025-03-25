@@ -41,7 +41,7 @@ jobs:
 
     - name: Decode SSH Key
       run: |
-        echo "${{ secrets.SSH_KEY_B64 }}" | base64 -d > key.pem
+        echo "${{ secrets.KEY_B64 }}" | base64 -d > key.pem
         chmod 600 key.pem
 
     - name: executing remote ssh commands using ssh key
