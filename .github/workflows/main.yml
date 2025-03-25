@@ -39,19 +39,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: SSH into server and execute commands
-      run: |
-        echo "${{ secrets.SSH_AWS_KEY }}" > my_ec2_key.pem
-        chmod 600 my_ec2_key.pem
-        ssh -o StrictHostKeyChecking=no -i my_ec2_key.pem ${{ secrets.SSH_AWS_USER }}@${{ secrets.SSH_AWS_IP }} << 'EOF'
-        
-        docker stop nginx_container || true
-        docker rm nginx_container || true
-        docker pull 8pin/imos:nginx:latest
-        docker run -d \
-          --name nginx_container \
-          --network imosNetwork \
-          -p 80:80 \
-          8pin/imos:nginx
-        docker system prune -a -f
-        EOF
+    - name: executing remote ssh commands using ssh key
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.KEY }}
+        port: ${{ secrets.PORT }}
+        script: |
+          docker stop nginx_container || true
+          docker rm nginx_container || true
+          docker pull 8pin/imos:nginx
+          docker run -d \
+            --name nginx_container \
+            --network imosNetwork \
+            -p 80:80 \
+            8pin/imos:nginx
+          docker system prune -a -f
