@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import './FactoryManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -29,12 +29,12 @@ const FactoryManagement = (props) => {
   const isDarkMode = theme.palette.mode === 'dark';
 
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset,getValues } = useForm({
     defaultValues: {
       factoryId: '',
       factoryName: '',
       factoryCode: '',
-      useYn: 'all'
+      flagActive: null
     }
   });
   
@@ -42,20 +42,53 @@ const FactoryManagement = (props) => {
   const [selectedFactory, setSelectedFactory] = useState(null);
   const [factoryDetail, setFactoryDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
+  const [addRows,setAddRows] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링용 키
+
+
   // 더미 데이터
-  const [factoryList, setFactoryList] = useState([
-    { id: 'FAC001', name: '서울공장', code: 'S001', useYn: 'Y', address: '서울특별시 강남구 테헤란로 123', phone: '02-1234-5678', manager: '홍길동' },
-    { id: 'FAC002', name: '부산공장', code: 'B001', useYn: 'Y', address: '부산광역시 해운대구 센텀중앙로 123', phone: '051-321-4567', manager: '김영희' },
-    { id: 'FAC003', name: '대구공장', code: 'D001', useYn: 'N', address: '대구광역시 동구 동대구로 123', phone: '053-456-7890', manager: '박철수' },
-    { id: 'FAC004', name: '인천공장', code: 'I001', useYn: 'Y', address: '인천광역시 남동구 남동대로 123', phone: '032-567-8901', manager: '이영수' },
-    { id: 'FAC005', name: '광주공장', code: 'G001', useYn: 'Y', address: '광주광역시 북구 첨단과기로 123', phone: '062-678-9012', manager: '정민지' }
-  ]);
+  const [factoryList, setFactoryList] = useState([]);
 
   // 검색 조건 변경 핸들러
   const handleSearch = (data) => {
-    console.log('Search with:', data);
-    // 실제로는 API 호출하여 검색 조건에 맞는 데이터를 가져옴
+   // 검색후 업데이트 로우 초기화
+    setUpdatedRows([]);
+    setAddRows([]);
+
+    const query = `
+      query getFactories($filter: FactoryFilter) {
+        factories(filter: $filter) {
+          factoryId
+          factoryName
+          factoryCode
+          address
+          telNo
+          officerName
+          flagActive
+        }
+      }
+    `;
+
+    fetchGraphQL(
+        'http://localhost:8080/graphql',
+        query,
+        data
+    ).then((data) => {
+          if (data.errors) {
+          } else {
+            const rowsWithId = data.data.factories.map((row, index) => ({
+              ...row,
+              id: row.factoryId  // 또는 row.factoryId || index + 1
+            }));
+            setFactoryList(rowsWithId);
+            setRefreshKey(prev => prev + 1);
+          }
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          setIsLoading(false);
+        });
   };
 
   // 초기화 함수
@@ -64,9 +97,81 @@ const FactoryManagement = (props) => {
       factoryId: '',
       factoryName: '',
       factoryCode: '',
-      useYn: 'all'
+      flagActive: null
     });
   };
+
+
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setFactoryList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        // 같은 factoryId를 가진 기존 행이 있는지 확인
+        const existingIndex = prevUpdatedRows.findIndex(row => row.factoryId === newRow.factoryId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
+
+
+  /**
+   * 공통 GraphQL API 호출 함수
+   * @param {string} url - GraphQL 엔드포인트 URL
+   * @param {string} query - GraphQL 쿼리 문자열
+   * @param {object} filter - 쿼리에 전달할 filter 객체
+   * @returns {Promise<object>} - GraphQL 응답 JSON
+   */
+  function fetchGraphQL(url, query, filter) {
+    const variables = { filter };
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        });
+  }
+
 
   // 공장 선택 핸들러
   const handleFactorySelect = (params) => {
@@ -100,22 +205,17 @@ const FactoryManagement = (props) => {
   const handleAdd = () => {
     const newFactory = {
       id: `NEW_${Date.now()}`,
-      name: '',
-      code: '',
-      useYn: 'Y',
+      factoryId: '자동입력',
+      factoryName: '',
+      factoryCode: '',
+      flagActive: 'Y',
       address: '',
-      phone: '',
-      manager: '',
-      registDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0],
-      registUser: '시스템',
-      updateUser: '시스템',
-      usagePurpose: ''
+      telNo: '',
+      officerName: '',
     };
-    
+
     setFactoryList([...factoryList, newFactory]);
-    setSelectedFactory(newFactory);
-    setFactoryDetail([newFactory]);
+
   };
 
   // 삭제 버튼 클릭 핸들러
@@ -159,63 +259,112 @@ const FactoryManagement = (props) => {
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      setIsLoading(false);
+      const query = `
+      query getFactories($filter: FactoryFilter) {
+        factories(filter: $filter) {
+          factoryId
+          factoryName
+          factoryCode
+          address
+          telNo
+          officerName
+          flagActive
+        }
+      }
+    `;
+
+      fetchGraphQL(
+          'http://localhost:8080/graphql',
+          query,
+          getValues()
+      ).then((data) => {
+            if (data.errors) {
+            } else {
+              const rowsWithId = data.data.factories.map((row, index) => ({
+                ...row,
+                id: row.factoryId  // 또는 row.factoryId || index + 1
+              }));
+              setFactoryList(rowsWithId);
+            }
+            setIsLoading(false);
+          })
+          .catch((err) => {
+            setIsLoading(false);
+          });
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
+
+  useEffect(() => {
+    console.log('updatedRows changed:', updatedRows);
+  }, [updatedRows]);
+
+  useEffect(() => {
+    console.log('addRows changed:', addRows);
+  }, [addRows]);
+
+
   // 공장 목록 그리드 컬럼 정의
   const factoryColumns = [
-    { field: 'id', headerName: '공장 ID', width: 100 },
-    { field: 'name', headerName: '공장 명', width: 150 },
-    { field: 'code', headerName: '공장 코드', width: 100 },
-    { 
-      field: 'useYn', 
-      headerName: '사용여부', 
+    { field: 'factoryId', headerName: '공장 ID', width: 100 },
+    { field: 'factoryName', headerName: '공장 명', width: 150 ,editable: true  },
+    { field: 'factoryCode', headerName: '공장 코드', width: 100, editable: true  },
+    {
+      field: 'flagActive',
+      headerName: '사용여부',
       width: 100,
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: [
+          { value: 'Y', label: '사용' },
+          { value: 'N', label: '미사용' }
+      ]
     },
-    { field: 'address', headerName: '주소', width: 250, flex: 1 },
-    { field: 'phone', headerName: '전화번호', width: 150 },
-    { field: 'manager', headerName: '담당자', width: 100 }
+    { field: 'address', headerName: '주소', width: 250, flex: 1, editable: true },
+    { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
+    { field: 'officerName', headerName: '담당자', width: 100}
   ];
   
   // 공장 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'id', headerName: '공장ID', width: 100, editable: true },
-    { field: 'name', headerName: '공장 명', width: 150, editable: true },
-    { field: 'code', headerName: '공장코드', width: 100, editable: true },
-    { field: 'address', headerName: '주소', width: 250, flex: 1, editable: true },
-    { field: 'phone', headerName: '전화번호', width: 150, editable: true },
-    { field: 'manager', headerName: '담당자 명', width: 100, editable: true },
-    { 
-      field: 'useYn', 
-      headerName: '사용 여부', 
-      width: 100, 
-      type: 'singleSelect',
-      valueOptions: ['Y', 'N'],
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
-      editable: true 
-    },
-    { field: 'usagePurpose', headerName: '용도', width: 100, editable: true },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
-  ];
+  // const detailColumns = [
+  //   { field: 'id', headerName: '공장ID', width: 100, editable: true },
+  //   { field: 'name', headerName: '공장 명', width: 150, editable: true },
+  //   { field: 'code', headerName: '공장코드', width: 100, editable: true },
+  //   { field: 'address', headerName: '주소', width: 250, flex: 1, editable: true },
+  //   { field: 'phone', headerName: '전화번호', width: 150, editable: true },
+  //   { field: 'manager', headerName: '담당자 명', width: 100, editable: true },
+  //   {
+  //     field: 'flagActive',
+  //     headerName: '사용 여부',
+  //     width: 100,
+  //     type: 'singleSelect',
+  //     valueOptions: ['Y', 'N'],
+  //     valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
+  //     editable: true
+  //   },
+  //   { field: 'usagePurpose', headerName: '용도', width: 100, editable: true },
+  //   { field: 'registUser', headerName: '등록자', width: 100 },
+  //   { field: 'registDate', headerName: '등록일', width: 120 },
+  //   { field: 'updateUser', headerName: '수정자', width: 100 },
+  //   { field: 'updateDate', headerName: '수정일', width: 120 }
+  // ];
 
   // 공장 목록 그리드 버튼
   const factoryGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: null }
-  ];
-
-  // 공장 상세 그리드 버튼
-  const detailGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
+
+
+  // 공장 상세 그리드 버튼
+  // const detailGridButtons = [
+  //   { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
+  //   { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
+  //   { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
+  // ];
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -315,17 +464,17 @@ const FactoryManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="useYn"
+            name="flagActive"
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label">사용여부</InputLabel>
+                <InputLabel id="flagActive-label">사용여부</InputLabel>
                 <Select
                   {...field}
-                  labelId="useYn-label"
+                  labelId="flagActive-label"
                   label="사용여부"
                 >
-                  <MenuItem value="all">전체</MenuItem>
+                  <MenuItem value={null}>전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
                   <MenuItem value="N">미사용</MenuItem>
                 </Select>
@@ -337,35 +486,41 @@ const FactoryManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 공장 목록 그리드 */}
-          <Grid item xs={12} md={6}>
+        // <Grid container spacing={2}>
+        //   {/* 공장 목록 그리드 */}
+        //   <Grid item xs={12} md={6}>
             <EnhancedDataGridWrapper
               title="공장 목록"
+              key={refreshKey}  // refreshKey가 변경되면 전체 그리드가 재마운트됩니다.
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
               height={450}
               onRowClick={handleFactorySelect}
               tabId={props.tabId + "-factories"}
-            />
-          </Grid>
-          
-          {/* 공장 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <EnhancedDataGridWrapper
-              title={`공장 상세 정보 ${selectedFactory ? '- ' + selectedFactory.name : ''}`}
-              rows={factoryDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
               gridProps={{
-                editMode: 'row'
+                editMode: 'cell',
+                // onCellEditStop: handleCellEditStop  // 여기서 전달
+                onProcessUpdate: handleProcessRowUpdate
               }}
-              tabId={props.tabId + "-factoryDetails"}
             />
-          </Grid>
-        </Grid>
+         //   </Grid>
+         //
+         //  공장 상세 정보 그리드
+         //  <Grid item xs={12} md={6}>
+         //    <EnhancedDataGridWrapper
+         //      title={`공장 상세 정보 ${selectedFactory ? '- ' + selectedFactory.name : ''}`}
+         //      rows={factoryDetail || []}
+         //      columns={detailColumns}
+         //      buttons={detailGridButtons}
+         //      height={450}
+         //      gridProps={{
+         //        editMode: 'row'
+         //      }}
+         //      tabId={props.tabId + "-factoryDetails"}
+         //    />
+         //  </Grid>
+         // </Grid>
       )}
       
       {/* 하단 정보 영역 */}
