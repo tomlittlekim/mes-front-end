@@ -249,6 +249,10 @@ const FactoryManagement = (props) => {
       address: '',
       telNo: '',
       officerName: '',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
 
     setFactoryList([...factoryList, newFactory]);
