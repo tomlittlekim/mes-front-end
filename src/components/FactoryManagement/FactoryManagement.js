@@ -19,7 +19,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
+import { EnhancedDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
@@ -41,12 +41,10 @@ const FactoryManagement = (props) => {
   
   // 상태 관리
   const [selectedFactory, setSelectedFactory] = useState(null);
-  const [factoryDetail, setFactoryDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
   const [addRows,setAddRows] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링용 키
-
 
   // 더미 데이터
   const [factoryList, setFactoryList] = useState([]);
@@ -182,18 +180,6 @@ const FactoryManagement = (props) => {
   const handleFactorySelect = (params) => {
     const factory = factoryList.find(f => f.id === params.id);
     setSelectedFactory(factory);
-    
-    // 공장 상세 정보 (실제로는 API 호출)
-    const detailData = {
-      ...factory,
-      registDate: '2023-01-15',
-      updateDate: '2023-06-20',
-      registUser: '자동입력',
-      updateUser: '자동입력',
-      usagePurpose: '제조'
-    };
-    
-    setFactoryDetail([detailData]);
   };
 
   // FactoryInput으로 보낼 데이터만 골라내는 함수
@@ -423,47 +409,14 @@ const FactoryManagement = (props) => {
     { field: 'createDate', headerName: '작성일', width: 200},
     { field: 'updateUser', headerName: '수정자', width: 100},
     { field: 'updateDate', headerName: '수정일', width: 200},
-
   ];
   
-  // 공장 상세 정보 그리드 컬럼 정의
-  // const detailColumns = [
-  //   { field: 'id', headerName: '공장ID', width: 100, editable: true },
-  //   { field: 'name', headerName: '공장 명', width: 150, editable: true },
-  //   { field: 'code', headerName: '공장코드', width: 100, editable: true },
-  //   { field: 'address', headerName: '주소', width: 250, flex: 1, editable: true },
-  //   { field: 'phone', headerName: '전화번호', width: 150, editable: true },
-  //   { field: 'manager', headerName: '담당자 명', width: 100, editable: true },
-  //   {
-  //     field: 'flagActive',
-  //     headerName: '사용 여부',
-  //     width: 100,
-  //     type: 'singleSelect',
-  //     valueOptions: ['Y', 'N'],
-  //     valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
-  //     editable: true
-  //   },
-  //   { field: 'usagePurpose', headerName: '용도', width: 100, editable: true },
-  //   { field: 'registUser', headerName: '등록자', width: 100 },
-  //   { field: 'registDate', headerName: '등록일', width: 120 },
-  //   { field: 'updateUser', headerName: '수정자', width: 100 },
-  //   { field: 'updateDate', headerName: '수정일', width: 120 }
-  // ];
-
   // 공장 목록 그리드 버튼
   const factoryGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
-
-
-  // 공장 상세 그리드 버튼
-  // const detailGridButtons = [
-  //   { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-  //   { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-  //   { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
-  // ];
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -587,12 +540,12 @@ const FactoryManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        // <Grid container spacing={2}>
-        //   {/* 공장 목록 그리드 */}
-        //   <Grid item xs={12} md={6}>
+        <Grid container spacing={2}>
+          {/* 공장 목록 그리드 */}
+          <Grid item xs={12}>
             <EnhancedDataGridWrapper
               title="공장 목록"
-              key={refreshKey}  // refreshKey가 변경되면 전체 그리드가 재마운트됩니다.
+              key={refreshKey}
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
@@ -601,27 +554,11 @@ const FactoryManagement = (props) => {
               tabId={props.tabId + "-factories"}
               gridProps={{
                 editMode: 'cell',
-                // onCellEditStop: handleCellEditStop  // 여기서 전달
-                onProcessUpdate: handleProcessRowUpdate
+                onProcessRowUpdate: handleProcessRowUpdate
               }}
             />
-         //   </Grid>
-         //
-         //  공장 상세 정보 그리드
-         //  <Grid item xs={12} md={6}>
-         //    <EnhancedDataGridWrapper
-         //      title={`공장 상세 정보 ${selectedFactory ? '- ' + selectedFactory.name : ''}`}
-         //      rows={factoryDetail || []}
-         //      columns={detailColumns}
-         //      buttons={detailGridButtons}
-         //      height={450}
-         //      gridProps={{
-         //        editMode: 'row'
-         //      }}
-         //      tabId={props.tabId + "-factoryDetails"}
-         //    />
-         //  </Grid>
-         // </Grid>
+          </Grid>
+        </Grid>
       )}
       
       {/* 하단 정보 영역 */}

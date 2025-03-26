@@ -188,9 +188,18 @@ const SearchCondition = ({
         </Stack>
       </Box>
       
-      <CardContent sx={{ pt: 1.5, pb: 1.5, px: 2 }}>
+      <CardContent 
+        sx={{ 
+          pt: 1, 
+          pb: 1, 
+          px: 2,
+          '&:last-child': {
+            pb: 1
+          }
+        }}
+      >
         <form onSubmit={(e) => { e.preventDefault(); onSearch && onSearch(); }}>
-          <Grid container spacing={1.5} alignItems="center">
+          <Grid container spacing={1} alignItems="center">
             {/* 검색 필드들 */}
             {children}
           </Grid>
