@@ -110,8 +110,8 @@ const SearchCondition = ({
     <Paper 
       elevation={3} 
       sx={{ 
-        mb: 2, 
-        borderRadius: 2,
+        mb: 1.5, 
+        borderRadius: 1.5,
         overflow: 'hidden',
         bgcolor: getBgColor(),
         border: `1px solid ${getBorderColor()}`
@@ -119,8 +119,8 @@ const SearchCondition = ({
     >
       <Box 
         sx={{ 
-          p: 1.5,
-          pb: 1.2,
+          p: 1,
+          pb: 0.8,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -132,44 +132,54 @@ const SearchCondition = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <FilterListIcon sx={{ 
-            mr: 1.5, 
+            mr: 1,
+            fontSize: '1.1rem',
             color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main 
           }} />
           <Typography 
-            variant="subtitle1" 
+            variant="subtitle2" 
             fontWeight="500"
             sx={{ 
-              color: getTextColor()
+              color: getTextColor(),
+              fontSize: '0.9rem'
             }}
           >
             {title}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1.5}>
+        <Stack direction="row" spacing={1} sx={{ pr: 1 }}>
           <Button 
             variant="outlined"
-            startIcon={<RestartAltIcon />}
+            startIcon={<RestartAltIcon sx={{ fontSize: '1.1rem' }} />}
             onClick={onReset}
             color={getResetButtonColor()}
             size="small"
-            sx={getResetButtonStyle()}
+            sx={{
+              ...getResetButtonStyle(),
+              minWidth: 'auto',
+              px: 1.5,
+              py: 0.4,
+              fontSize: '0.8rem'
+            }}
           >
             초기화
           </Button>
           <Button 
             variant="contained"
-            startIcon={<SearchIcon />}
+            startIcon={<SearchIcon sx={{ fontSize: '1.1rem' }} />}
             onClick={onSearch}
             type="submit"
             size="small"
             sx={{ 
-              borderRadius: 1.5,
-              px: 2,
-              py: 0.5,
+              borderRadius: 1,
+              px: 1.5,
+              py: 0.4,
+              minWidth: 'auto',
+              fontSize: '0.8rem',
               fontWeight: 500,
-              boxShadow: 2,
+              boxShadow: 1,
               '&:hover': {
-                boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+                boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
               }
             }}
           >
@@ -178,9 +188,9 @@ const SearchCondition = ({
         </Stack>
       </Box>
       
-      <CardContent sx={{ pt: 2.5, pb: 2 }}>
+      <CardContent sx={{ pt: 1.5, pb: 1.5, px: 2 }}>
         <form onSubmit={(e) => { e.preventDefault(); onSearch && onSearch(); }}>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={1.5} alignItems="center">
             {/* 검색 필드들 */}
             {children}
           </Grid>
