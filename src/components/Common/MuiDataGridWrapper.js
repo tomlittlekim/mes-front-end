@@ -205,7 +205,16 @@ const MuiDataGridWrapper = ({
         }
         action={
           <Toolbar 
-            sx={{ mt: 0, pt: 0, minHeight: '40px !important' }}
+            sx={{ 
+              mt: 0, 
+              pt: 0, 
+              minHeight: '40px !important',
+              pr: 1,
+              '@media (min-width: 600px)': {
+                paddingLeft: '24px',
+                paddingRight: '12px'
+              }
+            }}
             component="div"
           >
             {buttons?.map((btn, idx) => (
