@@ -67,6 +67,10 @@ const FactoryManagement = (props) => {
           telNo
           officerName
           flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
         }
       }
     `;
@@ -202,22 +206,37 @@ const FactoryManagement = (props) => {
     flagActive: row.flagActive
   });
 
+  const transformRowForUpdate = (row) => ({
+    factoryId: row.factoryId,
+    factoryName: row.factoryName,
+    factoryCode: row.factoryCode,
+    address: row.address,
+    telNo: row.telNo,
+    officerName: row.officerName,
+    flagActive: row.flagActive
+  });
+
+
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
     const createFactoryMutation = `
-      mutation CreateFactory($input: [FactoryInput]!) {
-        createFactory(input: $input)
-      }
-    `;
+      mutation SaveFactory($createdRows: [FactoryInput], $updatedRows: [FactoryUpdate]) {
+        saveFactory(createdRows: $createdRows, updatedRows: $updatedRows)
+    }
+  `;
 
-    const factoryInputs = addRows.map(transformRowForMutation);
+    const createdFactoryInputs = addRows.map(transformRowForMutation);
+    const updatedFactoryInputs = updatedRows.map(transformRowForUpdate);
 
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query: createFactoryMutation,
-        variables: { input: factoryInputs }
+        variables: {
+          createdRows: createdFactoryInputs,
+          updatedRows: updatedFactoryInputs,
+        }
       })
     })
         .then((res) => res.json())
@@ -225,6 +244,7 @@ const FactoryManagement = (props) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
+            handleSearch(getValues());
             Swal.fire({
               icon: 'success',
               title: '성공',
@@ -344,6 +364,10 @@ const FactoryManagement = (props) => {
           telNo
           officerName
           flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
         }
       }
     `;
@@ -394,7 +418,7 @@ const FactoryManagement = (props) => {
     },
     { field: 'address', headerName: '주소', width: 200, flex: 1, editable: true },
     { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
-    { field: 'officerName', headerName: '담당자', width: 100},
+    { field: 'officerName', headerName: '담당자', width: 100, editable: true},
     { field: 'createUser', headerName: '작성자', width: 100},
     { field: 'createDate', headerName: '작성일', width: 200},
     { field: 'updateUser', headerName: '수정자', width: 100},
@@ -543,11 +567,13 @@ const FactoryManagement = (props) => {
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label">사용여부</InputLabel>
+                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
                 <Select
                   {...field}
                   labelId="flagActive-label"
                   label="사용여부"
+                  displayEmpty
+                  notched
                 >
                   <MenuItem value={null}>전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
