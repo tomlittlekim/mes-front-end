@@ -123,25 +123,59 @@ const SearchCondition = ({
           pb: 1.2,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           background: isDarkMode 
             ? `linear-gradient(90deg, ${getHeaderBg()} 0%, ${alpha(getHeaderBg(), 0.8)} 100%)` 
             : `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
           borderBottom: `1px solid ${getBorderColor()}`
         }}
       >
-        <FilterListIcon sx={{ 
-          mr: 1.5, 
-          color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main 
-        }} />
-        <Typography 
-          variant="subtitle1" 
-          fontWeight="500"
-          sx={{ 
-            color: getTextColor()
-          }}
-        >
-          {title}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FilterListIcon sx={{ 
+            mr: 1.5, 
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main 
+          }} />
+          <Typography 
+            variant="subtitle1" 
+            fontWeight="500"
+            sx={{ 
+              color: getTextColor()
+            }}
+          >
+            {title}
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1.5}>
+          <Button 
+            variant="outlined"
+            startIcon={<RestartAltIcon />}
+            onClick={onReset}
+            color={getResetButtonColor()}
+            size="small"
+            sx={getResetButtonStyle()}
+          >
+            초기화
+          </Button>
+          <Button 
+            variant="contained"
+            startIcon={<SearchIcon />}
+            onClick={onSearch}
+            type="submit"
+            size="small"
+            sx={{ 
+              borderRadius: 1.5,
+              px: 2,
+              py: 0.5,
+              fontWeight: 500,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+              }
+            }}
+          >
+            조회
+          </Button>
+        </Stack>
       </Box>
       
       <CardContent sx={{ pt: 2.5, pb: 2 }}>
@@ -149,49 +183,6 @@ const SearchCondition = ({
           <Grid container spacing={2} alignItems="center">
             {/* 검색 필드들 */}
             {children}
-            
-            {/* 버튼 영역 */}
-            <Grid item xs={12}>
-              <Divider sx={{ mt: 1.5, mb: 1.5 }} />
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-end'
-                }}
-              >
-                <Stack direction="row" spacing={1.5}>
-                  <Button 
-                    variant="outlined"
-                    startIcon={<RestartAltIcon />}
-                    onClick={onReset}
-                    color={getResetButtonColor()}
-                    size="medium"
-                    sx={getResetButtonStyle()}
-                  >
-                    초기화
-                  </Button>
-                  <Button 
-                    variant="contained"
-                    startIcon={<SearchIcon />}
-                    onClick={onSearch}
-                    type="submit"
-                    size="medium"
-                    sx={{ 
-                      borderRadius: 1.5,
-                      px: 2.5,
-                      py: 0.8,
-                      fontWeight: 500,
-                      boxShadow: 2,
-                      '&:hover': {
-                        boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-                      }
-                    }}
-                  >
-                    조회
-                  </Button>
-                </Stack>
-              </Box>
-            </Grid>
           </Grid>
         </form>
       </CardContent>
