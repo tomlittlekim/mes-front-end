@@ -43,7 +43,11 @@ export const DomainProvider = ({ children }) => {
               setNginxEnv(domainType);
               console.log(nginxEnv);
 
-              if (domainType === "PEMS") {
+              // localStorage에서 저장된 도메인 상태 확인
+              const savedDomain = localStorage.getItem('currentDomain');
+              if (savedDomain) {
+                  setDomain(savedDomain);
+              } else if (domainType === "PEMS") {
                   setDomain(DOMAINS.PEMS);
               } else {
                   setDomain(DOMAINS.IMOS);
@@ -73,7 +77,8 @@ export const DomainProvider = ({ children }) => {
       toggleDomain,
       getDomainConfig,
       domainName: DOMAIN_CONFIG[domain].name,
-      nginxEnv
+      nginxEnv,
+      canToggleDomain: process.env.NODE_ENV === 'development'
     }}>
       {children}
     </DomainContext.Provider>

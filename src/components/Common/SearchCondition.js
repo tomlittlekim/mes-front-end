@@ -110,8 +110,8 @@ const SearchCondition = ({
     <Paper 
       elevation={3} 
       sx={{ 
-        mb: 2, 
-        borderRadius: 2,
+        mb: 1.5, 
+        borderRadius: 1.5,
         overflow: 'hidden',
         bgcolor: getBgColor(),
         border: `1px solid ${getBorderColor()}`
@@ -119,79 +119,80 @@ const SearchCondition = ({
     >
       <Box 
         sx={{ 
-          p: 1.5,
-          pb: 1.2,
+          p: 1,
+          pb: 0.8,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           background: isDarkMode 
             ? `linear-gradient(90deg, ${getHeaderBg()} 0%, ${alpha(getHeaderBg(), 0.8)} 100%)` 
             : `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
           borderBottom: `1px solid ${getBorderColor()}`
         }}
       >
-        <FilterListIcon sx={{ 
-          mr: 1.5, 
-          color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main 
-        }} />
-        <Typography 
-          variant="subtitle1" 
-          fontWeight="500"
-          sx={{ 
-            color: getTextColor()
-          }}
-        >
-          {title}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FilterListIcon sx={{ 
+            mr: 1,
+            fontSize: '1.1rem',
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main 
+          }} />
+          <Typography 
+            variant="subtitle2" 
+            fontWeight="500"
+            sx={{ 
+              color: getTextColor(),
+              fontSize: '0.9rem'
+            }}
+          >
+            {title}
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1} sx={{ pr: 1 }}>
+          <Button 
+            variant="outlined"
+            startIcon={<RestartAltIcon sx={{ fontSize: '1.1rem' }} />}
+            onClick={onReset}
+            color={getResetButtonColor()}
+            size="small"
+            sx={{
+              ...getResetButtonStyle(),
+              minWidth: 'auto',
+              px: 1.5,
+              py: 0.4,
+              fontSize: '0.8rem'
+            }}
+          >
+            초기화
+          </Button>
+          <Button 
+            variant="contained"
+            startIcon={<SearchIcon sx={{ fontSize: '1.1rem' }} />}
+            onClick={onSearch}
+            type="submit"
+            size="small"
+            sx={{ 
+              borderRadius: 1,
+              px: 1.5,
+              py: 0.4,
+              minWidth: 'auto',
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              boxShadow: 1,
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+              }
+            }}
+          >
+            조회
+          </Button>
+        </Stack>
       </Box>
       
-      <CardContent sx={{ pt: 2.5, pb: 2 }}>
+      <CardContent sx={{ pt: 1.5, pb: 1.5, px: 2 }}>
         <form onSubmit={(e) => { e.preventDefault(); onSearch && onSearch(); }}>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={1.5} alignItems="center">
             {/* 검색 필드들 */}
             {children}
-            
-            {/* 버튼 영역 */}
-            <Grid item xs={12}>
-              <Divider sx={{ mt: 1.5, mb: 1.5 }} />
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-end'
-                }}
-              >
-                <Stack direction="row" spacing={1.5}>
-                  <Button 
-                    variant="outlined"
-                    startIcon={<RestartAltIcon />}
-                    onClick={onReset}
-                    color={getResetButtonColor()}
-                    size="medium"
-                    sx={getResetButtonStyle()}
-                  >
-                    초기화
-                  </Button>
-                  <Button 
-                    variant="contained"
-                    startIcon={<SearchIcon />}
-                    onClick={onSearch}
-                    type="submit"
-                    size="medium"
-                    sx={{ 
-                      borderRadius: 1.5,
-                      px: 2.5,
-                      py: 0.8,
-                      fontWeight: 500,
-                      boxShadow: 2,
-                      '&:hover': {
-                        boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-                      }
-                    }}
-                  >
-                    조회
-                  </Button>
-                </Stack>
-              </Box>
-            </Grid>
           </Grid>
         </form>
       </CardContent>

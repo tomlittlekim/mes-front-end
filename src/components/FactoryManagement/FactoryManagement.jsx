@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import { GRAPHQL_URL } from '../../config';
 import './FactoryManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -66,12 +67,16 @@ const FactoryManagement = (props) => {
           telNo
           officerName
           flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
         }
       }
     `;
 
     fetchGraphQL(
-        'http://localhost:8080/graphql',
+        GRAPHQL_URL,
         query,
         data
     ).then((data) => {
@@ -191,14 +196,66 @@ const FactoryManagement = (props) => {
     setFactoryDetail([detailData]);
   };
 
+  // FactoryInput으로 보낼 데이터만 골라내는 함수
+  const transformRowForMutation = (row) => ({
+    factoryName: row.factoryName,
+    factoryCode: row.factoryCode,
+    address: row.address,
+    telNo: row.telNo,
+    officerName: row.officerName,
+    flagActive: row.flagActive
+  });
+
+  const transformRowForUpdate = (row) => ({
+    factoryId: row.factoryId,
+    factoryName: row.factoryName,
+    factoryCode: row.factoryCode,
+    address: row.address,
+    telNo: row.telNo,
+    officerName: row.officerName,
+    flagActive: row.flagActive
+  });
+
+
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
+    const createFactoryMutation = `
+      mutation SaveFactory($createdRows: [FactoryInput], $updatedRows: [FactoryUpdate]) {
+        saveFactory(createdRows: $createdRows, updatedRows: $updatedRows)
+    }
+  `;
+
+    const createdFactoryInputs = addRows.map(transformRowForMutation);
+    const updatedFactoryInputs = updatedRows.map(transformRowForUpdate);
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: createFactoryMutation,
+        variables: {
+          createdRows: createdFactoryInputs,
+          updatedRows: updatedFactoryInputs,
+        }
+      })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
   };
 
   // 등록 버튼 클릭 핸들러
@@ -212,6 +269,10 @@ const FactoryManagement = (props) => {
       address: '',
       telNo: '',
       officerName: '',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
 
     setFactoryList([...factoryList, newFactory]);
@@ -229,7 +290,13 @@ const FactoryManagement = (props) => {
       });
       return;
     }
-    
+
+    const deleteFactoryMutation = `
+      mutation DeleteFactory($factoryId: String!) {
+        deleteFactory(factoryId: $factoryId)
+      }
+    `;
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -241,16 +308,44 @@ const FactoryManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        const updatedList = factoryList.filter(f => f.id !== selectedFactory.id);
-        setFactoryList(updatedList);
-        setSelectedFactory(null);
-        setFactoryDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        // 백엔드 삭제 요청 (GraphQL)
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: deleteFactoryMutation,
+            variables: {factoryId: selectedFactory.factoryId} // 선택된 공장의 factoryId를 사용
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = factoryList.filter(f => f.id !== selectedFactory.id);
+                setFactoryList(updatedList);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
       }
     });
   };
@@ -269,12 +364,16 @@ const FactoryManagement = (props) => {
           telNo
           officerName
           flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
         }
       }
     `;
 
       fetchGraphQL(
-          'http://localhost:8080/graphql',
+          GRAPHQL_URL,
           query,
           getValues()
       ).then((data) => {
@@ -298,17 +397,12 @@ const FactoryManagement = (props) => {
 
 
   useEffect(() => {
-    console.log('updatedRows changed:', updatedRows);
-  }, [updatedRows]);
-
-  useEffect(() => {
-    console.log('addRows changed:', addRows);
-  }, [addRows]);
-
+    console.log('selected changed:', selectedFactory);
+  }, [selectedFactory]);
 
   // 공장 목록 그리드 컬럼 정의
   const factoryColumns = [
-    { field: 'factoryId', headerName: '공장 ID', width: 100 },
+    { field: 'factoryId', headerName: '공장 ID', width: 150 },
     { field: 'factoryName', headerName: '공장 명', width: 150 ,editable: true  },
     { field: 'factoryCode', headerName: '공장 코드', width: 100, editable: true  },
     {
@@ -322,9 +416,14 @@ const FactoryManagement = (props) => {
           { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'address', headerName: '주소', width: 250, flex: 1, editable: true },
+    { field: 'address', headerName: '주소', width: 200, flex: 1, editable: true },
     { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
-    { field: 'officerName', headerName: '담당자', width: 100}
+    { field: 'officerName', headerName: '담당자', width: 100, editable: true},
+    { field: 'createUser', headerName: '작성자', width: 100},
+    { field: 'createDate', headerName: '작성일', width: 200},
+    { field: 'updateUser', headerName: '수정자', width: 100},
+    { field: 'updateDate', headerName: '수정일', width: 200},
+
   ];
   
   // 공장 상세 정보 그리드 컬럼 정의
@@ -468,11 +567,13 @@ const FactoryManagement = (props) => {
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label">사용여부</InputLabel>
+                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
                 <Select
                   {...field}
                   labelId="flagActive-label"
                   label="사용여부"
+                  displayEmpty
+                  notched
                 >
                   <MenuItem value={null}>전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
