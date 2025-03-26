@@ -87,6 +87,7 @@ const Login = () => {
     // 백엔드 연동 전 임시 로그인 처리
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('username', username);
+    localStorage.setItem('currentDomain', domain);  // 현재 도메인 상태 저장
     
     // 로그인 성공 메시지
     Swal.fire({
