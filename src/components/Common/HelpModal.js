@@ -34,40 +34,45 @@ const HelpModal = ({ open, onClose, title, children }) => {
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: getBgColor(),
-          borderRadius: 2,
-          '& .MuiDialogTitle-root': {
-            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            pb: 2
-          }
-        }
-      }}
-    >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <HelpOutlineIcon sx={{ color: theme.palette.primary.main }} />
-        <Typography variant="h6" sx={{ color: getTextColor() }}>
-          {title}
-        </Typography>
-      </DialogTitle>
-      <DialogContent sx={{ pt: 2 }}>
-        <Stack spacing={2}>
-          {children}
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ p: 2, pt: 0 }}>
-        <Button onClick={onClose} variant="contained" size="small">
-          닫기
-        </Button>
-      </DialogActions>
-    </Dialog>
+      <Dialog
+          open={open}
+          onClose={onClose}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: getBgColor(),
+              borderRadius: 2,
+              '& .MuiDialogTitle-root': {
+                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                pb: 2
+              }
+            }
+          }}
+      >
+        {/* DialogTitle에서 component="div"로 변경하여 h2 태그가 생성되지 않도록 합니다 */}
+        <DialogTitle
+            component="div"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+        >
+          <HelpOutlineIcon sx={{ color: theme.palette.primary.main }} />
+          {/* Typography에서 component="div"로 변경하여 h6 태그가 생성되지 않도록 합니다 */}
+          <Typography variant="h6" component="div" sx={{ color: getTextColor() }}>
+            {title}
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2}>
+            {children}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={onClose} variant="contained" size="small">
+            닫기
+          </Button>
+        </DialogActions>
+      </Dialog>
   );
 };
 
-export default HelpModal; 
+export default HelpModal;
