@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -16,6 +16,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 /**
@@ -37,6 +39,23 @@ const SearchCondition = ({
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // children을 배열로 변환
+  const childrenArray = React.Children.toArray(children);
+  
+  // 첫 줄에 표시할 항목들 (최대 4개)
+  const visibleItems = useMemo(() => {
+    return childrenArray.slice(0, 4);
+  }, [childrenArray]);
+  
+  // 숨겨진 항목들
+  const hiddenItems = useMemo(() => {
+    return childrenArray.slice(4);
+  }, [childrenArray]);
+  
+  // 더보기 버튼이 필요한지 확인
+  const hasMoreItems = hiddenItems.length > 0;
   
   // 도메인별 색상 설정
   const getHeaderBg = () => {
@@ -200,8 +219,32 @@ const SearchCondition = ({
       >
         <form onSubmit={(e) => { e.preventDefault(); onSearch && onSearch(); }}>
           <Grid container spacing={1} alignItems="center">
-            {/* 검색 필드들 */}
-            {children}
+            {/* 첫 줄에 표시할 검색 필드들 */}
+            {visibleItems}
+            
+            {/* 숨겨진 검색 필드들 */}
+            {isExpanded && hiddenItems}
+            
+            {/* 더보기 버튼 */}
+            {hasMoreItems && (
+              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                <Button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  size="small"
+                  sx={{
+                    color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                    '&:hover': {
+                      backgroundColor: isDarkMode 
+                        ? alpha(theme.palette.primary.light, 0.1)
+                        : alpha(theme.palette.primary.main, 0.05)
+                    }
+                  }}
+                >
+                  {isExpanded ? '접기' : '더보기'}
+                </Button>
+              </Grid>
+            )}
           </Grid>
         </form>
       </CardContent>
