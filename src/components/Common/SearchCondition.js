@@ -19,8 +19,6 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 /**
  * 검색 조건용 공통 컴포넌트
@@ -30,15 +28,13 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
  * @param {Function} props.onSearch - 검색 버튼 클릭 시 실행할 함수
  * @param {Function} props.onReset - 초기화 버튼 클릭 시 실행할 함수
  * @param {String} props.title - 검색 조건 제목 (기본값: "조회조건")
- * @param {Object} props.adapterLocale - LocalizationProvider에 전달할 로케일 (예: ko)
  * @returns {JSX.Element}
  */
 const SearchCondition = ({
   children,
   onSearch,
   onReset,
-  title = "조회조건",
-  adapterLocale = null
+  title = "조회조건"
 }) => {
   const theme = useTheme();
   const { domain } = useDomain();
@@ -127,18 +123,6 @@ const SearchCondition = ({
         boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
       }
     };
-  };
-
-  // children을 LocalizationProvider로 감싸주는 함수
-  const wrapWithLocalizationProvider = (children) => {
-    if (adapterLocale) {
-      return (
-          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={adapterLocale}>
-            {children}
-          </LocalizationProvider>
-      );
-    }
-    return children;
   };
 
   return (
@@ -234,36 +218,34 @@ const SearchCondition = ({
             }}
         >
           <form onSubmit={(e) => { e.preventDefault(); onSearch && onSearch(); }}>
-            {wrapWithLocalizationProvider(
-                <Grid container spacing={1} alignItems="center">
-                  {/* 첫 줄에 표시할 검색 필드들 */}
-                  {visibleItems}
+            <Grid container spacing={1} alignItems="center">
+              {/* 첫 줄에 표시할 검색 필드들 */}
+              {visibleItems}
 
-                  {/* 숨겨진 검색 필드들 */}
-                  {isExpanded && hiddenItems}
+              {/* 숨겨진 검색 필드들 */}
+              {isExpanded && hiddenItems}
 
-                  {/* 더보기 버튼 */}
-                  {hasMoreItems && (
-                      <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-                        <Button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                            size="small"
-                            sx={{
-                              color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-                              '&:hover': {
-                                backgroundColor: isDarkMode
-                                    ? alpha(theme.palette.primary.light, 0.1)
-                                    : alpha(theme.palette.primary.main, 0.05)
-                              }
-                            }}
-                        >
-                          {isExpanded ? '접기' : '더보기'}
-                        </Button>
-                      </Grid>
-                  )}
-                </Grid>
-            )}
+              {/* 더보기 버튼 */}
+              {hasMoreItems && (
+                  <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                    <Button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        size="small"
+                        sx={{
+                          color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                          '&:hover': {
+                            backgroundColor: isDarkMode
+                                ? alpha(theme.palette.primary.light, 0.1)
+                                : alpha(theme.palette.primary.main, 0.05)
+                          }
+                        }}
+                    >
+                      {isExpanded ? '접기' : '더보기'}
+                    </Button>
+                  </Grid>
+              )}
+            </Grid>
           </form>
         </CardContent>
       </Paper>
