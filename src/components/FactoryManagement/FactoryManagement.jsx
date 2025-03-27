@@ -395,11 +395,6 @@ const FactoryManagement = (props) => {
     return () => clearTimeout(timer);
   }, []);
 
-
-  useEffect(() => {
-    console.log('selected changed:', selectedFactory);
-  }, [selectedFactory]);
-
   // 공장 목록 그리드 컬럼 정의
   const factoryColumns = [
     { field: 'factoryId', headerName: '공장 ID', width: 150 },
@@ -601,7 +596,6 @@ const FactoryManagement = (props) => {
               tabId={props.tabId + "-factories"}
               gridProps={{
                 editMode: 'cell',
-                // onCellEditStop: handleCellEditStop  // 여기서 전달
                 onProcessUpdate: handleProcessRowUpdate
               }}
             />
