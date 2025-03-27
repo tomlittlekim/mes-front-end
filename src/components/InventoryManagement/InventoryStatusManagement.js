@@ -11,16 +11,24 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import AddIcon from '@mui/icons-material/Add';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const InventoryStatusManagement = (props) => {
   // 현재 테마 가져오기
@@ -54,9 +62,9 @@ const InventoryStatusManagement = (props) => {
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       warehouseId: '',
+      itemType: '',
       itemId: '',
       itemName: '',
-      itemType: '',
       fromDate: null,
       toDate: null
     }
@@ -65,14 +73,15 @@ const InventoryStatusManagement = (props) => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [inventoryList, setInventoryList] = useState([]);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
     reset({
       warehouseId: '',
+      itemType: '',
       itemId: '',
       itemName: '',
-      itemType: '',
       fromDate: null,
       toDate: null
     });
@@ -171,6 +180,20 @@ const InventoryStatusManagement = (props) => {
         >
           자재/재고현황
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -297,37 +320,34 @@ const InventoryStatusManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <MuiDataGridWrapper
-              title="재고 현황"
-              rows={inventoryList}
-              columns={inventoryColumns}
-              buttons={inventoryGridButtons}
-              height={500}
-            />
-          </Grid>
-        </Grid>
+        <MuiDataGridWrapper
+          title="자재/재고현황"
+          rows={inventoryList}
+          columns={inventoryColumns}
+          buttons={inventoryGridButtons}
+          height={500}
+          gridProps={{
+            editMode: 'row'
+          }}
+        />
       )}
       
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 자재/재고현황에서는 창고별 모든 자재 및 제품의 실시간 재고 현황을 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 기초수량, 입고수량, 출고수량, 조정수량을 기반으로 현 재고를 확인하고 안전재고와 비교할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 모든 항목은 엑셀로 내보내기가 가능하며 인쇄하여 실물 문서로 관리할 수도 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="자재/재고현황 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 자재/재고현황에서는 각 창고별 자재의 현재 재고 수량을 조회할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 창고, 품목유형, 자재코드, 자재명으로 검색하여 원하는 자재의 재고를 확인할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 재고 수량이 안전재고 수량보다 적은 경우 경고 표시가 나타납니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

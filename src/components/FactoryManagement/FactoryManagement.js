@@ -14,7 +14,9 @@ import {
   useTheme,
   Stack,
   Button,
-  FormHelperText
+  FormHelperText,
+  IconButton,
+  alpha
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -22,6 +24,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { EnhancedDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpModal from '../Common/HelpModal';
 
 const FactoryManagement = (props) => {
   // 현재 테마 가져오기
@@ -48,6 +52,8 @@ const FactoryManagement = (props) => {
 
   // 더미 데이터
   const [factoryList, setFactoryList] = useState([]);
+
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 검색 조건 변경 핸들러
   const handleSearch = (data) => {
@@ -459,6 +465,20 @@ const FactoryManagement = (props) => {
         >
           공장정보관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -579,6 +599,23 @@ const FactoryManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="공장정보관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 공장관리에서는 기업의 공장 시설 정보를 등록, 수정, 삭제할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 공장 목록에서 공장을 선택하면 해당 공장의 상세 정보를 확인하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 공장별 위치, 면적, 가동 상태 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

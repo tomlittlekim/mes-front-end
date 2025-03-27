@@ -11,16 +11,22 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const MaterialManagement = (props) => {
   // 현재 테마 가져오기
@@ -43,6 +49,7 @@ const MaterialManagement = (props) => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [materialList, setMaterialList] = useState([]);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -210,6 +217,20 @@ const MaterialManagement = (props) => {
         >
           원/부자재관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -345,24 +366,22 @@ const MaterialManagement = (props) => {
         />
       )}
       
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 원/부자재관리에서는 제품 생산에 필요한 원자재와 부자재 정보를 관리합니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 행추가 버튼을 클릭하여 새로운 자재를 등록할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 각 행을 직접 수정한 후 저장 버튼을 클릭하여 변경사항을 저장할 수 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="원/부자재관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 원/부자재관리에서는 제품 생산에 필요한 원자재와 부자재 정보를 관리합니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 행추가 버튼을 클릭하여 새로운 자재를 등록할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 각 행을 직접 수정한 후 저장 버튼을 클릭하여 변경사항을 저장할 수 있습니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

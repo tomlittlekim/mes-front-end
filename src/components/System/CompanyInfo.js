@@ -12,7 +12,9 @@ import {
   Paper,
   Divider,
   InputAdornment,
-  Avatar
+  Avatar,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { SearchCondition } from '../Common';
 import SaveIcon from '@mui/icons-material/Save';
@@ -21,6 +23,8 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { styled } from '@mui/material/styles';
 import { ThemeContext } from '../../contexts/ThemeContext';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpModal from '../Common/HelpModal';
 
 // 이미지 업로드를 위한 스타일 컴포넌트
 const VisuallyHiddenInput = styled('input')({
@@ -68,6 +72,7 @@ const CompanyInfo = (props) => {
   const [isEditing, setIsEditing] = useState(false);
   const [logoImage, setLogoImage] = useState(null);
   const [companyInfo, setCompanyInfo] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   // React Hook Form 설정
   const { control, handleSubmit, reset, setValue } = useForm({
@@ -178,6 +183,20 @@ const CompanyInfo = (props) => {
         >
           회사정보
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
       
       {!isLoading && (
@@ -571,6 +590,23 @@ const CompanyInfo = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="회사정보 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 회사정보는 시스템에서 사용되는 회사의 기본 정보를 관리합니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 회사명, 사업자등록번호, 주소 등 기본 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 회사정보는 시스템 전반에서 사용되므로 정확한 정보를 입력해야 합니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

@@ -15,7 +15,9 @@ import {
   Chip,
   Button,
   Paper,
-  Divider
+  Divider,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -23,9 +25,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const NoticeBoard = (props) => {
   // 현재 테마 가져오기
@@ -70,6 +74,7 @@ const NoticeBoard = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [noticeList, setNoticeList] = useState([]);
   const [selectedNotice, setSelectedNotice] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
@@ -229,6 +234,20 @@ const NoticeBoard = (props) => {
         >
           공지사항
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -447,6 +466,23 @@ const NoticeBoard = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="공지사항 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 공지사항은 시스템, 업무, 인사, 교육 등의 분류별로 조회할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 중요 공지사항은 '중요' 태그로 표시됩니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 공지사항 등록 및 수정은 관리자 권한이 있는 사용자만 가능합니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

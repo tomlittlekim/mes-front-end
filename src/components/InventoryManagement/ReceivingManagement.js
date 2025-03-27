@@ -11,7 +11,9 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -19,9 +21,11 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -68,6 +72,7 @@ const ReceivingManagement = (props) => {
   const [receivingList, setReceivingList] = useState([]);
   const [selectedReceiving, setSelectedReceiving] = useState(null);
   const [receivingDetail, setReceivingDetail] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
@@ -296,6 +301,20 @@ const ReceivingManagement = (props) => {
         >
           입고관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -463,6 +482,23 @@ const ReceivingManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="입고관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 입고관리에서는 자재나 제품의 입고 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 입고번호, 거래처 정보, 제품 정보, 입고수량 등을 관리하여 입고를 체계적으로 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 입고 정보는 재고 관리, 생산 계획 등에서 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

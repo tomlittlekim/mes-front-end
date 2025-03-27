@@ -13,7 +13,8 @@ import {
   useTheme,
   Stack,
   Button,
-  FormHelperText
+  FormHelperText,
+  IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -21,6 +22,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpModal from '../Common/HelpModal';
+import { alpha } from '@mui/material/styles';
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -291,6 +295,8 @@ const CommonCodeManagement = (props) => {
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
 
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
       <Box sx={{ 
@@ -310,6 +316,20 @@ const CommonCodeManagement = (props) => {
         >
           공통코드관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -422,6 +442,23 @@ const CommonCodeManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="공통코드관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 공통코드관리에서는 시스템에서 사용하는 코드 그룹 및 코드 정보를 등록, 수정, 삭제할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 코드 그룹을 선택하면 해당 그룹에 속한 코드 목록을 확인하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 코드는 시스템 전반에서 사용되므로 코드 값과 명칭을 명확하게 입력하고 관리해야 합니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

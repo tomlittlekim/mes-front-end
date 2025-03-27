@@ -11,16 +11,20 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import SearchIcon from '@mui/icons-material/Search';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const ProductionResultInquiry = (props) => {
   // 현재 테마 가져오기
@@ -68,6 +72,7 @@ const ProductionResultInquiry = (props) => {
   const [productionList, setProductionList] = useState([]);
   const [selectedProduction, setSelectedProduction] = useState(null);
   const [productionDetails, setProductionDetails] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
@@ -264,6 +269,20 @@ const ProductionResultInquiry = (props) => {
         >
           생산실적조회
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -427,6 +446,23 @@ const ProductionResultInquiry = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="생산실적조회 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 생산실적조회에서는 생산 작업의 실적 정보를 조회할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 작업지시번호, 제품 정보, 생산수량, 작업일자 등을 조회하여 생산 실적을 확인할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 생산 실적 정보는 재고 관리, 생산 계획 등에서 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

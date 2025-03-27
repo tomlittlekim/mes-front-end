@@ -11,14 +11,18 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -64,6 +68,7 @@ const CustomerManagement = (props) => {
   const [customerList, setCustomerList] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerDetail, setCustomerDetail] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
@@ -278,6 +283,20 @@ const CustomerManagement = (props) => {
         >
           거래처관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -420,6 +439,23 @@ const CustomerManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="거래처관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 거래처관리에서는 거래처의 기본 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 거래처코드, 거래처명, 대표자, 연락처 등의 정보를 관리하여 거래처 정보를 체계적으로 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 거래처 정보는 주문 관리, 출하 관리, 매출 관리 등에서 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

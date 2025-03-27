@@ -11,7 +11,9 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -22,6 +24,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpModal from '../Common/HelpModal';
 
 const ProductionResultManagement = (props) => {
   // 현재 테마 가져오기
@@ -69,6 +73,7 @@ const ProductionResultManagement = (props) => {
   const [workOrderList, setWorkOrderList] = useState([]);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [productionResults, setProductionResults] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
@@ -306,8 +311,22 @@ const ProductionResultManagement = (props) => {
             color: getTextColor()
           }}
         >
-          생산실적등록
+          생산실적관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -474,6 +493,23 @@ const ProductionResultManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="생산실적관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 생산실적관리에서는 생산 작업의 실적 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 작업지시번호, 제품 정보, 생산수량, 작업일자 등을 관리하여 생산 실적을 체계적으로 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 생산 실적 정보는 재고 관리, 생산 계획 등에서 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

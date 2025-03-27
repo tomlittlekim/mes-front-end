@@ -12,7 +12,9 @@ import {
   Typography, 
   useTheme,
   Stack,
-  Chip
+  Chip,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -20,9 +22,11 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const ShipmentManagement = (props) => {
   // 현재 테마 가져오기
@@ -47,6 +51,7 @@ const ShipmentManagement = (props) => {
   const [shipmentList, setShipmentList] = useState([]);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [shipmentDetail, setShipmentDetail] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -314,6 +319,20 @@ const ShipmentManagement = (props) => {
         >
           출하관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -480,6 +499,23 @@ const ShipmentManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="출하관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 출하관리에서는 완제품의 출하 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 출하일자, 출하수량, 거래처 정보 등을 관리하여 출하 현황을 파악할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 출하 정보는 재고 관리와 매출 관리의 기초 데이터로 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };
