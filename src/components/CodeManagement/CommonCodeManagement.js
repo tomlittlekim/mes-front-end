@@ -97,14 +97,6 @@ const CommonCodeManagement = (props) => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(()=>{
-    console.log("addCodeRows", addCodeRows);
-  },[addCodeRows]);
-
-  useEffect(()=>{
-    console.log("updatedCodeRows", updatedCodeRows);
-  },[updatedCodeRows]);
-
   // 검색 실행 함수
   const onSubmit = (data) => {
     setUpdatedCodeClassRows([]);
@@ -254,6 +246,20 @@ const CommonCodeManagement = (props) => {
     const createdCodeClassInputs = addCodeClassRows.map(transformRowForMutation);
     const updatedCodeClassInputs = updatedCodeClassRows.map(transformRowForUpdate);
 
+    const addRowQty =  addCodeClassRows.length;
+    const updateRowQty = updatedCodeClassRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -379,11 +385,24 @@ const CommonCodeManagement = (props) => {
       updateDate: '자동입력',
     };
 
-    setCodes([...codes, newCode]);
+    setCodes([newCode, ...codes]);
   };
 
   // 코드 저장 핸들러
   const handleSaveCode = () => {
+    const addRowQty =  addCodeRows.length;
+    const updateRowQty = updatedCodeRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
     const createCodeMutation = `
       mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
         saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -482,6 +501,7 @@ const CommonCodeManagement = (props) => {
                   text: '삭제되었습니다.',
                   confirmButtonText: '확인'
                 });
+                setSelectedCode(null);
               }
             })
             .catch((error) => {
@@ -505,7 +525,7 @@ const CommonCodeManagement = (props) => {
       codeClassDesc: '',
     };
 
-    setCodeGroups([...codeGroups, newCodeGroup]);
+    setCodeGroups([newCodeGroup,...codeGroups]);
   };
 
   // 컴포넌트 마운트 시 초기 데이터 로드

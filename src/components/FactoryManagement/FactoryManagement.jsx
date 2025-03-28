@@ -219,6 +219,19 @@ const FactoryManagement = (props) => {
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
     const createFactoryMutation = `
       mutation SaveFactory($createdRows: [FactoryInput], $updatedRows: [FactoryUpdate]) {
         saveFactory(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -275,7 +288,7 @@ const FactoryManagement = (props) => {
       updateDate: '자동입력'
     };
 
-    setFactoryList([...factoryList, newFactory]);
+    setFactoryList([newFactory,...factoryList]);
 
   };
 
@@ -330,6 +343,7 @@ const FactoryManagement = (props) => {
                 // 삭제 성공 시, 로컬 상태 업데이트
                 const updatedList = factoryList.filter(f => f.id !== selectedFactory.id);
                 setFactoryList(updatedList);
+                setSelectedFactory(null);
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
