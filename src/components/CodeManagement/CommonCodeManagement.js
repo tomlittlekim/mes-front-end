@@ -52,6 +52,8 @@ const CommonCodeManagement = (props) => {
 
   // 선택된 코드 그룹
   const [selectedCodeGroup, setSelectedCodeGroup] = useState(null);
+  //선택된 코드
+  const [selectedCode, setSelectedCode] = useState(null);
 
   const [addCodeClassRows,setAddCodeClassRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
   const [updatedCodeClassRows, setUpdatedCodeClassRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
@@ -343,6 +345,14 @@ const CommonCodeManagement = (props) => {
         });
   };
 
+
+  //코드 선택 핸들러
+  const handleCodeSelect = (params) => {
+    const code = codes.find(c => c.id === params.id);
+    setSelectedCode(code);
+  }
+
+
   // 코드 추가 핸들러
   const handleAddCode = () => {
     if (!selectedCodeGroup) {
@@ -415,6 +425,24 @@ const CommonCodeManagement = (props) => {
 
   // 코드 삭제 핸들러
   const handleDeleteCode = () => {
+
+    if (!selectedCode) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '삭제할 코드를 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const deleteCodeMutation = `
+      mutation DeleteCode($codeId: String!) {
+        deleteCode(codeId: $codeId)
+      }
+    `;
+
+
     Swal.fire({
       title: '삭제 확인',
       text: '선택한 코드를 삭제하시겠습니까?',
@@ -426,12 +454,44 @@ const CommonCodeManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '코드가 삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        // 백엔드 삭제 요청 (GraphQL)
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: deleteCodeMutation,
+            variables: {codeId: selectedCode.codeId} // 선택된 공장의 factoryId를 사용
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = codes.filter(f => f.id !== selectedCode.id);
+                setCodes(updatedList);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
       }
     });
   };
@@ -687,6 +747,7 @@ const CommonCodeManagement = (props) => {
                 editMode: 'cell',
                 onProcessUpdate: codeRowUpdate
               }}
+              onRowClick={handleCodeSelect}
               tabId={props.tabId + "-codes"}
             />
           </Grid>
