@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { GRAPHQL_URL } from '../../config';
 import './ReceivingManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -65,9 +66,10 @@ const ReceivingManagement = (props) => {
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
-  const [receivingList, setReceivingList] = useState([]);
+  const [receivingList, setReceivingList] = useState([]); 
   const [selectedReceiving, setSelectedReceiving] = useState(null);
-  const [receivingDetail, setReceivingDetail] = useState(null);
+  const [receivingDetail, setReceivingDetail] = useState([]);  // 빈 배열로 초기화
+  const [editRowsModel, setEditRowsModel] = useState({});      // 편집 상태 관리를 위한 상태 추가
 
   // 초기화 함수
   const handleReset = () => {
@@ -81,82 +83,264 @@ const ReceivingManagement = (props) => {
     });
   };
 
-  // 검색 실행 함수
-  const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'I0001', receiveDate: '2024-04-15', supplier: '(주)코리아잉크', product: '잉크믹스_보라', type: '원자재', spec: '정품 잉크 믹스', unit: 'L', price: 5000, quantity: 100, totalAmount: 500000, warehouse: '자재창고A', note: '정기발주품' },
-      { id: 'I0002', receiveDate: '2024-04-16', supplier: '대림페이퍼', product: '모조지 70g', type: '원자재', spec: '91.4cm(폭) 용지', unit: 'M', price: 1000, quantity: 500, totalAmount: 500000, warehouse: '자재창고B', note: '긴급발주품' },
-      { id: 'I0003', receiveDate: '2024-04-17', supplier: '신한물산', product: '포장비닐', type: '부자재', spec: '100cm(폭) 롤형태', unit: 'EA', price: 300, quantity: 300, totalAmount: 90000, warehouse: '자재창고A', note: '' },
-      { id: 'I0004', receiveDate: '2024-04-18', supplier: '한국케미칼', product: '세척제', type: '부자재', spec: '고급 세척제', unit: 'L', price: 3000, quantity: 50, totalAmount: 150000, warehouse: '자재창고C', note: '취급주의물품' }
-    ];
-    
-    setReceivingList(dummyData);
-    setSelectedReceiving(null);
-    setReceivingDetail(null);
+  // GraphQL 쿼리 정의
+  const INVENTORY_QUERIES = {
+    GET_INVENTORY_LIST: `
+      query getInventoryList($filter: InventoryInMFilter) {
+        getInventoryList(filter: $filter) {
+          seq
+          site
+          compCd
+          factoryId
+          warehouseId
+          totalPrice
+          hasInvoice
+          remarks
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+          inManagementId
+        }
+      }
+    `,
+    GET_DETAILED_INVENTORY_LIST: `
+      query getDetailedInventoryList($filter: InventoryInFilter) {
+        getDetailedInventoryList(filter: $filter) {
+          inManagementId
+          inInventoryId
+          supplierName
+          manufacturerName
+          userMaterialId
+          materialName
+          materialCategory
+          materialStandard
+          qty
+          unitPrice
+          unitVat
+          totalPrice
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `
+  }
+
+  const fetchGraphQL = async (query, variables) => {
+    try {
+      const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query,
+          variables
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // 응답 텍스트 먼저 확인
+      const responseText = await response.text();
+
+      // 텍스트가 비어있지 않은 경우에만 JSON 파싱
+      if (responseText.trim()) {
+        const data = JSON.parse(responseText);
+        return data.data;
+      } else {
+        throw new Error('빈 응답이 반환되었습니다.');
+      }
+    } catch (error) {
+      console.error('GraphQL 요청 오류:', error);
+      throw error;
+    }
   };
 
-  // 입고 선택 핸들러
-  const handleReceivingSelect = (params) => {
+  // 검색 실행 함수
+  const handleSearch = async (data) => {
+    try {
+      // 필터 객체 생성
+      const filter = {
+        site: data.site || null, 
+        compCd: data.compCd || null, 
+        factoryId: data.factoryId || null,
+        warehouseId: data.warehouseId || null,
+      };
+
+      // GraphQL 요청 보내기
+      const result = await fetchGraphQL(
+        INVENTORY_QUERIES.GET_INVENTORY_LIST,
+        { filter }
+      );
+      
+      // 응답 처리
+      if (result && result.getInventoryList) {
+        // 받아온 데이터로 상태 업데이트
+        setReceivingList(result.getInventoryList.map(item => ({
+          id: item.inManagementId,
+          inManagementId: item.inManagementId,
+          inType: "",
+          factoryId: item.factoryId,
+          warehouseId: item.warehouseId,
+          materialInfo: "",
+          totalPrice: item.totalPrice,
+          hasInvoice: item.hasInvoice,
+          createDate: item.createDate
+        })));
+        
+        // 선택 상태 초기화
+        setSelectedReceiving(null);
+        setReceivingDetail([]);
+      } else {
+        console.error('응답 데이터가 예상 형식과 다릅니다:', result);
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+    }
+  };
+
+  // 입고 선택 핸들러 Row 클릭
+  const handleReceivingSelect = useCallback(async (params) => {
+    console.log('선택된 행:', params);
+    
     const receiving = receivingList.find(r => r.id === params.id);
+    console.log('찾은 리시빙 객체:', receiving);
+    
+    if (!receiving) {
+      console.error('선택된 행이 없습니다');
+      return;
+    }
+    
+    // 먼저 선택한 객체 설정
     setSelectedReceiving(receiving);
     
-    if (!receiving) return;
-    
-    // 입고 상세 정보 (실제로는 API 호출)
-    const detailData = {
-      ...receiving,
-      supplierCode: 'SUP' + receiving.id.substring(1),
-      supplierContact: '010-1234-5678',
-      purchaseOrderId: 'PO' + receiving.id.substring(1),
-      inspectionResult: '합격',
-      inspectionUser: '김검수',
-      inspectionDate: receiving.receiveDate,
-      registDate: receiving.receiveDate,
-      updateDate: receiving.receiveDate,
-      registUser: '시스템',
-      updateUser: '시스템'
-    };
-    
-    setReceivingDetail([detailData]);
-  };
+    try {
+      // 필터 객체 생성
+      const filter = {
+        site: params.row?.site || null, 
+        compCd: params.row?.compCd || null, 
+        inManagementId: receiving.inManagementId || null,
+      };
+
+      // GraphQL 요청 보내기
+      const result = await fetchGraphQL(
+        INVENTORY_QUERIES.GET_DETAILED_INVENTORY_LIST,
+        { filter }
+      );
+
+      if (result && result.getDetailedInventoryList) {
+        // 받아온 데이터로 상태 업데이트
+        const detailData = result.getDetailedInventoryList.map((item, index) => ({
+          id: item.inInventoryId || `detail_${item.inManagementId}_${index}`,
+          inManagementId: item.inManagementId,
+          inInventoryId: item.inInventoryId,
+          supplierName: item.supplierName,
+          manufactureName: item.manufacturerName,
+          userMaterialId: item.userMaterialId,
+          materialName: item.materialName,
+          materialCategory: item.materialCategory,
+          materialStandard: item.materialStandard,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          unitVat: item.unitVat,
+          totalPrice: item.totalPrice,
+          createUser: item.createUser,
+          createDate: new Date(item.createDate),
+          updateUser: item.updateUser,
+          updateDate: new Date(item.updateDate)
+        }));
+        
+        console.log('상세 데이터 설정:', detailData);
+        setReceivingDetail(detailData);
+      } else {
+        // 데이터가 없으면 빈 배열로 설정
+        setReceivingDetail([]);
+        console.error('응답 데이터가 예상 형식과 다릅니다:', result);
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+      // 오류 발생시 빈 배열로 설정
+      setReceivingDetail([]);
+    }
+  }, [receivingList]);
+
+  // 편집 모델 변경 핸들러
+  const handleEditRowsModelChange = useCallback((model) => {
+    console.log('편집 모델 변경:', model);
+    setEditRowsModel(model);
+  }, []);
 
   // 등록 버튼 클릭 핸들러
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
+    console.log('등록 버튼 클릭, 선택된 항목:', selectedReceiving);
+    
+    // 선택된 항목이 없으면 경고 메시지 표시
+    if (!selectedReceiving) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '입고 목록에서 항목을 먼저 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 고유 ID 생성
+    const uniqueId = `NEW_${Date.now()}`;
+    const uniqueInventoryId = `NEW_INV_${Date.now()}`;
+    
     const newReceiving = {
-      id: `NEW_${Date.now()}`,
-      receiveDate: new Date().toISOString().split('T')[0],
-      supplier: '',
-      product: '',
-      type: '',
-      spec: '',
-      unit: '',
-      price: 0,
-      quantity: 0,
-      totalAmount: 0,
-      warehouse: '',
-      note: '',
-      supplierCode: '',
-      supplierContact: '',
-      purchaseOrderId: '',
-      inspectionResult: '대기',
-      inspectionUser: '',
-      inspectionDate: '',
-      registDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0],
-      registUser: '시스템',
-      updateUser: '시스템'
+      id: uniqueId,
+      inManagementId: selectedReceiving.inManagementId,
+      inInventoryId: uniqueInventoryId,
+      supplierName: '',
+      manufactureName: '',
+      userMaterialId: '',
+      materialName: '',
+      materialCategory: '',
+      materialStandard: '',
+      qty: 0,
+      unitPrice: 0,
+      unitVat: 0,
+      totalPrice: 0,
+      createUser: '시스템',
+      createDate: new Date(),
+      updateUser: '시스템',
+      updateDate: new Date()
     };
     
-    setReceivingList([...receivingList, newReceiving]);
-    setSelectedReceiving(newReceiving);
-    setReceivingDetail([newReceiving]);
-  };
+    console.log('새 행 추가:', newReceiving);
+    
+    // 이전 상태를 복사하고 새 항목 추가
+    const updatedDetail = [...receivingDetail, newReceiving];
+    setReceivingDetail(updatedDetail);
+    
+    // 새 행에 대한 편집 상태 활성화
+    const updatedEditModel = { ...editRowsModel };
+    updatedEditModel[uniqueId] = {
+      supplierName: { mode: 'edit' },
+      manufactureName: { mode: 'edit' },
+      userMaterialId: { mode: 'edit' },
+      materialName: { mode: 'edit' },
+      materialCategory: { mode: 'edit' },
+      materialStandard: { mode: 'edit' },
+      qty: { mode: 'edit' },
+      unitPrice: { mode: 'edit' },
+      unitVat: { mode: 'edit' }
+    };
+    setEditRowsModel(updatedEditModel);
+    
+    console.log('업데이트된 디테일:', updatedDetail);
+  }, [selectedReceiving, receivingDetail, editRowsModel]);
 
   // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!selectedReceiving) {
       Swal.fire({
         icon: 'warning',
@@ -173,10 +357,10 @@ const ReceivingManagement = (props) => {
       text: '저장되었습니다.',
       confirmButtonText: '확인'
     });
-  };
+  }, [selectedReceiving]);
 
   // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (!selectedReceiving) {
       Swal.fire({
         icon: 'warning',
@@ -201,7 +385,7 @@ const ReceivingManagement = (props) => {
         const updatedList = receivingList.filter(r => r.id !== selectedReceiving.id);
         setReceivingList(updatedList);
         setSelectedReceiving(null);
-        setReceivingDetail(null);
+        setReceivingDetail([]);
         Swal.fire({
           icon: 'success',
           title: '성공',
@@ -210,11 +394,10 @@ const ReceivingManagement = (props) => {
         });
       }
     });
-  };
+  }, [selectedReceiving, receivingList]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
       handleSearch({});
       setIsLoading(false);
@@ -225,50 +408,37 @@ const ReceivingManagement = (props) => {
 
   // 입고 목록 그리드 컬럼 정의
   const receivingColumns = [
-    { field: 'id', headerName: '입고ID', width: 100 },
-    { field: 'receiveDate', headerName: '입고일자', width: 110 },
-    { field: 'supplier', headerName: '공급업체', width: 150 },
-    { field: 'product', headerName: '품목명', width: 180, flex: 1 },
-    { field: 'type', headerName: '품목유형', width: 100 },
-    { field: 'spec', headerName: '규격', width: 120 },
-    { field: 'unit', headerName: '단위', width: 70 },
-    { field: 'price', headerName: '단가', width: 80, type: 'number' },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number' },
-    { field: 'totalAmount', headerName: '총금액', width: 100, type: 'number' },
-    { field: 'warehouse', headerName: '입고창고', width: 120 },
-    { field: 'note', headerName: '비고', width: 150 }
+    { field: 'inManagementId', headerName: '입고ID', width: 100 }, 
+    { field: 'inType', headerName: '입고형태', width: 100 },
+    { field: 'factoryId', headerName: '공장번호', width: 110 },
+    { field: 'warehouseId', headerName: '창고번호', width: 180, flex: 1 },
+    { field: 'materialInfo', headerName: '자재정보', width: 100 },
+    { field: 'totalPrice', headerName: '총 금액', width: 120 },
+    { field: 'hasInvoice', headerName: '거래명세서', width: 70 },
+    { field: 'createDate', headerName: '생성일', width: 150 }
   ];
   
   // 입고 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'id', headerName: '입고ID', width: 100, editable: true },
-    { field: 'receiveDate', headerName: '입고일자', width: 110, editable: true },
-    { field: 'supplier', headerName: '공급업체', width: 150, editable: true },
-    { field: 'supplierCode', headerName: '업체코드', width: 100, editable: true },
-    { field: 'supplierContact', headerName: '연락처', width: 120, editable: true },
-    { field: 'purchaseOrderId', headerName: '발주번호', width: 120, editable: true },
-    { field: 'product', headerName: '품목명', width: 180, editable: true },
-    { field: 'type', headerName: '품목유형', width: 100, editable: true, type: 'singleSelect', valueOptions: ['원자재', '부자재', '반제품', '완제품'] },
-    { field: 'spec', headerName: '규격', width: 120, editable: true },
-    { field: 'unit', headerName: '단위', width: 70, editable: true },
-    { field: 'price', headerName: '단가', width: 80, type: 'number', editable: true },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number', editable: true },
-    { field: 'totalAmount', headerName: '총금액', width: 100, type: 'number', editable: true },
-    { field: 'warehouse', headerName: '입고창고', width: 120, editable: true, type: 'singleSelect', valueOptions: ['자재창고A', '자재창고B', '자재창고C', '완제품창고'] },
-    { field: 'inspectionResult', headerName: '검수결과', width: 100, editable: true, type: 'singleSelect', valueOptions: ['대기', '합격', '불합격', '조건부합격'] },
-    { field: 'inspectionUser', headerName: '검수자', width: 100, editable: true },
-    { field: 'inspectionDate', headerName: '검수일자', width: 100, editable: true },
-    { field: 'note', headerName: '비고', width: 150, editable: true },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
+  const columns = [
+    { field: 'inManagementId', headerName: '입고관리ID', width: 150, editable: true },
+    { field: 'supplierName', headerName: '공장명', width: 150, editable: true },
+    { field: 'manufactureName', headerName: '제조사명', width: 100, editable: true },
+    { field: 'userMaterialId', headerName: '자재ID', width: 100, editable: true },
+    { field: 'materialName', headerName: '자재명', width: 100, editable: true },
+    { field: 'materialCategory', headerName: '자재유형', width: 100, editable: true },
+    { field: 'materialStandard', headerName: '규격', width: 80, type: 'number', editable: true },
+    { field: 'qty', headerName: '수량', width: 80, type: 'number', editable: true },
+    { field: 'unitPrice', headerName: '단위 금액', width: 100, type: 'number', editable: true },
+    { field: 'unitVat', headerName: '부가세', width: 100, type: 'number', editable: true },
+    { field: 'totalPrice', headerName: '총금액', width: 100, type: 'number', editable: true },
+    { field: 'createUser', headerName: '등록자', width: 150, editable: true },
+    { field: 'createDate', headerName: '등록일', width: 120, type: 'date', editable: true },
+    { field: 'updateUser', headerName: '수정자', width: 150, editable: true },
+    { field: 'updateDate', headerName: '수정일', width: 120, type: 'date', editable: true },
   ];
 
   // 입고 목록 그리드 버튼
-  const receivingGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> }
-  ];
+  const receivingGridButtons = [];
 
   // 입고 상세 그리드 버튼
   const detailGridButtons = [
@@ -374,7 +544,7 @@ const ReceivingManagement = (props) => {
           />
         </Grid>
         <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}> 
             <Stack direction="row" spacing={1} alignItems="center">
               <Controller
                 name="fromDate"
@@ -418,27 +588,43 @@ const ReceivingManagement = (props) => {
       {!isLoading && (
         <Grid container spacing={2}>
           {/* 입고 기본 정보 그리드 */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <MuiDataGridWrapper
               title="입고목록"
               rows={receivingList}
               columns={receivingColumns}
               buttons={receivingGridButtons}
-              height={450}
+              height={500}
+              gridProps={{
+                pageSize: 10,
+                rowsPerPageOptions: [5, 10, 20],
+                pagination: true,
+                autoHeight: false,
+                disableSelectionOnClick: false,
+                hideFooterSelectedRowCount: false
+              }}
               onRowClick={handleReceivingSelect}
             />
           </Grid>
           
           {/* 입고 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={8}>
             <MuiDataGridWrapper
               title={`입고상세정보 ${selectedReceiving ? '- ' + selectedReceiving.id : ''}`}
-              rows={receivingDetail || []}
-              columns={detailColumns}
+              rows={receivingDetail}
+              columns={columns}
               buttons={detailGridButtons}
-              height={450}
+              height={500}
               gridProps={{
-                editMode: 'row'
+                editMode: 'cell',
+                getRowId: (row) => row.id,
+                pageSize: 10,
+                rowsPerPageOptions: [5, 10, 20],
+                pagination: true,
+                autoHeight: false,
+                editRowsModel: editRowsModel,
+                onEditRowsModelChange: handleEditRowsModelChange,
+                disableSelectionOnClick: true
               }}
             />
           </Grid>
