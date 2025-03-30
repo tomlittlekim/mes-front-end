@@ -4,6 +4,7 @@ function  useLocalStorageVO() {
     const [loginUser, setLoginUser] = useState(() => {
         const stored = localStorage.getItem("auth");
         return stored ? JSON.parse(stored) : {
+            id: -1,
             userId: '',
             userNm: '',
             userEmail: '',
@@ -13,11 +14,14 @@ function  useLocalStorageVO() {
 
     useEffect(() => {
         localStorage.setItem('auth', JSON.stringify(loginUser));
-        localStorage.setItem('isAuthenticated', 'true');
+        if (loginUser.id >= 0) {
+            localStorage.setItem('isAuthenticated', 'true');
+        } else localStorage.removeItem('isAuthenticated');
     }, [loginUser]);
 
     const setUserInfo = (auth) => {
         setLoginUser({
+            id: auth.id,
             userId: auth.userId,
             userNm: auth.userNm,
             userEmail: auth.email,

@@ -40,7 +40,7 @@ const Login = () => {
 
   // 컴포넌트 마운트 시 localStorage에서 저장된 아이디 불러오기
   useEffect(() => {
-    const savedUserId = localStorage.getItem('userId');
+    const savedUserId = localStorage.getItem('savedUserId');
     if (savedUserId) {
       setReq({
         ...req,
