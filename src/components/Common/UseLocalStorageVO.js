@@ -14,8 +14,6 @@ function  useLocalStorageVO() {
     });
 
     useEffect(() => {
-        debugger
-        console.log(loginUser)
         localStorage.setItem('auth', JSON.stringify(loginUser));
         if (loginUser.id >= 0) {
             localStorage.setItem('isAuthenticated', 'true');
