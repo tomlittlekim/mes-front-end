@@ -19,6 +19,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import {GRAPHQL_URL} from "../../config";
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -49,89 +50,217 @@ const CustomerManagement = (props) => {
   };
   
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset,getValues } = useForm({
     defaultValues: {
-      customerCode: '',
-      customerName: '',
-      representativeName: '',
-      useYn: '',
-      business: ''
+      vendorId: '',
+      vendorName: '',
+      ceoName: '',
+      businessType: '',
+      flagActive: null
     }
   });
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
-  const [customerList, setCustomerList] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [customerDetail, setCustomerDetail] = useState(null);
+  const [vendorList, setVendorList] = useState([]);
+  const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
+  const [addRows,setAddRows] = useState([]);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+
+  //거래처 유형 리스트 불러오기
+  const [vendorTypeOptions, setVendorTypeOptions] = useState([]);
+
 
   // 초기화 함수
   const handleReset = () => {
     reset({
-      customerCode: '',
-      customerName: '',
-      representativeName: '',
-      useYn: '',
-      business: ''
+      vendorId: '',
+      vendorName: '',
+      ceoName: '',
+      businessType: '',
+      flagActive: null
     });
   };
 
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setVendorList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.vendorId === newRow.vendorId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
+
+
   // 검색 실행 함수
   const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'C001', name: '(주)에이비씨', code: 'ABC', business: '제조업', representative: '홍길동', phone: '02-1234-5678', address: '서울특별시 강남구', useYn: 'Y' },
-      { id: 'C002', name: '우리물산', code: 'WRM', business: '도매업', representative: '김영희', phone: '02-2345-6789', address: '서울특별시 송파구', useYn: 'Y' },
-      { id: 'C003', name: '더나은회사', code: 'TNH', business: '서비스업', representative: '이철수', phone: '02-3456-7890', address: '서울특별시 마포구', useYn: 'N' },
-      { id: 'C004', name: '세계무역', code: 'SGM', business: '무역업', representative: '박지민', phone: '02-4567-8901', address: '서울특별시 용산구', useYn: 'Y' }
-    ];
-    
-    setCustomerList(dummyData);
-    setSelectedCustomer(null);
-    setCustomerDetail(null);
+    // 검색후 업데이트 로우 초기화
+    setUpdatedRows([]);
+    setAddRows([]);
+
+    const query = `
+      query getVendors($filter: VendorFilter) {
+        getVendors(filter: $filter) {
+          vendorId
+          vendorName
+          vendorType
+          businessRegNo
+          ceoName
+          businessType
+          address
+          telNo
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `;
+
+    fetchGraphQL(
+        GRAPHQL_URL,
+        query,
+        data
+    ).then((data) => {
+      if (data.errors) {
+      } else {
+        const rowsWithId = data.data.getVendors.map((row, index) => ({
+          ...row,
+          id: row.vendorId  // 또는 row.factoryId || index + 1
+        }));
+        setVendorList(rowsWithId);
+        // setRefreshKey(prev => prev + 1);
+      }
+      setIsLoading(false);
+    }).catch((err) => {
+          setIsLoading(false);
+        });
   };
 
   // 거래처 선택 핸들러
   const handleCustomerSelect = (params) => {
-    const customer = customerList.find(c => c.id === params.id);
-    setSelectedCustomer(customer);
-    
-    if (customer) {
-      // 상세 정보 - API 호출 대신 더미 데이터 사용
-      const detailData = {
-        ...customer,
-        businessNumber: '123-45-67890',
-        email: `contact@${customer.code.toLowerCase()}.com`,
-        fax: customer.phone.replace('1234', '9876'),
-        manager: '김관리',
-        managerPhone: '010-1234-5678',
-        managerEmail: `manager@${customer.code.toLowerCase()}.com`,
-        bankName: '국민은행',
-        accountNumber: '123-456-789012',
-        accountHolder: customer.representative,
-        createDate: '2023-01-15',
-        updateDate: '2023-06-20'
-      };
-      
-      setCustomerDetail([detailData]);
-    }
+    const vendor = vendorList.find(c => c.id === params.id);
+    setSelectedVendor(vendor);
   };
+
+  const transformRowForMutation = (row) => ({
+    vendorName: row.vendorName,
+    vendorType: row.vendorType,
+    businessRegNo: row.businessRegNo,
+    ceoName: row.ceoName,
+    businessType: row.businessType,
+    address: row.address,
+    telNo: row.telNo,
+    flagActive: row.flagActive
+  });
+
+  const transformRowForUpdate = (row) => ({
+    vendorId: row.vendorId,
+    vendorName: row.vendorName,
+    vendorType: row.vendorType,
+    businessRegNo: row.businessRegNo,
+    ceoName: row.ceoName,
+    businessType: row.businessType,
+    address: row.address,
+    telNo: row.telNo,
+    flagActive: row.flagActive
+  });
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const createVendorMutation = `
+      mutation SaveVendor($createdRows: [VendorInput], $updatedRows: [VendorUpdate]) {
+        saveVendor(createdRows: $createdRows, updatedRows: $updatedRows)
+    }
+  `;
+
+    const createdVendorInputs = addRows.map(transformRowForMutation);
+    const updatedVendorInputs = updatedRows.map(transformRowForUpdate);
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: createVendorMutation,
+        variables: {
+          createdRows: createdVendorInputs,
+          updatedRows: updatedVendorInputs,
+        }
+      })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
   };
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (!selectedCustomer) {
+    if (!selectedVendor) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -140,7 +269,14 @@ const CustomerManagement = (props) => {
       });
       return;
     }
-    
+
+    const deleteVendorMutation = `
+      mutation DeleteVendor($vendorId: String!) {
+        deleteVendor(vendorId: $vendorId)
+      }
+    `;
+
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -152,104 +288,204 @@ const CustomerManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        const updatedList = customerList.filter(c => c.id !== selectedCustomer.id);
-        setCustomerList(updatedList);
-        setSelectedCustomer(null);
-        setCustomerDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        // 백엔드 삭제 요청 (GraphQL)
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: deleteVendorMutation,
+            variables: {factoryId: selectedVendor.vendorId} // 선택된 공장의 factoryId를 사용
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = vendorList.filter(f => f.id !== selectedVendor.id);
+                setVendorList(updatedList);
+                setSelectedVendor(null);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
       }
     });
   };
 
   // 등록 버튼 클릭 핸들러
   const handleAdd = () => {
-    const newCustomer = {
+    const newVendor = {
       id: `NEW_${Date.now()}`,
-      name: '',
-      code: '',
-      business: '',
-      representative: '',
-      phone: '',
+      vendorId: '자동입력',
+      vendorName: '',
+      vendorType: '',
+      businessRegNo: '',
+      ceoName: '',
+      businessType: '',
       address: '',
-      useYn: 'Y',
-      businessNumber: '',
-      email: '',
-      fax: '',
-      manager: '',
-      managerPhone: '',
-      managerEmail: '',
-      bankName: '',
-      accountNumber: '',
-      accountHolder: '',
-      createDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0]
+      telNo: '',
+      flagActive: 'Y',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
-    
-    setCustomerList([...customerList, newCustomer]);
-    setSelectedCustomer(newCustomer);
-    setCustomerDetail([newCustomer]);
+
+    setVendorList([newVendor, ...vendorList]);
+    setSelectedVendor(newVendor);
   };
+
+
+  useEffect(() => {
+    const query = `
+      query getCodes($codeClassId: String!) {
+        getCodes(codeClassId: $codeClassId) {
+          codeId
+          codeName
+        }
+      }
+    `;
+
+    // filter 객체에 vendor type 코드 그룹을 지정합니다.
+    const variables = {
+      codeClassId: "CD20250331110039125"
+    };
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        variables
+      })
+    })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.data.getCodes.map((row) => ({
+              value: row.codeId,
+              label: row.codeName
+            }));
+            setVendorTypeOptions(options);
+          }
+        })
+        .catch((err) => console.error(err));
+  }, []);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      handleSearch({});
-      setIsLoading(false);
+      const query = `
+      query getVendors($filter: VendorFilter) {
+        getVendors(filter: $filter) {
+          vendorId
+          vendorName
+          vendorType
+          businessRegNo
+          ceoName
+          businessType
+          address
+          telNo
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `;
+
+      fetchGraphQL(
+          GRAPHQL_URL,
+          query,
+          getValues()
+      ).then((data) => {
+        if (data.errors) {
+        } else {
+          const rowsWithId = data.data.getVendors.map((row, index) => ({
+            ...row,
+            id: row.vendorId  // 또는 row.factoryId || index + 1
+          }));
+          setVendorList(rowsWithId);
+        }
+        setIsLoading(false);
+      })
+          .catch((err) => {
+            setIsLoading(false);
+          });
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() =>{
+    console.log("updatedRows", updatedRows);
+  },[updatedRows]);
+
+  useEffect(()=>{
+    console.log("addRows", addRows);
+  },[addRows]);
+
   // 거래처 목록 그리드 컬럼 정의
   const customerColumns = [
-    { field: 'code', headerName: '거래처코드', width: 120 },
-    { field: 'name', headerName: '거래처명', width: 200, flex: 1 },
-    { field: 'business', headerName: '업종', width: 100 },
-    { field: 'representative', headerName: '대표자', width: 100 },
-    { field: 'phone', headerName: '전화번호', width: 150 },
-    { field: 'address', headerName: '주소', width: 250 },
-    { 
-      field: 'useYn', 
-      headerName: '사용여부', 
+    { field: 'vendorId', headerName: '거래처코드', width: 120 },
+    { field: 'vendorName', headerName: '거래처명', width: 120 , editable: true},
+    {
+      field: 'vendorType',
+      headerName: '거래처 유형',
       width: 100,
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
-    }
-  ];
-
-  // 거래처 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'code', headerName: '거래처코드', width: 120, editable: true },
-    { field: 'name', headerName: '거래처명', width: 200, editable: true },
-    { field: 'business', headerName: '업종', width: 100, editable: true },
-    { field: 'businessNumber', headerName: '사업자번호', width: 150, editable: true },
-    { field: 'representative', headerName: '대표자', width: 100, editable: true },
-    { field: 'phone', headerName: '전화번호', width: 150, editable: true },
-    { field: 'fax', headerName: '팩스', width: 150, editable: true },
-    { field: 'email', headerName: '이메일', width: 180, editable: true },
-    { field: 'address', headerName: '주소', width: 250, editable: true },
-    { field: 'manager', headerName: '담당자', width: 100, editable: true },
-    { field: 'managerPhone', headerName: '담당자연락처', width: 150, editable: true },
-    { field: 'managerEmail', headerName: '담당자이메일', width: 180, editable: true },
-    { field: 'bankName', headerName: '은행명', width: 100, editable: true },
-    { field: 'accountNumber', headerName: '계좌번호', width: 150, editable: true },
-    { field: 'accountHolder', headerName: '예금주', width: 100, editable: true },
-    { 
-      field: 'useYn', 
-      headerName: '사용여부', 
-      width: 100,
+      editable: true,
       type: 'singleSelect',
-      valueOptions: ['Y', 'N'],
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
-      editable: true 
+      valueOptions: vendorTypeOptions
     },
-    { field: 'createDate', headerName: '등록일', width: 120 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
+    { field: 'businessRegNo', headerName: '사업자등록 번호', width: 100, editable: true },
+    { field: 'ceoName', headerName: '대표자명', width: 100, editable: true },
+    { field: 'businessType', headerName: '업종/업태', width: 100, editable: true },
+    { field: 'address', headerName: '주소', width: 200, flex:1 ,editable: true  },
+    { field: 'telNo', headerName: '전화번호', width: 130, editable: true },
+    {
+      field: 'flagActive',
+      headerName: '사용여부',
+      width: 90,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: [
+        { value: 'Y', label: '사용' },
+        { value: 'N', label: '미사용' }
+      ]
+    },
+    { field: 'createUser', headerName: '작성자', width: 100},
+    { field: 'createDate', headerName: '작성일', width: 200},
+    { field: 'updateUser', headerName: '수정자', width: 100},
+    { field: 'updateDate', headerName: '수정일', width: 200}
   ];
 
   // 거래처 목록 그리드 버튼
@@ -258,6 +494,29 @@ const CustomerManagement = (props) => {
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
+
+  /**
+   * 공통 GraphQL API 호출 함수
+   * @param {string} url - GraphQL 엔드포인트 URL
+   * @param {string} query - GraphQL 쿼리 문자열
+   * @param {object} filter - 쿼리에 전달할 filter 객체
+   * @returns {Promise<object>} - GraphQL 응답 JSON
+   */
+  function fetchGraphQL(url, query, filter) {
+    const variables = { filter };
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        });
+  }
+
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -287,7 +546,7 @@ const CustomerManagement = (props) => {
       >
         <Grid item xs={12} sm={6} md={2.4}>
           <Controller
-            name="customerCode"
+            name="vendorId"
             control={control}
             render={({ field }) => (
               <TextField
@@ -303,7 +562,7 @@ const CustomerManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
           <Controller
-            name="customerName"
+            name="vendorName"
             control={control}
             render={({ field }) => (
               <TextField
@@ -319,7 +578,7 @@ const CustomerManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
           <Controller
-            name="representativeName"
+            name="ceoName"
             control={control}
             render={({ field }) => (
               <TextField
@@ -335,7 +594,7 @@ const CustomerManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
           <Controller
-            name="business"
+            name="businessType"
             control={control}
             render={({ field }) => (
               <TextField
@@ -351,55 +610,44 @@ const CustomerManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
           <Controller
-            name="useYn"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label">사용여부</InputLabel>
-                <Select
-                  {...field}
-                  labelId="useYn-label"
-                  label="사용여부"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="Y">사용</MenuItem>
-                  <MenuItem value="N">미사용</MenuItem>
-                </Select>
-              </FormControl>
-            )}
+              name="flagActive"
+              control={control}
+              render={({ field }) => (
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="flagActive-label"
+                        label="사용여부"
+                        displayEmpty
+                        notched
+                    >
+                      <MenuItem value={null}>전체</MenuItem>
+                      <MenuItem value="Y">사용</MenuItem>
+                      <MenuItem value="N">미사용</MenuItem>
+                    </Select>
+                  </FormControl>
+              )}
           />
         </Grid>
       </SearchCondition>
 
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 거래처 목록 그리드 */}
           <Grid item xs={12} md={6}>
             <MuiDataGridWrapper
               title="거래처 목록"
-              rows={customerList}
+              rows={vendorList}
               columns={customerColumns}
               buttons={customerGridButtons}
               height={450}
               onRowClick={handleCustomerSelect}
-            />
-          </Grid>
-          
-          {/* 거래처 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`거래처 상세 정보 ${selectedCustomer ? '- ' + selectedCustomer.name : ''}`}
-              rows={customerDetail || []}
-              columns={detailColumns}
-              buttons={[]} // 상세정보는 별도의 버튼 없음
-              height={450}
               gridProps={{
-                editMode: 'row'
+                editMode: 'cell',
+                onProcessUpdate: handleProcessRowUpdate
               }}
             />
           </Grid>
-        </Grid>
       )}
       
       {/* 하단 정보 영역 */}
