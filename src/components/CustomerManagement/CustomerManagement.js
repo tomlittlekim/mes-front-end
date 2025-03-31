@@ -357,8 +357,8 @@ const CustomerManagement = (props) => {
 
   useEffect(() => {
     const query = `
-      query getCodes($codeClassId: String!) {
-        getCodes(codeClassId: $codeClassId) {
+      query getGridCodes($codeClassId: String!) {
+        getGridCodes(codeClassId: $codeClassId) {
           codeId
           codeName
         }
@@ -389,7 +389,7 @@ const CustomerManagement = (props) => {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getCodes.map((row) => ({
+            const options = data.data.getGridCodes.map((row) => ({
               value: row.codeId,
               label: row.codeName
             }));
