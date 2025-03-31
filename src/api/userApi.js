@@ -1,11 +1,12 @@
 import { dontLoginFetch, apiFetch } from "./fetchConfig";
 
 export interface UserOutPut {
-    id: number;
-    userId: string;
+    userId: number;
+    loginId: string;
     userNm: string;
     email: string;
-    roleId: string;
+    roleId: number;
+    roleNm: string;
     status: string;
     message: string;
 }
