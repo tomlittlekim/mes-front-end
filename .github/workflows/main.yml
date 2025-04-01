@@ -44,6 +44,8 @@ jobs:
         echo "${{ secrets.KEY }}" > my_ec2_key.pem
         chmod 600 my_ec2_key.pem
         ssh -o StrictHostKeyChecking=no -i my_ec2_key.pem ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+        
+        whoami
           
         docker stop nginx || true
         docker rm nginx || true

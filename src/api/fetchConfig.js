@@ -26,8 +26,8 @@ const createFetch = (withAuth = true) => {
         }
 
         const url = method === "GET" && data
-            ? `${REST_URL}${path}?${new URLSearchParams(data).toString()}`
-            : `${REST_URL}${path}`;
+            ? `${path}?${new URLSearchParams(data).toString()}`
+            : `${path}`;
 
         const response = await fetch(url, fetchOptions);
         console.log(response);
