@@ -20,7 +20,6 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
 import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Swal from 'sweetalert2';
@@ -70,7 +69,10 @@ const ReceivingManagement = (props) => {
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
+
   const [receivingList, setReceivingList] = useState([]);
+  const [newReceivingList, setNewReceivingList] = useState([]);
+  
   const [selectedReceiving, setSelectedReceiving] = useState(null);
   const [receivingDetail, setReceivingDetail] = useState([]);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -234,8 +236,8 @@ const ReceivingManagement = (props) => {
     try {
       // 필터 객체 생성
       const filter = {
-        site: params.row?.site || null, 
-        compCd: params.row?.compCd || null, 
+        site: params.row?.site || 'imos', 
+        compCd: params.row?.compCd || 'eightPin', 
         inManagementId: params.row?.inManagementId || null,
       };
 
@@ -281,7 +283,7 @@ const ReceivingManagement = (props) => {
     }
   };
 
-  const handleAdd = () => {
+  const handleDetailAdd = () => {
     const newDetailedInventory = {
       id: `NEW_${Date.now()}`,
       inManagementId: selectedReceiving.inManagementId,
@@ -309,35 +311,143 @@ const ReceivingManagement = (props) => {
 
   }
 
-  const handleSave = () => {
-
-  }
-
   // 등록 버튼 클릭 핸들러
-  const handleDetailAdd = () => {
-    if (!selectedReceiving || !selectedReceiving.inManagementId) {
-        Swal.fire({
-            icon: 'warning',
-            title: '알림',
-            text: '입고 항목을 먼저 선택해주세요.',
-            confirmButtonText: '확인'
-        });
-        return;
-    }
-    
+  const handleAdd = () => {
     const newInventory = {
-        id: '자동입력',
+        id: `NEW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         inManagementId: '',
-        inType: '자동입력', //
-        factoryId: selectedReceiving.factoryId,
-        warehouseId: selectedReceiving.warehouseId,
-        materialInfo: '자동입력',
-        totalPrice: 0,
-        hasInvoice: false,
+        inType: '원재료 입고', // 자동아님 
+        factoryId: 'FTY-001', // 자동아님, 드롭다운 하나만 선택할듯
+        warehouseId: 'WH-001', // 자동아님, 드롭다운 하나만 선택할듯
+        materialInfo: '자동입력', // 자동, 재료 데이터 요약
+        totalPrice: 0, // 자동, 물건값 자동계산
+        hasInvoice: null,
         createDate: new Date(),
     };
-    
+
+    setReceivingList([...receivingList, newInventory]);
+    setNewReceivingList([...newReceivingList, newInventory]);
   }
+
+  const handleSave = () => {
+
+    console.log('newReceivingList', newReceivingList);
+
+    const createdRows = newReceivingList
+    .map(row => ({
+      site: 'imos',
+      compCd: 'eightPin',
+      inType: row.inType,
+      factoryId: row.factoryId,
+      warehouseId: row.warehouseId,
+      hasInvoice: row.hasInvoice ? 'Y' : 'N',
+      totalPrice: '0'
+    }));
+
+    console.log('createdRows', createdRows);
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `
+          mutation saveInventory($createdRows: [InventoryInMInput]) {
+            saveInventory(createdRows: $createdRows)
+          }
+        `,
+        variables: {
+          createdRows: createdRows,
+        }
+      })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            // handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        }).finally(() => {
+          handleSearch({});  // 빈 객체를 전달하여 모든 데이터를 다시 조회
+        });
+  }
+
+  const handleDelete = () => {
+    if (!selectedReceiving) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '삭제할 입고목록을 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const deleteInventoryMutation = `
+      mutation DeleteInventory($inManagementId: String!) {
+        deleteInventory(inManagementId: $inManagementId)
+      }
+    `;
+
+    Swal.fire({
+      title: '삭제 확인',
+      text: '정말 삭제하시겠습니까?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 백엔드 삭제 요청 (GraphQL)
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: deleteInventoryMutation,
+            variables: {inManagementId: selectedReceiving.inManagementId} // 선택된 공장의 factoryId를 사용
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                handleSearch({});  // 빈 객체를 전달하여 모든 데이터를 다시 조회
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
+      }
+    });
+  };
 
   const transformRowForMutation = (row) => ({
     inManagementId: row.inManagementId,
@@ -422,23 +532,6 @@ const ReceivingManagement = (props) => {
         .catch((error) => {
           console.error("Error save factory:", error);
         });
-    
-    // if (!selectedReceiving) {
-    //   Swal.fire({
-    //     icon: 'warning',
-    //     title: '알림',
-    //     text: '저장할 입고정보를 선택해주세요.',
-    //     confirmButtonText: '확인'
-    //   });
-    //   return;
-    // }
-    
-    // Swal.fire({
-    //   icon: 'success',
-    //   title: '성공',
-    //   text: '저장되었습니다.',
-    //   confirmButtonText: '확인'
-    // });
   }
 
   // 삭제 버튼 클릭 핸들러
@@ -572,6 +665,7 @@ const ReceivingManagement = (props) => {
   const receivingGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
+    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> },
   ];
 
   // 입고 상세 그리드 버튼
