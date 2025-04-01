@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { GRAPHQL_URL } from '../../config';
+import React, { useState, useEffect } from 'react';
 import './ReceivingManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -12,7 +11,9 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -21,8 +22,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import { MuiDataGridWrapper, SearchCondition , EnhancedDataGridWrapper} from '../Common';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -66,10 +70,10 @@ const ReceivingManagement = (props) => {
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
-  const [receivingList, setReceivingList] = useState([]); 
+  const [receivingList, setReceivingList] = useState([]);
   const [selectedReceiving, setSelectedReceiving] = useState(null);
-  const [receivingDetail, setReceivingDetail] = useState([]);  // 빈 배열로 초기화
-  const [editRowsModel, setEditRowsModel] = useState({});      // 편집 상태 관리를 위한 상태 추가
+  const [receivingDetail, setReceivingDetail] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   // 추가 코드 
   const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링용 키
@@ -470,7 +474,7 @@ const ReceivingManagement = (props) => {
         const updatedList = receivingList.filter(r => r.id !== selectedReceiving.id);
         setReceivingList(updatedList);
         setSelectedReceiving(null);
-        setReceivingDetail([]);
+        setReceivingDetail(null);
         Swal.fire({
           icon: 'success',
           title: '성공',
@@ -530,6 +534,7 @@ const ReceivingManagement = (props) => {
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
+    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
       handleSearch({});
       setIsLoading(false);
@@ -602,6 +607,20 @@ const ReceivingManagement = (props) => {
         >
           입고관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -680,7 +699,7 @@ const ReceivingManagement = (props) => {
           />
         </Grid>
         <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}> 
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Stack direction="row" spacing={1} alignItems="center">
               <Controller
                 name="fromDate"
@@ -747,15 +766,7 @@ const ReceivingManagement = (props) => {
               rows={receivingList}
               columns={receivingColumns}
               buttons={receivingGridButtons}
-              height={500}
-              gridProps={{
-                pageSize: 10,
-                rowsPerPageOptions: [5, 10, 20],
-                pagination: true,
-                autoHeight: false,
-                disableSelectionOnClick: false,
-                hideFooterSelectedRowCount: false
-              }}
+              height={450}
               onRowClick={handleReceivingSelect}
             /> */}
           </Grid>
@@ -778,20 +789,12 @@ const ReceivingManagement = (props) => {
               />
             {/* <MuiDataGridWrapper
               title={`입고상세정보 ${selectedReceiving ? '- ' + selectedReceiving.id : ''}`}
-              rows={receivingDetail}
-              columns={columns}
+              rows={receivingDetail || []}
+              columns={detailColumns}
               buttons={detailGridButtons}
-              height={500}
+              height={450}
               gridProps={{
-                editMode: 'cell',
-                getRowId: (row) => row.id,
-                pageSize: 10,
-                rowsPerPageOptions: [5, 10, 20],
-                pagination: true,
-                autoHeight: false,
-                editRowsModel: editRowsModel,
-                onEditRowsModelChange: handleEditRowsModelChange,
-                disableSelectionOnClick: true
+                editMode: 'row'
               }}
             /> */}
           </Grid>
@@ -816,6 +819,23 @@ const ReceivingManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="입고관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 입고관리에서는 자재나 제품의 입고 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 입고번호, 거래처 정보, 제품 정보, 입고수량 등을 관리하여 입고를 체계적으로 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 입고 정보는 재고 관리, 생산 계획 등에서 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

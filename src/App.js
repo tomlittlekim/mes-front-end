@@ -15,6 +15,9 @@ import {
   Route,
   Navigate
 } from 'react-router-dom';
+import ProfilePage from "./pages/ProfilePage";
+import {ApolloProvider} from "@apollo/client";
+import { client } from './apollo/client';
 
 // MUI 테마 설정 컴포넌트
 const ThemeConfigurator = ({ children }) => {
@@ -128,30 +131,62 @@ const ThemeConfigurator = ({ children }) => {
   );
 };
 
+// function App() {
+//   // localStorage에서 인증 상태 확인
+//   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+//
+//   return (
+//     <DomainProvider>
+//       <CustomThemeProvider>
+//         <ThemeConfigurator>
+//           <TabProvider>
+//             <BrowserRouter>
+//               <Routes>
+//                 <Route path="/login" element={
+//                   !isAuthenticated ? <Login /> : <Navigate to="/" />
+//                 } />
+//                 <Route path="/profile" element={
+//                   isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />
+//                 } />
+//                 <Route path="/*" element={
+//                   isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
+//                 } />
+//               </Routes>
+//             </BrowserRouter>
+//           </TabProvider>
+//         </ThemeConfigurator>
+//       </CustomThemeProvider>
+//     </DomainProvider>
+//   );
+// }
+
 function App() {
-  // localStorage에서 인증 상태 확인
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   return (
-    <DomainProvider>
-      <CustomThemeProvider>
-        <ThemeConfigurator>
-          <TabProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={
-                  !isAuthenticated ? <Login /> : <Navigate to="/" />
-                } />
-                <Route path="/*" element={
-                  isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
-                } />
-              </Routes>
-            </BrowserRouter>
-          </TabProvider>
-        </ThemeConfigurator>
-      </CustomThemeProvider>
-    </DomainProvider>
+      <ApolloProvider client={client}>
+        <DomainProvider>
+          <CustomThemeProvider>
+            <ThemeConfigurator>
+              <TabProvider>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/login" element={
+                      !isAuthenticated ? <Login /> : <Navigate to="/" />
+                    } />
+                    <Route path="/profile" element={
+                      isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />
+                    } />
+                    <Route path="/*" element={
+                      isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
+                    } />
+                  </Routes>
+                </BrowserRouter>
+              </TabProvider>
+            </ThemeConfigurator>
+          </CustomThemeProvider>
+        </DomainProvider>
+      </ApolloProvider>
   );
 }
-
 export default App;

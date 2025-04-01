@@ -28,6 +28,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import KeyIcon from '@mui/icons-material/Key';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpModal from '../Common/HelpModal';
+import { alpha } from '@mui/material';
 
 const UserManagement = (props) => {
   // 현재 테마 가져오기
@@ -62,6 +65,7 @@ const UserManagement = (props) => {
   const [userList, setUserList] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   // React Hook Form 설정 - 검색
   const { control, handleSubmit, reset } = useForm({
@@ -321,6 +325,20 @@ const UserManagement = (props) => {
         >
           사용자관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
       
       {/* 검색 영역 */}
@@ -693,6 +711,23 @@ const UserManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="사용자관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 사용자관리에서는 시스템 사용자의 계정을 등록, 수정, 삭제할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 사용자별로 권한을 부여하여 시스템 접근 범위를 제한할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 비밀번호는 주기적으로 변경하여 보안을 강화해야 합니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };
