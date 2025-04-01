@@ -5,7 +5,7 @@ import PageLayout from '../components/Layout/PageLayout';
 const MaterialManagementPage = (props) => {
   return (
     <PageLayout>
-      <MaterialManagement tabId={props.tabId || 'material'} />
+      <MaterialManagement tabId={props.tabId || 'pi-material-management'} />
     </PageLayout>
   );
 };
