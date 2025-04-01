@@ -294,7 +294,7 @@ const CustomerManagement = (props) => {
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             query: deleteVendorMutation,
-            variables: {factoryId: selectedVendor.vendorId} // 선택된 공장의 factoryId를 사용
+            variables: {vendorId: selectedVendor.vendorId}
           })
         })
             .then((res) => res.json())
@@ -445,14 +445,6 @@ const CustomerManagement = (props) => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() =>{
-    console.log("updatedRows", updatedRows);
-  },[updatedRows]);
-
-  useEffect(()=>{
-    console.log("addRows", addRows);
-  },[addRows]);
 
   // 거래처 목록 그리드 컬럼 정의
   const customerColumns = [
