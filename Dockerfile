@@ -1,5 +1,5 @@
 # 1단계: React 앱 빌드
-FROM node:18 AS build
+FROM node:23.10.0 AS build
 WORKDIR /app
 
 COPY package*.json ./
@@ -19,4 +19,5 @@ COPY default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/build /usr/share/nginx/html
 
 # 컨테이너가 시작될 때 Nginx 실행
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
