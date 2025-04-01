@@ -11,18 +11,15 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack,
-  IconButton,
-  alpha
+  Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import HelpModal from '../Common/HelpModal';
+import {GRAPHQL_URL} from "../../config";
 
 const LineManagement = (props) => {
   // 현재 테마 가져오기
@@ -31,15 +28,14 @@ const LineManagement = (props) => {
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset,getValues } = useForm({
     defaultValues: {
       factoryId: '',
       factoryName: '',
       factoryCode: '',
       lineId: '',
       lineName: '',
-      status: '',
-      useYn: ''
+      flagActive: null
     }
   });
 
@@ -47,8 +43,10 @@ const LineManagement = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [lineList, setLineList] = useState([]);
   const [selectedLine, setSelectedLine] = useState(null);
-  const [lineDetail, setLineDetail] = useState(null);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [addRows, setAddRows] = useState([]);
+  const [updatedRows, setUpdatedRows] = useState([]);
+  const [factoryTypeOptions, setFactoryTypeOptions] = useState([]);
+  const [factoryModel,setFactoryModel] = useState([]);
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -80,76 +78,204 @@ const LineManagement = (props) => {
       factoryCode: '',
       lineId: '',
       lineName: '',
-      status: '',
-      useYn: ''
+      flagActive: null
     });
   };
 
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    if (newRow.factoryId !== oldRow.factoryId) {
+      const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
+      if (selectedFactory) {
+        newRow = {
+          ...newRow,
+          factoryName: selectedFactory.factoryName,
+          factoryCode: selectedFactory.factoryCode,
+        };
+      }
+    }
+
+    setLineList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.lineId === newRow.lineId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    return { ...oldRow, ...newRow };
+  }
+
   // 검색 실행 함수
   const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'LINE001', name: '1라인', factoryId: 'FAC001', factoryName: '서울공장', status: '가동중', useYn: 'Y' },
-      { id: 'LINE002', name: '2라인', factoryId: 'FAC001', factoryName: '서울공장', status: '대기중', useYn: 'Y' },
-      { id: 'LINE003', name: '1라인', factoryId: 'FAC002', factoryName: '부산공장', status: '점검중', useYn: 'N' },
-      { id: 'LINE004', name: '2라인', factoryId: 'FAC002', factoryName: '부산공장', status: '가동중', useYn: 'Y' },
-      { id: 'LINE005', name: '3라인', factoryId: 'FAC002', factoryName: '부산공장', status: '대기중', useYn: 'Y' }
-    ];
-    
-    setLineList(dummyData);
-    setSelectedLine(null);
-    setLineDetail(null);
+    setUpdatedRows([]);
+    setAddRows([]);
+
+    const query = `
+      query getLines($filter: LineFilter) {
+        getLines(filter: $filter) {
+          factoryId
+          factoryName
+          factoryCode
+          lineId
+          lineName
+          lineDesc
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `;
+
+    fetchGraphQL(
+        GRAPHQL_URL,
+        query,
+        data
+    ).then((data) => {
+      if (data.errors) {
+      } else {
+        const rowsWithId = data.data.getLines.map((row, index) => ({
+          ...row,
+          id: row.lineId  // 또는 row.factoryId || index + 1
+        }));
+        setLineList(rowsWithId);
+        // setRefreshKey(prev => prev + 1);
+      }
+      setIsLoading(false);
+    }).catch((err) => {
+      setIsLoading(false);
+    });
   };
 
   // 라인 선택 핸들러
   const handleLineSelect = (params) => {
     const line = lineList.find(l => l.id === params.id);
     setSelectedLine(line);
-    
-    // 라인 상세 정보 (실제로는 API 호출)
-    const detailData = {
-      ...line,
-      description: '생산 라인',
-      registDate: '2023-01-15',
-      updateDate: '2023-06-20',
-      registUser: '자동입력',
-      updateUser: '자동입력'
-    };
-    
-    setLineDetail([detailData]);
   };
 
   // 등록 버튼 클릭 핸들러
   const handleAdd = () => {
     const newLine = {
       id: `NEW_${Date.now()}`,
-      name: '',
       factoryId: '',
       factoryName: '',
-      status: '대기중',
-      useYn: 'Y',
-      description: '',
-      registDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0],
-      registUser: '시스템',
-      updateUser: '시스템'
+      factoryCode: '',
+      lineId: '자동입력',
+      lineName: '',
+      lineDesc: '',
+      flagActive: 'Y',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
     
-    setLineList([...lineList, newLine]);
-    setSelectedLine(newLine);
-    setLineDetail([newLine]);
+    setLineList([newLine, ...lineList]);
   };
+
+  const transformRowForMutation = (row) => ({
+    factoryId: row.factoryId,
+    lineName: row.lineName,
+    lineDesc: row.lineDesc,
+    flagActive: row.flagActive
+  });
+
+  const transformRowForUpdate = (row) => ({
+    lineId: row.lineId,
+    factoryId: row.factoryId,
+    lineName: row.lineName,
+    lineDesc: row.lineDesc,
+    flagActive: row.flagActive
+  });
+
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
+
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const createLineMutation = `
+      mutation saveLine($createdRows: [LineInput], $updatedRows: [LineUpdate]) {
+        saveLine(createdRows: $createdRows, updatedRows: $updatedRows)
+    }
+  `;
+
+    const createdLineInputs = addRows.map(transformRowForMutation);
+    const updatedLineInputs = updatedRows.map(transformRowForUpdate);
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: createLineMutation,
+        variables: {
+          createdRows: createdLineInputs,
+          updatedRows: updatedLineInputs,
+        }
+      })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
   };
 
   // 삭제 버튼 클릭 핸들러
@@ -163,7 +289,13 @@ const LineManagement = (props) => {
       });
       return;
     }
-    
+
+    const deleteLineMutation = `
+      mutation DeleteLine($lineId: String!) {
+        deleteLine(lineId: $lineId)
+      }
+    `;
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -175,101 +307,214 @@ const LineManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        const updatedList = lineList.filter(l => l.id !== selectedLine.id);
-        setLineList(updatedList);
-        setSelectedLine(null);
-        setLineDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        // 백엔드 삭제 요청 (GraphQL)
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: deleteLineMutation,
+            variables: {lineId: selectedLine.lineId} // 선택된 공장의 factoryId를 사용
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = lineList.filter(f => f.id !== selectedLine.id);
+                setLineList(updatedList);
+                setSelectedLine(null);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
       }
     });
   };
+
+  useEffect(() => {
+    const query = `
+      query getGridFactory {
+        getGridFactory {
+          factoryId
+          factoryName
+          factoryCode
+        }
+      }
+    `;
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query
+      })
+    }).then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        }).then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.data.getGridFactory.map((row) => ({
+              value: row.factoryId,
+              label: row.factoryId
+            }));
+            setFactoryTypeOptions(options);
+
+            const models = data.data.getGridFactory.map((row) => ({
+              factoryId: row.factoryId,
+              factoryName: row.factoryName,
+              factoryCode: row.factoryCode
+            }));
+            setFactoryModel(models);
+
+          }
+        }).catch((err) => console.error(err));
+  }, []);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      handleSearch({});
-      setIsLoading(false);
+      const query = `
+      query getLines($filter: LineFilter) {
+        getLines(filter: $filter) {
+          factoryId
+          factoryName
+          factoryCode
+          lineId
+          lineName
+          lineDesc
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `;
+
+      fetchGraphQL(
+          GRAPHQL_URL,
+          query,
+          getValues()
+      ).then((data) => {
+        if (data.errors) {
+        } else {
+          const rowsWithId = data.data.getLines.map((row, index) => ({
+            ...row,
+            id: row.lineId  // 또는 row.factoryId || index + 1
+          }));
+          setLineList(rowsWithId);
+        }
+        setIsLoading(false);
+      })
+          .catch((err) => {
+            setIsLoading(false);
+          });
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
   // 라인 목록 그리드 컬럼 정의
   const lineColumns = [
-    { field: 'id', headerName: '라인 ID', width: 100 },
-    { field: 'name', headerName: '라인 명', width: 100 },
-    { field: 'factoryId', headerName: '공장 ID', width: 100 },
-    { field: 'factoryName', headerName: '공장 명', width: 150 },
-    { 
-      field: 'status', 
-      headerName: '상태', 
+    {
+      field: 'factoryId',
+      headerName: '공장 ID',
       width: 100,
-      renderCell: (params) => {
-        let color = '';
-        if (params.value === '가동중') color = 'green';
-        else if (params.value === '대기중') color = 'orange';
-        else if (params.value === '점검중') color = 'red';
-        
-        return (
-          <span style={{ color }}>{params.value}</span>
-        );
-      }
-    },
-    { 
-      field: 'useYn', 
-      headerName: '사용여부', 
-      width: 100,
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
-    }
-  ];
-  
-  // 라인 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'id', headerName: '라인ID', width: 100, editable: true },
-    { field: 'name', headerName: '라인 명', width: 120, editable: true },
-    { field: 'factoryId', headerName: '공장ID', width: 100, editable: true },
-    { field: 'factoryName', headerName: '공장 명', width: 150, editable: true },
-    { 
-      field: 'status', 
-      headerName: '상태', 
-      width: 100, 
       editable: true,
       type: 'singleSelect',
-      valueOptions: ['가동중', '대기중', '점검중']
+      valueOptions: factoryTypeOptions
     },
-    { field: 'description', headerName: '설명', width: 200, editable: true },
-    { 
-      field: 'useYn', 
-      headerName: '사용 여부', 
-      width: 100,
+    { field: 'factoryName', headerName: '공장 명', width: 130 },
+    { field: 'factoryCode', headerName: '공장 코드', width: 100 },
+    { field: 'lineId', headerName: '라인 ID', width: 100 },
+    { field: 'lineName', headerName: '라인 명', width: 100 , editable: true },
+    // {
+    //   field: 'status',
+    //   headerName: '상태',
+    //   width: 90,
+    //   editable: true,
+    //   renderCell: (params) => {
+    //     let color = '';
+    //     if (params.value === '가동중') color = 'green';
+    //     else if (params.value === '대기중') color = 'orange';
+    //     else if (params.value === '점검중') color = 'red';
+    //
+    //     return (
+    //       <span style={{ color }}>{params.value}</span>
+    //     );
+    //   }
+    // },
+    { field: 'lineDesc', headerName: '라인 설명', width: 200, editable: true, flex:1},
+    {
+      field: 'flagActive',
+      headerName: '사용여부',
+      width: 90,
+      editable: true,
       type: 'singleSelect',
-      valueOptions: ['Y', 'N'],
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
-      editable: true 
+      valueOptions: [
+        { value: 'Y', label: '사용' },
+        { value: 'N', label: '미사용' }
+      ]
     },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
+    { field: 'createUser', headerName: '작성자', width: 100},
+    { field: 'createDate', headerName: '작성일', width: 200},
+    { field: 'updateUser', headerName: '수정자', width: 100},
+    { field: 'updateDate', headerName: '수정일', width: 200}
   ];
 
   // 라인 목록 그리드 버튼
   const lineGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: null }
-  ];
-
-  // 라인 상세 그리드 버튼
-  const detailGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
+
+  /**
+   * 공통 GraphQL API 호출 함수
+   * @param {string} url - GraphQL 엔드포인트 URL
+   * @param {string} query - GraphQL 쿼리 문자열
+   * @param {object} filter - 쿼리에 전달할 filter 객체
+   * @returns {Promise<object>} - GraphQL 응답 JSON
+   */
+  function fetchGraphQL(url, query, filter) {
+    const variables = { filter };
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        });
+  }
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -288,22 +533,8 @@ const LineManagement = (props) => {
             color: getTextColor()
           }}
         >
-          라인관리
+          라인정보관리
         </Typography>
-        <IconButton
-          onClick={() => setIsHelpModalOpen(true)}
-          sx={{
-            ml: 1,
-            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: isDarkMode 
-                ? alpha(theme.palette.primary.light, 0.1)
-                : alpha(theme.palette.primary.main, 0.05)
-            }
-          }}
-        >
-          <HelpOutlineIcon />
-        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -391,40 +622,42 @@ const LineManagement = (props) => {
             )}
           />
         </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="status"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*        <InputLabel id="status-label">상태</InputLabel>*/}
+        {/*        <Select*/}
+        {/*          {...field}*/}
+        {/*          labelId="status-label"*/}
+        {/*          label="상태"*/}
+        {/*        >*/}
+        {/*          <MenuItem value="">전체</MenuItem>*/}
+        {/*          <MenuItem value="가동중">가동중</MenuItem>*/}
+        {/*          <MenuItem value="대기중">대기중</MenuItem>*/}
+        {/*          <MenuItem value="점검중">점검중</MenuItem>*/}
+        {/*        </Select>*/}
+        {/*      </FormControl>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="status"
+            name="flagActive"
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="status-label">상태</InputLabel>
-                <Select
-                  {...field}
-                  labelId="status-label"
-                  label="상태"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="가동중">가동중</MenuItem>
-                  <MenuItem value="대기중">대기중</MenuItem>
-                  <MenuItem value="점검중">점검중</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="useYn"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label">사용여부</InputLabel>
+                <InputLabel id="useYn-label" shrink>사용여부</InputLabel>
                 <Select
                   {...field}
                   labelId="useYn-label"
                   label="사용여부"
+                  displayEmpty
+                  notched
                 >
-                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value={null}>전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
                   <MenuItem value="N">미사용</MenuItem>
                 </Select>
@@ -436,8 +669,7 @@ const LineManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 라인 목록 그리드 */}
+        //   {/* 라인 목록 그리드 */}
           <Grid item xs={12} md={6}>
             <MuiDataGridWrapper
               title="라인 목록"
@@ -446,23 +678,12 @@ const LineManagement = (props) => {
               buttons={lineGridButtons}
               height={450}
               onRowClick={handleLineSelect}
-            />
-          </Grid>
-          
-          {/* 라인 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`라인 상세 정보 ${selectedLine ? '- ' + selectedLine.name : ''}`}
-              rows={lineDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
               gridProps={{
-                editMode: 'row'
+                editMode: 'cell',
+                onProcessUpdate: handleProcessRowUpdate
               }}
             />
           </Grid>
-        </Grid>
       )}
       
       {/* 하단 정보 영역 */}
@@ -483,23 +704,6 @@ const LineManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
-
-      {/* 도움말 모달 */}
-      <HelpModal
-        open={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="라인관리 도움말"
-      >
-        <Typography variant="body2" color={getTextColor()}>
-          • 라인관리에서는 생산 라인의 정보를 등록하고 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 라인코드, 라인명, 공장 정보, 가동 상태 등을 관리하여 생산 라인을 체계적으로 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 라인 정보는 생산 계획, 작업 지시, 생산 실적 관리 등에서 활용됩니다.
-        </Typography>
-      </HelpModal>
     </Box>
   );
 };
