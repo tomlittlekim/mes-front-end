@@ -55,6 +55,7 @@ jobs:
           docker stop nginx || true
           docker rm nginx || true
           docker pull 8pin/imos:nginx
+          
           docker run -d \
             --name nginx \
             --network imosNetwork \
