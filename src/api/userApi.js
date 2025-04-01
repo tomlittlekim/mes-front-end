@@ -13,7 +13,7 @@ export interface UserOutPut {
 
 export const signIn = async (req: any): Promise<UserOutPut> => {
     try {
-        const data = await dontLoginFetch.post('/login', req)
+        const data = await dontLoginFetch.post('/api/login', req)
         return data.json();
     } catch (error) {
         throw error;
