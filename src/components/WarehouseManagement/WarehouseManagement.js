@@ -11,20 +11,17 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack,
-  IconButton,
-  alpha
+  Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import HelpModal from '../Common/HelpModal';
+import {GRAPHQL_URL} from "../../config";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -33,13 +30,13 @@ const WarehouseManagement = (props) => {
   const isDarkMode = theme.palette.mode === 'dark';
   
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset,getValues } = useForm({
     defaultValues: {
       factoryId: '',
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      useYn: ''
+      flagActive: ''
     }
   });
 
@@ -47,8 +44,13 @@ const WarehouseManagement = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [warehouseList, setWarehouseList] = useState([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
-  const [warehouseDetail, setWarehouseDetail] = useState(null);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [addRows, setAddRows] = useState([]);
+  const [updatedRows, setUpdatedRows] = useState([]);
+
+  const [warehouseTypeOptions, setWarehouseTypeOptions] = useState([]);
+  const [factoryTypeOptions, setFactoryTypeOptions] = useState([]);
+  const [factoryModel,setFactoryModel] = useState([]);
+
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -79,73 +81,168 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      useYn: ''
+      flagActive: ''
     });
   };
+
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    if (newRow.factoryId !== oldRow.factoryId) {
+      const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
+      if (selectedFactory) {
+        newRow = {
+          ...newRow,
+          factoryName: selectedFactory.factoryName,
+          factoryCode: selectedFactory.factoryCode,
+        };
+      }
+    }
+
+    setWarehouseList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.warehouseId === newRow.warehouseId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    return { ...oldRow, ...newRow };
+  }
+
 
   // 검색 실행 함수
   const handleSearch = (data) => {
     console.log('검색 조건:', data);
     
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'WH001', name: '원자재창고', type: '원자재', area: 500, location: '1공장 A동', factoryId: 'FC001', factoryName: '서울공장', useYn: true, createdBy: '김철수', createdAt: '2023-01-10', updatedBy: '이영희', updatedAt: '2023-06-15' },
-      { id: 'WH002', name: '부자재창고', type: '부자재', area: 300, location: '1공장 B동', factoryId: 'FC001', factoryName: '서울공장', useYn: true, createdBy: '김철수', createdAt: '2023-01-15', updatedBy: '이영희', updatedAt: '2023-06-20' },
-      { id: 'WH003', name: '완제품창고', type: '완제품', area: 800, location: '2공장 A동', factoryId: 'FC002', factoryName: '부산공장', useYn: true, createdBy: '박지성', createdAt: '2023-02-10', updatedBy: '박지성', updatedAt: '2023-02-10' },
-      { id: 'WH004', name: '보관창고', type: '완제품', area: 600, location: '2공장 B동', factoryId: 'FC002', factoryName: '부산공장', useYn: false, createdBy: '이민정', createdAt: '2023-03-05', updatedBy: '김철수', updatedAt: '2023-07-01' }
-    ];
-    
-    setWarehouseList(dummyData);
     setSelectedWarehouse(null);
-    setWarehouseDetail(null);
   };
 
   // 창고 선택 핸들러
   const handleWarehouseSelect = (params) => {
     const warehouse = warehouseList.find(w => w.id === params.id);
     setSelectedWarehouse(warehouse);
-    
-    if (!warehouse) return;
-    
-    // 창고 상세 정보 (실제로는 API 호출)
-    const detailData = [
-      { id: 1, section: 'A', zone: 'A-1', capacity: 100, currentStorage: 80, material: '알루미늄', quantity: 80, unit: 'KG' },
-      { id: 2, section: 'A', zone: 'A-2', capacity: 100, currentStorage: 60, material: '구리', quantity: 60, unit: 'KG' },
-      { id: 3, section: 'B', zone: 'B-1', capacity: 100, currentStorage: 30, material: '철', quantity: 30, unit: 'KG' },
-      { id: 4, section: 'B', zone: 'B-2', capacity: 100, currentStorage: 0, material: '-', quantity: 0, unit: '-' }
-    ];
-    
-    setWarehouseDetail(detailData);
   };
 
   // 행 추가 핸들러
   const handleAddRow = () => {
     const newWarehouse = {
       id: `NEW_${Date.now()}`,
-      name: '',
-      type: '',
-      area: 0,
-      location: '',
       factoryId: '',
       factoryName: '',
-      useYn: true,
-      createdBy: '시스템',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedBy: '시스템',
-      updatedAt: new Date().toISOString().split('T')[0]
+      warehouseId: '자동입력',
+      warehouseName: '',
+      warehouseType: '',
+      flagActive: 'Y',
+      createdUser: '자동입력',
+      createdDate: '자동입력',
+      updatedUser: '자동입력',
+      updatedDate: '자동입력'
     };
     
-    setWarehouseList([...warehouseList, newWarehouse]);
+    setWarehouseList([newWarehouse, ...warehouseList]);
   };
+
+
+  const transformRowForMutation = (row) => ({
+    factoryId: row.factoryId,
+    lineName: row.lineName,
+    lineDesc: row.lineDesc,
+    flagActive: row.flagActive
+  });
+
+  const transformRowForUpdate = (row) => ({
+    lineId: row.lineId,
+    factoryId: row.factoryId,
+    lineName: row.lineName,
+    lineDesc: row.lineDesc,
+    flagActive: row.flagActive
+  });
+
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const createWarehouseMutation = `
+      mutation saveWarehouse($createdRows: [WarehouseInput], $updatedRows: [WarehouseUpdate]) {
+        saveWarehouse(createdRows: $createdRows, updatedRows: $updatedRows)
+    }
+  `;
+
+    const createdWarehouseInputs = addRows.map(transformRowForMutation);
+    const updatedWarehouseInputs = updatedRows.map(transformRowForUpdate);
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: createWarehouseMutation,
+        variables: {
+          createdRows: createdWarehouseInputs,
+          updatedRows: updatedWarehouseInputs,
+        }
+      })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
   };
 
   // 삭제 버튼 클릭 핸들러
@@ -174,7 +271,6 @@ const WarehouseManagement = (props) => {
         const updatedList = warehouseList.filter(w => w.id !== selectedWarehouse.id);
         setWarehouseList(updatedList);
         setSelectedWarehouse(null);
-        setWarehouseDetail(null);
         Swal.fire({
           icon: 'success',
           title: '성공',
@@ -184,6 +280,14 @@ const WarehouseManagement = (props) => {
       }
     });
   };
+
+  useEffect(()=>{
+    console.log("addRows", addRows)
+  },[addRows]);
+
+  useEffect(()=>{
+    console.log("updatedRows", updatedRows)
+  },[updatedRows]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -196,51 +300,138 @@ const WarehouseManagement = (props) => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const query = `
+      query getGridCodes($codeClassId: String!) {
+        getGridCodes(codeClassId: $codeClassId) {
+          codeId
+          codeName
+        }
+      }
+    `;
+
+    // filter 객체에 vendor type 코드 그룹을 지정합니다.
+    const variables = {
+      codeClassId: "CD20250401114109083"
+    };
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        variables
+      })
+    })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.data.getGridCodes.map((row) => ({
+              value: row.codeId,
+              label: row.codeName
+            }));
+            setWarehouseTypeOptions(options);
+          }
+        })
+        .catch((err) => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    const query = `
+      query getGridFactory {
+        getGridFactory {
+          factoryId
+          factoryName
+          factoryCode
+        }
+      }
+    `;
+
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query
+      })
+    }).then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    }).then((data) => {
+      if (data.errors) {
+        console.error(data.errors);
+      } else {
+        // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+        const options = data.data.getGridFactory.map((row) => ({
+          value: row.factoryId,
+          label: row.factoryId
+        }));
+        setFactoryTypeOptions(options);
+
+        const models = data.data.getGridFactory.map((row) => ({
+          factoryId: row.factoryId,
+          factoryName: row.factoryName,
+          factoryCode: row.factoryCode
+        }));
+        setFactoryModel(models);
+
+      }
+    }).catch((err) => console.error(err));
+  }, []);
+
   // 창고 목록 그리드 컬럼 정의
   const warehouseColumns = [
-    { field: 'id', headerName: '창고 ID', width: 100 },
-    { field: 'name', headerName: '창고명', width: 150, editable: true },
-    { field: 'type', headerName: '창고 유형', width: 120, editable: true },
-    { field: 'area', headerName: '면적(㎡)', width: 100, type: 'number', editable: true },
-    { field: 'location', headerName: '위치', width: 150, editable: true },
-    { field: 'factoryId', headerName: '공장 ID', width: 100, editable: true },
-    { field: 'factoryName', headerName: '공장명', width: 150, editable: true },
-    { 
-      field: 'useYn', 
-      headerName: '사용 여부', 
-      width: 100, 
-      type: 'boolean',
-      editable: true
+    {
+      field: 'factoryId',
+      headerName: '공장 ID',
+      width: 100,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: factoryTypeOptions,
+      flex:1
     },
-    { field: 'createdBy', headerName: '등록자', width: 100 },
-    { field: 'createdAt', headerName: '등록일', width: 110 },
-    { field: 'updatedBy', headerName: '수정자', width: 100 },
-    { field: 'updatedAt', headerName: '수정일', width: 110 }
-  ];
-  
-  // 창고 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'section', headerName: '구역', width: 100, editable: true },
-    { field: 'zone', headerName: '존', width: 100, editable: true },
-    { field: 'capacity', headerName: '수용량', width: 100, type: 'number', editable: true },
-    { field: 'currentStorage', headerName: '현재보관량', width: 110, type: 'number', editable: true },
-    { field: 'material', headerName: '자재명', width: 150, editable: true },
-    { field: 'quantity', headerName: '수량', width: 100, type: 'number', editable: true },
-    { field: 'unit', headerName: '단위', width: 80, editable: true }
+    { field: 'factoryName', headerName: '공장명', width: 150 },
+    { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
+    { field: 'warehouseName', headerName: '창고 명', width: 100, editable: true },
+    {
+      field: 'warehouseType',
+      headerName: '창고 유형',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: warehouseTypeOptions,
+    },
+    {
+      field: 'flagActive',
+      headerName: '사용여부',
+      width: 90,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: [
+        { value: 'Y', label: '사용' },
+        { value: 'N', label: '미사용' }
+      ]
+    },
+    { field: 'createdUser', headerName: '등록자', width: 100 },
+    { field: 'createdDate', headerName: '등록일', width: 150 },
+    { field: 'updatedUser', headerName: '수정자', width: 100 },
+    { field: 'updatedDate', headerName: '수정일', width: 150 }
   ];
 
   // 창고 목록 그리드 버튼
   const warehouseGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> },
-    { label: '행추가', onClick: handleAddRow, icon: <AddIcon /> },
+    { label: '등록', onClick: handleAddRow, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
-  ];
-
-  // 창고 상세 그리드 버튼
-  const detailGridButtons = [
-    { label: '수정', onClick: () => {}, icon: <EditIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
   ];
 
   return (
@@ -262,20 +453,6 @@ const WarehouseManagement = (props) => {
         >
           창고관리
         </Typography>
-        <IconButton
-          onClick={() => setIsHelpModalOpen(true)}
-          sx={{
-            ml: 1,
-            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: isDarkMode 
-                ? alpha(theme.palette.primary.light, 0.1)
-                : alpha(theme.palette.primary.main, 0.05)
-            }
-          }}
-        >
-          <HelpOutlineIcon />
-        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -349,17 +526,17 @@ const WarehouseManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="useYn"
+            name="flagActive"
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label">사용여부</InputLabel>
+                <InputLabel id="flagActive-label">사용여부</InputLabel>
                 <Select
                   {...field}
-                  labelId="useYn-label"
+                  labelId="flagActive-label"
                   label="사용여부"
                 >
-                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value={null}>전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
                   <MenuItem value="N">미사용</MenuItem>
                 </Select>
@@ -371,8 +548,7 @@ const WarehouseManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 창고 기본 정보 그리드 */}
+        //   {/* 창고 기본 정보 그리드 */}
           <Grid item xs={12} md={6}>
             <MuiDataGridWrapper
               title="창고 목록"
@@ -382,43 +558,31 @@ const WarehouseManagement = (props) => {
               height={450}
               onRowClick={handleWarehouseSelect}
               gridProps={{
-                editMode: 'row'
+                editMode: 'cell',
+                onProcessUpdate: handleProcessRowUpdate
               }}
             />
           </Grid>
-          
-          {/* 창고 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`재고 현황 ${selectedWarehouse ? '- ' + selectedWarehouse.name : ''}`}
-              rows={warehouseDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
-              gridProps={{
-                editMode: 'row'
-              }}
-            />
-          </Grid>
-        </Grid>
       )}
       
-      {/* 도움말 모달 */}
-      <HelpModal
-        open={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="창고관리 도움말"
-      >
-        <Typography variant="body2" color={getTextColor()}>
-          • 창고관리에서는 공장 및 창고 정보를 등록하고 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 창고코드, 창고명, 위치, 관리자 등의 정보를 관리하여 창고 정보를 체계적으로 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 창고 정보는 재고 관리, 생산 계획 등에서 활용됩니다.
-        </Typography>
-      </HelpModal>
+      {/* 하단 정보 영역 */}
+      <Box mt={2} p={2} sx={{ 
+        bgcolor: getBgColor(), 
+        borderRadius: 1,
+        border: `1px solid ${getBorderColor()}`
+      }}>
+        <Stack spacing={1}>
+          <Typography variant="body2" color={getTextColor()}>
+            • 창고관리에서는 공장 및 창고 정보를 등록, 수정, 삭제할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 창고를 선택하면 해당 창고의 상세 정보를 관리할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 창고 등록 시 창고코드, 창고명, 위치, 관리자 등의 정보를 입력해야 합니다.
+          </Typography>
+        </Stack>
+      </Box>
     </Box>
   );
 };
