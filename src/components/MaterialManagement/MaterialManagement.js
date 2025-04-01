@@ -19,7 +19,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import {useDomain, DOMAINS} from '../../contexts/DomainContext';
-import {MATERIAL_QUERY, MATERIAL_MUTATION, DELETE_MUTATION} from '../../graphql/queries/materialQueries';
+import {MATERIAL_QUERY, MATERIAL_MUTATION, DELETE_MUTATION} from '../../graphql-queries/material-master/materialQueries';
 import {useGraphQL} from '../../apollo/useGraphQL';
 import {AdapterDateFns} from "@mui/x-date-pickers/AdapterDateFns";
 import {format} from 'date-fns';
@@ -39,7 +39,6 @@ import {
     formatGridData,
     generateId
 } from "../../utils/grid/gridUtils";
-import Message from "../../utils/message/Message";
 
 const MaterialManagement = ({tabId}) => {
     const theme = useTheme();
@@ -68,7 +67,7 @@ const MaterialManagement = ({tabId}) => {
         minQuantity: 0,
         maxQuantity: 0,
         manufacturerName: '',
-        supplierName: '',
+        supplierId: '',
         materialStorage: '',
         flagActive: 'Y',
         createUser: '자동입력',
@@ -104,7 +103,7 @@ const MaterialManagement = ({tabId}) => {
         {field: 'minQuantity', headerName: '최소수량', width: 80, type: 'number', editable: true },
         {field: 'maxQuantity', headerName: '최대수량', width: 80, type: 'number', editable: true },
         {field: 'manufacturerName', headerName: '제조사명', width: 120, editable: true },
-        {field: 'supplierName', headerName: '공급업체명', width: 120,  type: 'singleSelect',
+        {field: 'supplierId', headerName: '공급업체명', width: 120,  type: 'singleSelect',
             valueOptions: [
                 { value: 'SUP010', label: '광학용품마트' },
                 { value: 'SUP018', label: '도서용품샵' },
@@ -249,7 +248,7 @@ const MaterialManagement = ({tabId}) => {
             minQuantity: row.minQuantity || 0,
             maxQuantity: row.maxQuantity || 0,
             manufacturerName: row.manufacturerName || '',
-            supplierName: row.supplierName || '',
+            supplierId: row.supplierId || '',
             materialStorage: row.materialStorage || '',
             flagActive: row.flagActive || 'Y'
         }),
@@ -264,7 +263,7 @@ const MaterialManagement = ({tabId}) => {
             minQuantity: row.minQuantity || 0,
             maxQuantity: row.maxQuantity || 0,
             manufacturerName: row.manufacturerName || '',
-            supplierName: row.supplierName || '',
+            supplierId: row.supplierId || '',
             materialStorage: row.materialStorage || '',
             flagActive: row.flagActive || 'Y'
         })
