@@ -72,7 +72,7 @@ const ReceivingManagement = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [receivingList, setReceivingList] = useState([]);
   const [selectedReceiving, setSelectedReceiving] = useState(null);
-  const [receivingDetail, setReceivingDetail] = useState(null);
+  const [receivingDetail, setReceivingDetail] = useState([]);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   // 추가 코드 
@@ -281,12 +281,6 @@ const ReceivingManagement = (props) => {
     }
   };
 
-  // 편집 모델 변경 핸들러
-  const handleEditRowsModelChange = useCallback((model) => {
-    console.log('편집 모델 변경:', model);
-    setEditRowsModel(model);
-  }, []);
-
   const handleAdd = () => {
     const newDetailedInventory = {
       id: `NEW_${Date.now()}`,
@@ -473,7 +467,7 @@ const ReceivingManagement = (props) => {
         const updatedList = receivingList.filter(r => r.id !== selectedReceiving.id);
         setReceivingList(updatedList);
         setSelectedReceiving(null);
-        setReceivingDetail(null);
+        setReceivingDetail([]);
         Swal.fire({
           icon: 'success',
           title: '성공',
