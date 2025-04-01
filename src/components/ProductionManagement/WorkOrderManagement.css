@@ -21,6 +21,22 @@
   font-weight: 600;
 }
 
+/* 작업지시 상태별 색상 표시 (추가) */
+.status-planned {
+  color: #1976d2 !important;
+  font-weight: 500;
+}
+
+.status-confirmed {
+  color: #673ab7 !important;
+  font-weight: 500;
+}
+
+.status-canceled {
+  color: #f44336 !important;
+  text-decoration: line-through;
+}
+
 /* 우선순위에 따른 셀 색상 */
 .priority-urgent {
   color: #f44336 !important;
@@ -42,8 +58,18 @@
   font-weight: 600;
 }
 
+/* 선택된 행 강조 표시 (옵션) */
+.MuiDataGrid-row.Mui-selected {
+  background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
 /* 다크 모드 스타일링 */
 .dark-mode .work-order-container {
   background-color: #001e3c;
   color: #b3c5e6;
-} 
+}
+
+/* 다크모드에서 선택된 행 강조 표시 */
+[data-theme="dark"] .MuiDataGrid-row.Mui-selected {
+  background-color: rgba(66, 165, 245, 0.2) !important;
+}
