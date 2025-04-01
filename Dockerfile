@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . ./
-RUN npm run build
+RUN rm -rf build && npm run build
 
 # 2️⃣ Nginx 기반으로 정적 파일 제공 (배포 단계)
 FROM nginx:alpine
