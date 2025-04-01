@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ReceivingManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -21,12 +21,12 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
-import { MuiDataGridWrapper, SearchCondition , EnhancedDataGridWrapper} from '../Common';
+import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
+import { GRAPHQL_URL } from '../../config';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -179,8 +179,7 @@ const ReceivingManagement = (props) => {
   };
 
   // 검색 실행 함수
-  const handleSearch = async (data) => {
-
+  const handleSearch = useCallback(async (data) => {
     setUpdatedDetailRows([]);
     setAddRows([]);
 
@@ -223,7 +222,7 @@ const ReceivingManagement = (props) => {
     } catch (error) {
       console.error('데이터 조회 오류:', error);
     }
-  };
+  }, []);
 
   // 입고 선택 핸들러 Row 클릭
   const handleReceivingSelect = async (params) => {
@@ -541,7 +540,7 @@ const ReceivingManagement = (props) => {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [handleSearch]);
 
   // 입고 목록 그리드 컬럼 정의
   const receivingColumns = [
