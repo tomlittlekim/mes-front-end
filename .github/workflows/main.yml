@@ -52,11 +52,11 @@ jobs:
         key: ${{ secrets.KEY }}
         port: ${{ secrets.PORT }}
         script: |
-          docker stop nginx_container || true
-          docker rm nginx_container || true
+          docker stop nginx || true
+          docker rm nginx || true
           docker pull 8pin/imos:nginx
           docker run -d \
-            --name nginx_container \
+            --name nginx \
             --network imosNetwork \
             -p 80:80 \
             8pin/imos:nginx
