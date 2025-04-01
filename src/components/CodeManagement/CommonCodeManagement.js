@@ -13,7 +13,8 @@ import {
   useTheme,
   Stack,
   Button,
-  FormHelperText
+  FormHelperText,
+  IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -21,343 +22,118 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpModal from '../Common/HelpModal';
+import { alpha } from '@mui/material/styles';
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
-
+  
   // React Hook Form 설정
-  const { control, handleSubmit, reset,getValues } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: {
-      codeClassId: '',
-      codeClassName: ''
+      codeGroupId: '',
+      codeGroupName: '',
+      useYn: 'all'
     }
   });
-
+  
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
-
+  
   // 코드 그룹 데이터
   const [codeGroups, setCodeGroups] = useState([
-
+    { id: 'CG001', name: '공장코드', description: '공장 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CG002', name: '설비코드', description: '설비 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CG003', name: '창고코드', description: '창고 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CG004', name: '거래처코드', description: '거래처 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CG005', name: '재고상태코드', description: '재고 상태 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'CG006', name: '부서코드', description: '부서 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'CG007', name: '검사코드', description: '검사 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-17' },
+    { id: 'CG008', name: '불량코드', description: '불량 유형 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-17' },
+    { id: 'CG009', name: '구매처유형코드', description: '구매처 유형 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-18' },
+    { id: 'CG010', name: '사원코드', description: '사원 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-18' },
+    { id: 'CG011', name: '작업구분코드', description: '작업 구분 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-19' },
+    { id: 'CG012', name: '생산라인코드', description: '생산 라인 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-19' },
+    { id: 'CG013', name: '작업장코드', description: '작업장 정보 코드', useYn: 'N', regUser: '관리자', regDate: '2024-03-20' },
+    { id: 'CG014', name: '출하방식코드', description: '출하 방식 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-20' },
+    { id: 'CG015', name: '단위코드', description: '단위 정보 코드', useYn: 'Y', regUser: '관리자', regDate: '2024-03-21' },
   ]);
 
   // 코드 데이터
   const [codes, setCodes] = useState([
-
+    { id: 'FC001', groupId: 'CG001', name: '대전공장', description: '대전 제조 공장', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'FC002', groupId: 'CG001', name: '천안공장', description: '천안 제조 공장', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'FC003', groupId: 'CG001', name: '구미공장', description: '구미 제조 공장', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'FC004', groupId: 'CG001', name: '부산공장', description: '부산 제조 공장', useYn: 'N', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'FC005', groupId: 'CG001', name: '울산공장', description: '울산 제조 공장', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'FC006', groupId: 'CG001', name: '광주공장', description: '광주 제조 공장', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'FC007', groupId: 'CG001', name: '인천공장', description: '인천 제조 공장', useYn: 'Y', regUser: '관리자', regDate: '2024-03-17' },
+    { id: 'FC008', groupId: 'CG001', name: '포항공장', description: '포항 제조 공장', useYn: 'N', regUser: '관리자', regDate: '2024-03-17' },
+    
+    { id: 'EQ001', groupId: 'CG002', name: '자동선반', description: '자동 선반 설비', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'EQ002', groupId: 'CG002', name: 'CNC가공기', description: 'CNC 가공 설비', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'EQ003', groupId: 'CG002', name: '사출기', description: '플라스틱 사출 설비', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'EQ004', groupId: 'CG002', name: '조립로봇', description: '자동 조립 로봇', useYn: 'N', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'EQ005', groupId: 'CG002', name: '검사장비', description: '자동 검사 장비', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'EQ006', groupId: 'CG002', name: '레이저절단기', description: '레이저 절단 설비', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    
+    { id: 'WH001', groupId: 'CG003', name: '본사창고', description: '본사 주 창고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'WH002', groupId: 'CG003', name: '자재창고', description: '원자재 보관 창고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'WH003', groupId: 'CG003', name: '2공장창고', description: '2공장 내 창고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'WH004', groupId: 'CG003', name: '완제품창고', description: '완제품 보관 창고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'WH005', groupId: 'CG003', name: '외부임대창고', description: '외부 임대 창고', useYn: 'N', regUser: '관리자', regDate: '2024-03-16' },
+    
+    { id: 'CU001', groupId: 'CG004', name: '삼성전자', description: '삼성전자 거래처', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CU002', groupId: 'CG004', name: 'LG전자', description: 'LG전자 거래처', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CU003', groupId: 'CG004', name: '현대자동차', description: '현대자동차 거래처', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CU004', groupId: 'CG004', name: 'SK하이닉스', description: 'SK하이닉스 거래처', useYn: 'Y', regUser: '관리자', regDate: '2024-03-15' },
+    { id: 'CU005', groupId: 'CG004', name: '포스코', description: '포스코 거래처', useYn: 'N', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'CU006', groupId: 'CG004', name: '한화시스템', description: '한화시스템 거래처', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    
+    { id: 'ST001', groupId: 'CG005', name: '정상', description: '정상 재고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'ST002', groupId: 'CG005', name: '불량', description: '불량 재고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'ST003', groupId: 'CG005', name: '폐기대기', description: '폐기 대기 재고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'ST004', groupId: 'CG005', name: '출고대기', description: '출고 대기 재고', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    
+    { id: 'DP001', groupId: 'CG006', name: '관리부', description: '관리부서', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'DP002', groupId: 'CG006', name: '생산부', description: '생산부서', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'DP003', groupId: 'CG006', name: '영업부', description: '영업부서', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'DP004', groupId: 'CG006', name: '품질부', description: '품질관리부서', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
+    { id: 'DP005', groupId: 'CG006', name: '연구개발부', description: '연구개발부서', useYn: 'Y', regUser: '관리자', regDate: '2024-03-16' },
   ]);
 
-  // 선택된 코드 그룹
+  // 선택된 코드 그룹 
   const [selectedCodeGroup, setSelectedCodeGroup] = useState(null);
-  //선택된 코드
-  const [selectedCode, setSelectedCode] = useState(null);
-
-  const [addCodeClassRows,setAddCodeClassRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
-  const [updatedCodeClassRows, setUpdatedCodeClassRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
-
-  const [addCodeRows,setAddCodeRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
-  const [updatedCodeRows, setUpdatedCodeRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
-
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      const query = `
-      query getCodeClass($filter: CodeClassFilter) {
-        getCodeClass(filter: $filter) {
-          codeClassId
-          codeClassName
-          codeClassDesc
-        }
-      }
-    `;
-
-      fetchGraphQL(
-          GRAPHQL_URL,
-          query,
-          getValues()
-      ).then((data) => {
-        if (data.errors) {
-        } else {
-          const rowsWithId = data.data.getCodeClass.map((row, index) => ({
-            ...row,
-            id: row.codeClassId  // 또는 row.factoryId || index + 1
-          }));
-          setCodeGroups(rowsWithId)
-        }
-        setIsLoading(false);
-      })
-          .catch((err) => {
-            setIsLoading(false);
-          });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // 검색 실행 함수
   const onSubmit = (data) => {
-    setUpdatedCodeClassRows([]);
-    setUpdatedCodeRows([]);
-    setAddCodeClassRows([]);
-    setAddCodeRows([]);
-
-    const query = `
-      query getCodeClass($filter: CodeClassFilter) {
-        getCodeClass(filter: $filter) {
-          codeClassId
-          codeClassName
-          codeClassDesc
-        }
-      }
-    `;
-
-    fetchGraphQL(
-        GRAPHQL_URL,
-        query,
-        data
-    ).then((data) => {
-      if (data.errors) {
-      } else {
-        const rowsWithId = data.data.getCodeClass.map((row, index) => ({
-          ...row,
-          id: row.codeClassId  // 또는 row.factoryId || index + 1
-        }));
-        setCodeGroups(rowsWithId)
-      }
-      setIsLoading(false);
-    })
-        .catch((err) => {
-          setIsLoading(false);
-        });
+    console.log('검색 실행:', data);
+    // 실제로는 API 호출하여 검색 조건에 맞는 데이터를 가져옴
   };
 
   // 검색 조건 초기화
   const handleReset = () => {
     reset({
-      codeClassId: '',
-      codeClassName: '',
+      codeGroupId: '',
+      codeGroupName: '',
+      useYn: 'all'
     });
   };
 
-  //코드 클레스 행 변화 (추가, 수정)
-  function codeClassRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    setCodeGroups((prev)=>{
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddCodeClassRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedCodeClassRows(prevUpdatedRows => {
-        // 같은 factoryId를 가진 기존 행이 있는지 확인
-        const existingIndex = prevUpdatedRows.findIndex(row => row.codeClassId === newRow.codeClassId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
-    return { ...oldRow, ...newRow };
-  }
-
-  //코드 행 변화 (추가, 수정)
-  function codeRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    setCodes((prev)=>{
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddCodeRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedCodeRows(prevUpdatedRows => {
-        // 같은 factoryId를 가진 기존 행이 있는지 확인
-        const existingIndex = prevUpdatedRows.findIndex(row => row.codeId === newRow.codeId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
-    return { ...oldRow, ...newRow };
-  }
-
-
-  // 코드 그룹 저장 핸들러
-  const handleSaveCodeGroup = () => {
-    const creatCodeClassMutation = `
-      mutation saveCodeClass($createdRows: [CodeClassInput], $updatedRows: [CodeClassUpdate]) {
-        saveCodeClass(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
-    const createdCodeClassInputs = addCodeClassRows.map(transformRowForMutation);
-    const updatedCodeClassInputs = updatedCodeClassRows.map(transformRowForUpdate);
-
-    const addRowQty =  addCodeClassRows.length;
-    const updateRowQty = updatedCodeClassRows.length;
-
-    if(addRowQty + updateRowQty === 0 ){
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '변경사항이 존재하지 않습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: creatCodeClassMutation,
-        variables: {
-          createdRows: createdCodeClassInputs,
-          updatedRows: updatedCodeClassInputs,
-        }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.errors) {
-            console.error("GraphQL errors:", data.errors);
-          } else {
-            onSubmit(getValues());
-            Swal.fire({
-              icon: 'success',
-              title: '성공',
-              text: '저장되었습니다.',
-              confirmButtonText: '확인'
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error save factory:", error);
-        });
-  };
-
-  // 코드 그룹 선택 시 이벤트 핸들러 - 우측 그리드 조회
+  // 코드 그룹 선택 시 이벤트 핸들러
   const handleCodeGroupSelect = (params) => {
     const codeGroup = codeGroups.find(cg => cg.id === params.id);
     setSelectedCodeGroup(codeGroup);
-
-    setAddCodeRows([]);
-    setUpdatedCodeRows([]);
-
-    const query = `
-      query getCodes($codeClassId: String!) {
-        getCodes(codeClassId: $codeClassId) {
-          codeClassId
-          codeId
-          codeName
-          codeDesc
-          sortOrder
-          flagActive
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    const variables = {
-      codeClassId: codeGroup.codeClassId
-    }
-
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query,
-        variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          if (data.errors) {
-            console.error("GraphQL Errors:", data.errors);
-          } else {
-            const rowsWithId = data.data.getCodes.map((row) => ({
-              ...row,
-              id: row.codeId
-            }));
-            setCodes(rowsWithId);
-          }
-          setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error("Fetch failed:", err);
-          setIsLoading(false);
-        });
   };
 
-
-  //코드 선택 핸들러
-  const handleCodeSelect = (params) => {
-    const code = codes.find(c => c.id === params.id);
-    setSelectedCode(code);
-  }
-
+  // 코드 필터링
+  const filteredCodes = codes.filter(code => 
+    selectedCodeGroup ? code.groupId === selectedCodeGroup.id : true
+  );
 
   // 코드 추가 핸들러
   const handleAddCode = () => {
@@ -373,95 +149,29 @@ const CommonCodeManagement = (props) => {
 
     const newCode = {
       id: `NEW_${Date.now()}`, // 임시 ID
-      codeClassId: selectedCodeGroup.codeClassId,
-      codeId: '자동입력',
-      codeName: '',
-      codeDesc: '',
-      sortOrder: '',
-      flagActive: 'Y',
-      createUser: '자동입력',
-      createDate: '자동입력',
-      updateUser: '자동입력',
-      updateDate: '자동입력',
+      groupId: selectedCodeGroup.id,
+      name: '',
+      description: '',
+      useYn: 'Y',
+      regUser: '시스템',
+      regDate: new Date().toISOString().split('T')[0]
     };
 
-    setCodes([newCode, ...codes]);
+    setCodes([...codes, newCode]);
   };
 
   // 코드 저장 핸들러
   const handleSaveCode = () => {
-    const addRowQty =  addCodeRows.length;
-    const updateRowQty = updatedCodeRows.length;
-
-    if(addRowQty + updateRowQty === 0 ){
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '변경사항이 존재하지 않습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const createCodeMutation = `
-      mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
-        saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
-    const createdCodeInputs = addCodeRows.map(transformCodeRowForMutation);
-    const updatedCodeInputs = updatedCodeRows.map(transformCodeRowForUpdate);
-
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: createCodeMutation,
-        variables: {
-          createdRows: createdCodeInputs,
-          updatedRows: updatedCodeInputs,
-        }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.errors) {
-            console.error("GraphQL errors:", data.errors);
-          } else {
-            handleCodeGroupSelect(selectedCodeGroup);
-            Swal.fire({
-              icon: 'success',
-              title: '성공',
-              text: '저장되었습니다.',
-              confirmButtonText: '확인'
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error save factory:", error);
-        });
+    Swal.fire({
+      icon: 'success',
+      title: '성공',
+      text: '코드가 저장되었습니다.',
+      confirmButtonText: '확인'
+    });
   };
 
   // 코드 삭제 핸들러
   const handleDeleteCode = () => {
-
-    if (!selectedCode) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 코드를 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const deleteCodeMutation = `
-      mutation DeleteCode($codeId: String!) {
-        deleteCode(codeId: $codeId)
-      }
-    `;
-
-
     Swal.fire({
       title: '삭제 확인',
       text: '선택한 코드를 삭제하시겠습니까?',
@@ -473,46 +183,23 @@ const CommonCodeManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            query: deleteCodeMutation,
-            variables: {codeId: selectedCode.codeId} // 선택된 공장의 factoryId를 사용
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.errors) {
-                console.error("GraphQL errors:", data.errors);
-                Swal.fire({
-                  icon: 'error',
-                  title: '삭제 실패',
-                  text: '삭제 중 오류가 발생했습니다.'
-                });
-              } else {
-                // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = codes.filter(f => f.id !== selectedCode.id);
-                setCodes(updatedList);
-                Swal.fire({
-                  icon: 'success',
-                  title: '성공',
-                  text: '삭제되었습니다.',
-                  confirmButtonText: '확인'
-                });
-                setSelectedCode(null);
-              }
-            })
-            .catch((error) => {
-              console.error("Error deleting factory:", error);
-              Swal.fire({
-                icon: 'error',
-                title: '삭제 실패',
-                text: '삭제 중 예외가 발생했습니다.'
-              });
-            });
+        Swal.fire({
+          icon: 'success',
+          title: '성공',
+          text: '코드가 삭제되었습니다.',
+          confirmButtonText: '확인'
+        });
       }
+    });
+  };
+
+  // 코드 그룹 저장 핸들러
+  const handleSaveCodeGroup = () => {
+    Swal.fire({
+      icon: 'success',
+      title: '성공',
+      text: '코드그룹이 저장되었습니다.',
+      confirmButtonText: '확인'
     });
   };
 
@@ -520,12 +207,14 @@ const CommonCodeManagement = (props) => {
   const handleAddCodeGroup = () => {
     const newCodeGroup = {
       id: `NEW_${Date.now()}`, // 임시 ID
-      codeClassId: '자동입력',
-      codeClassName: '',
-      codeClassDesc: '',
+      name: '',
+      description: '',
+      useYn: 'Y',
+      regUser: '시스템',
+      regDate: new Date().toISOString().split('T')[0]
     };
 
-    setCodeGroups([newCodeGroup,...codeGroups]);
+    setCodeGroups([...codeGroups, newCodeGroup]);
   };
 
   // 컴포넌트 마운트 시 초기 데이터 로드
@@ -534,39 +223,41 @@ const CommonCodeManagement = (props) => {
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 100);
-
+    
     return () => clearTimeout(timer);
   }, []);
 
   // 코드 그룹 DataGrid 컬럼 정의
   const codeGroupColumns = [
-    { field: 'codeClassId', headerName: '코드클레스ID', width: 130 },
-    { field: 'codeClassName', headerName: '코드클레스명', width: 130, editable: true },
-    { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
+    { field: 'id', headerName: '코드그룹ID', width: 130 },
+    { field: 'name', headerName: '코드그룹명', width: 150 },
+    { field: 'description', headerName: '설명', width: 200, flex: 1 },
+    { 
+      field: 'useYn', 
+      headerName: '사용여부', 
+      width: 100,
+      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
+    },
+    { field: 'regUser', headerName: '등록자', width: 100 },
+    { field: 'regDate', headerName: '등록일', width: 120 }
   ];
 
   // 코드 DataGrid 컬럼 정의
   const codeColumns = [
-    { field: 'codeClassId', headerName: '코드클레스ID', width: 120 },
-    { field: 'codeId', headerName: '코드ID', width: 120 },
-    { field: 'codeName', headerName: '코드명', width: 80, editable: true },
-    { field: 'codeDesc', headerName: '설명', width: 200, flex: 1, editable: true },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 85,
-      editable: true,
+    { field: 'id', headerName: '코드ID', width: 130, editable: true },
+    { field: 'name', headerName: '코드명', width: 150, editable: true },
+    { field: 'description', headerName: '설명', width: 200, flex: 1, editable: true },
+    { 
+      field: 'useYn', 
+      headerName: '사용여부', 
+      width: 100,
       type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
+      valueOptions: ['Y', 'N'],
+      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
+      editable: true
     },
-    { field: 'sortOrder', headerName: '정렬순서', width: 100, type: 'number', editable: true },
-    { field: 'createUser', headerName: '작성자', width: 85},
-    { field: 'createDate', headerName: '작성일', width: 150},
-    { field: 'updateUser', headerName: '수정자', width: 85},
-    { field: 'updateDate', headerName: '수정일', width: 150}
+    { field: 'regUser', headerName: '등록자', width: 100 },
+    { field: 'regDate', headerName: '등록일', width: 120 }
   ];
 
   // 코드 그룹 그리드 버튼
@@ -589,14 +280,14 @@ const CommonCodeManagement = (props) => {
     }
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
-
+  
   const getBgColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
     }
     return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
   };
-
+  
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
@@ -604,86 +295,51 @@ const CommonCodeManagement = (props) => {
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
 
-
-  const transformRowForMutation = (row) => ({
-    codeClassName: row.codeClassName,
-    codeClassDesc: row.codeClassDesc,
-  });
-
-  const transformCodeRowForMutation = (row) => ({
-    codeClassId: row.codeClassId,
-    codeName: row.codeName,
-    codeDesc: row.codeDesc,
-    sortOrder: row.sortOrder,
-    flagActive: row.flagActive
-  });
-
-  const transformRowForUpdate = (row) => ({
-    codeClassId: row.codeClassId,
-    codeClassName: row.codeClassName,
-    codeClassDesc: row.codeClassDesc,
-  });
-
-  const transformCodeRowForUpdate = (row) => ({
-    codeClassId: row.codeClassId,
-    codeId: row.codeId,
-    codeName: row.codeName,
-    codeDesc: row.codeDesc,
-    sortOrder: row.sortOrder,
-    flagActive: row.flagActive
-  });
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
-      <Box sx={{
-        display: 'flex',
-        alignItems: 'center',
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
         mb: 2,
         borderBottom: `1px solid ${getBorderColor()}`,
         pb: 1
       }}>
-        <Typography
-          variant="h5"
-          component="h2"
-          sx={{
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          sx={{ 
             fontWeight: 600,
             color: getTextColor()
           }}
         >
           공통코드관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
-      <SearchCondition
+      <SearchCondition 
         onSearch={handleSubmit(onSubmit)}
         onReset={handleReset}
       >
-        <Grid item xs={12} sm={6} md={6}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
-            name="codeClassId"
+            name="codeGroupId"
             control={control}
             render={({ field }) => (
               <TextField
@@ -697,9 +353,9 @@ const CommonCodeManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={6}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
-            name="codeClassName"
+            name="codeGroupName"
             control={control}
             render={({ field }) => (
               <TextField
@@ -714,69 +370,63 @@ const CommonCodeManagement = (props) => {
           />
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          {/*<Controller*/}
-          {/*  name="useYn"*/}
-          {/*  control={control}*/}
-          {/*  render={({ field }) => (*/}
-          {/*    <FormControl variant="outlined" size="small" fullWidth>*/}
-          {/*      <InputLabel id="useYn-label">사용여부</InputLabel>*/}
-          {/*      <Select*/}
-          {/*        {...field}*/}
-          {/*        labelId="useYn-label"*/}
-          {/*        label="사용여부"*/}
-          {/*      >*/}
-          {/*        <MenuItem value="all">전체</MenuItem>*/}
-          {/*        <MenuItem value="Y">사용</MenuItem>*/}
-          {/*        <MenuItem value="N">미사용</MenuItem>*/}
-          {/*      </Select>*/}
-          {/*    </FormControl>*/}
-          {/*  )}*/}
-          {/*/>*/}
+          <Controller
+            name="useYn"
+            control={control}
+            render={({ field }) => (
+              <FormControl variant="outlined" size="small" fullWidth>
+                <InputLabel id="useYn-label">사용여부</InputLabel>
+                <Select
+                  {...field}
+                  labelId="useYn-label"
+                  label="사용여부"
+                >
+                  <MenuItem value="all">전체</MenuItem>
+                  <MenuItem value="Y">사용</MenuItem>
+                  <MenuItem value="N">미사용</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+          />
         </Grid>
       </SearchCondition>
-
+      
       {/* 그리드 영역 */}
       {!isLoading && (
         <Grid container spacing={2}>
           {/* 코드 그룹 그리드 */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <EnhancedDataGridWrapper
               title="코드 그룹"
               rows={codeGroups}
               columns={codeGroupColumns}
               buttons={codeGroupButtons}
               height={450}
-              gridProps={{
-                editMode: 'cell',
-                onProcessUpdate: codeClassRowUpdate
-              }}
               onRowClick={handleCodeGroupSelect}
               tabId={props.tabId + "-codegroup"}
             />
           </Grid>
-
+          
           {/* 코드 그리드 */}
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} md={6}>
             <EnhancedDataGridWrapper
-              title={`코드 목록 ${selectedCodeGroup ? '- ' + selectedCodeGroup.codeClassName : ''}`}
-              rows={codes}
+              title={`코드 목록 ${selectedCodeGroup ? '- ' + selectedCodeGroup.name : ''}`}
+              rows={filteredCodes}
               columns={codeColumns}
               buttons={codeButtons}
               height={450}
               gridProps={{
-                editMode: 'cell',
-                onProcessUpdate: codeRowUpdate
+                editMode: 'row'
               }}
-              onRowClick={handleCodeSelect}
               tabId={props.tabId + "-codes"}
             />
           </Grid>
         </Grid>
       )}
-
+      
       {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{
-        bgcolor: getBgColor(),
+      <Box mt={2} p={2} sx={{ 
+        bgcolor: getBgColor(), 
         borderRadius: 1,
         border: `1px solid ${getBorderColor()}`
       }}>
@@ -792,8 +442,25 @@ const CommonCodeManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="공통코드관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 공통코드관리에서는 시스템에서 사용하는 코드 그룹 및 코드 정보를 등록, 수정, 삭제할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 코드 그룹을 선택하면 해당 그룹에 속한 코드 목록을 확인하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 코드는 시스템 전반에서 사용되므로 코드 값과 명칭을 명확하게 입력하고 관리해야 합니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };
 
-export default CommonCodeManagement;
+export default CommonCodeManagement; 

@@ -306,7 +306,10 @@ const MuiDataGridWrapper = ({
               },
               '.MuiDataGrid-cell': {
                 borderBottom: 'none',
-                color: getTextColor()
+                color: getTextColor(),
+                display: 'flex',         // 추가: flexbox 사용
+                alignItems: 'center',    // 추가: 수직 중앙 정렬
+                justifyContent: 'center' // 추가: 수평 중앙 정렬 (align 속성과 함께 동작)
               },
               '.MuiTablePagination-root': {
                 color: getTextColor()

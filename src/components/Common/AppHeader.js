@@ -29,6 +29,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import PersonIcon from '@mui/icons-material/Person';
 import Swal from 'sweetalert2';
 import SyncIcon from '@mui/icons-material/Sync';
+import {useNavigate} from "react-router-dom";
 
 // 탭 레이블 컴포넌트를 memo로 최적화
 const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
@@ -74,6 +75,7 @@ const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
 });
 
 const AppHeader = (props) => {
+  const navigate = useNavigate();
   const { activeTab, closeAllTabs, closeTab, tabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
   const { domain, toggleDomain, nginxEnv, domainName } = useDomain();
@@ -100,6 +102,12 @@ const AppHeader = (props) => {
   // 사용자 메뉴 닫기
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
+  };
+
+  //내 프로필로 이동 핸들러
+  const handleProfileClick = () => {
+    handleUserMenuClose();
+    navigate('/profile');
   };
 
   // 로그아웃 핸들러
@@ -377,7 +385,7 @@ const AppHeader = (props) => {
 
             <Divider />
 
-            <MenuItem onClick={handleUserMenuClose}>
+            <MenuItem onClick={handleProfileClick}>
               <ListItemIcon>
                 <PersonIcon fontSize="small" />
               </ListItemIcon>

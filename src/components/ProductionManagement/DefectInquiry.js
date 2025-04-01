@@ -12,6 +12,8 @@ import {
   Typography, 
   useTheme,
   Stack,
+  IconButton,
+  alpha,
   Chip
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -20,9 +22,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const DefectInquiry = (props) => {
   // 현재 테마 가져오기
@@ -55,14 +59,11 @@ const DefectInquiry = (props) => {
   // React Hook Form 설정
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
-      defectId: '',
-      productionId: '',
-      workOrderId: '',
+      productId: '',
       productName: '',
       defectType: '',
-      startDate: null,
-      endDate: null,
-      status: ''
+      fromDate: null,
+      toDate: null
     }
   });
 
@@ -71,18 +72,16 @@ const DefectInquiry = (props) => {
   const [defectList, setDefectList] = useState([]);
   const [selectedDefect, setSelectedDefect] = useState(null);
   const [defectDetails, setDefectDetails] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
     reset({
-      defectId: '',
-      productionId: '',
-      workOrderId: '',
+      productId: '',
       productName: '',
       defectType: '',
-      startDate: null,
-      endDate: null,
-      status: ''
+      fromDate: null,
+      toDate: null
     });
   };
 
@@ -307,6 +306,20 @@ const DefectInquiry = (props) => {
         >
           불량조회
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -316,32 +329,16 @@ const DefectInquiry = (props) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="defectId"
+            name="productId"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label="불량ID"
+                label="제품코드"
                 variant="outlined"
                 size="small"
                 fullWidth
-                placeholder="불량ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productionId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="생산실적ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="생산실적ID를 입력하세요"
+                placeholder="제품코드를 입력하세요"
               />
             )}
           />
@@ -368,10 +365,10 @@ const DefectInquiry = (props) => {
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="defect-type-label">불량유형</InputLabel>
+                <InputLabel id="defectType-label">불량유형</InputLabel>
                 <Select
                   {...field}
-                  labelId="defect-type-label"
+                  labelId="defectType-label"
                   label="불량유형"
                 >
                   <MenuItem value="">전체</MenuItem>
@@ -384,32 +381,11 @@ const DefectInquiry = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="status-label">상태</InputLabel>
-                <Select
-                  {...field}
-                  labelId="status-label"
-                  label="상태"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="확인필요">확인필요</MenuItem>
-                  <MenuItem value="처리중">처리중</MenuItem>
-                  <MenuItem value="확인완료">확인완료</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
         <Grid item xs={12} sm={12} md={6}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Stack direction="row" spacing={1} alignItems="center">
               <Controller
-                name="startDate"
+                name="fromDate"
                 control={control}
                 render={({ field }) => (
                   <DatePicker
@@ -426,7 +402,7 @@ const DefectInquiry = (props) => {
               />
               <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
               <Controller
-                name="endDate"
+                name="toDate"
                 control={control}
                 render={({ field }) => (
                   <DatePicker
@@ -448,50 +424,31 @@ const DefectInquiry = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 불량 목록 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title="불량 목록"
-              rows={defectList}
-              columns={defectColumns}
-              buttons={defectGridButtons}
-              height={450}
-              onRowClick={handleDefectSelect}
-            />
-          </Grid>
-          
-          {/* 불량 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`불량 상세정보 ${selectedDefect ? '- ' + selectedDefect.id : ''}`}
-              rows={defectDetails || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
-            />
-          </Grid>
-        </Grid>
+        <MuiDataGridWrapper
+          title="불량조회"
+          rows={defectList}
+          columns={defectColumns}
+          buttons={defectGridButtons}
+          height={500}
+        />
       )}
       
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 불량조회 화면에서는 생산 과정에서 발생한 불량 정보를 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 불량 유형, 발생일자, 제품 등의 조건으로 검색이 가능합니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 분석 버튼을 통해 불량 유형별 통계를 확인하거나, 출력 및 엑셀 내보내기 기능을 활용할 수 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="불량조회 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 불량조회에서는 제품별 불량 발생 현황을 조회할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 제품코드, 제품명, 불량유형, 기간으로 검색하여 원하는 불량 정보를 확인할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 불량 발생 추이를 분석하여 품질 개선에 활용할 수 있습니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

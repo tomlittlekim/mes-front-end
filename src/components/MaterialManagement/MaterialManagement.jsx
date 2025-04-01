@@ -13,38 +13,39 @@ import {
   useTheme,
   Stack
 } from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
-import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import { MATERIAL_QUERY, MATERIAL_MUTATION, DELETE_MUTATION } from '../../graphql/queries/materialQueries';
+import { useQuery, useMutation } from '@apollo/client';
+import {AdapterDateFns} from "@mui/x-date-pickers/AdapterDateFns";
+import { format } from 'date-fns';
+import ko from "date-fns/locale/ko";
+import Message from '../../utils/Message';
 
-const MaterialManagement = (props) => {
-  // 현재 테마 가져오기
+const MaterialManagement = ({ tabId }) => {
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // React Hook Form 설정
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       materialType: '',
       materialId: '',
       materialName: '',
-      useYn: '',
+      flagActive: '',
       fromDate: null,
       toDate: null
     }
   });
 
-  // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [materialList, setMaterialList] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
@@ -66,124 +67,179 @@ const MaterialManagement = (props) => {
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
 
-  // 초기화 함수
   const handleReset = () => {
     reset({
       materialType: '',
       materialId: '',
       materialName: '',
-      useYn: '',
+      flagActive: '',
       fromDate: null,
       toDate: null
     });
   };
 
-  // 검색 실행 함수
-  const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: '0000001', type: '원자재', name: '[T55VD] 보라 VIOLET', spec: '정품입고', unit: 'L', price: 1, quantity: 3, manufacturer: '엠스', supplier: '팔도입고', warehouse: '자재창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '0000002', type: '원자재', name: 'PFI-050M_빨강', spec: '정품입고', unit: 'L', price: 1, quantity: 5, manufacturer: '캐논', supplier: '한솔입고', warehouse: '자재창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '0000003', type: '원자재', name: '모조지70g', spec: '91.4cm(폭)', unit: 'M', price: 1, quantity: 1, manufacturer: '창조산사', supplier: '중이경단', warehouse: '자재창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' },
-      { id: '0000004', type: '부자재', name: '포장비닐', spec: '100cm(폭)', unit: 'EA', price: 10, quantity: 100, manufacturer: '패이퍼윌트', supplier: '패이퍼윌스', warehouse: '자재창고', useYn: 'Y', registUser: '홍길동', registDate: '2023-10-15', updateUser: '김유신', updateDate: '2024-01-20' }
-    ];
-    
-    setMaterialList(dummyData);
-  };
+  const { loading, error, data, refetch } = useQuery(MATERIAL_QUERY, {
+    variables: {
+        filter: {
+            materialType: '',
+            systemMaterialId: '',
+            userMaterialId: '',
+            materialName: '',
+            flagActive: null,
+            fromDate: null,
+            toDate: null
+        }
+    }
+});
 
-  // 행 추가 버튼 클릭 핸들러
+
+  const [saveMaterials] = useMutation(MATERIAL_MUTATION, {
+    onCompleted: () => {
+      refetch();
+    }
+  });
+
+  const [deleteMaterials] = useMutation(DELETE_MUTATION, {
+    onCompleted: () => {
+      refetch();
+    }
+  });
+
+  const handleSearch = async (data) => {
+    try {
+        const result = await refetch({
+            filter: {
+                materialType: data.materialType || '',
+                systemMaterialId: data.materialId || '',
+                userMaterialId: '',
+                materialName: data.materialName || '',
+                flagActive: data.flagActive || null,
+                fromDate: data.fromDate ? format(data.fromDate, 'yyyy-MM-dd') : null,
+                toDate: data.toDate ? format(data.toDate, 'yyyy-MM-dd') : null
+            }
+        });
+        
+        if (result.data?.materials) {
+            const materials = result.data.materials.map(material => ({
+                ...material,
+                id: material.id || `NEW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                flagActive: material.flagActive === null ? 'N' : (material.flagActive ? 'Y' : 'N')
+            }));
+            setMaterialList(materials);
+            setRefreshKey(prev => prev + 1);
+        }
+    } catch (error) {
+        Message.showError(error);
+    }
+};
+
   const handleAdd = () => {
     const newMaterial = {
-      id: `NEW_${Date.now()}`,
-      type: '',
-      name: '',
-      spec: '',
-      unit: '',
-      price: 0,
-      quantity: 0,
-      manufacturer: '',
-      supplier: '',
-      warehouse: '',
-      useYn: 'Y',
-      registUser: '시스템',
-      registDate: new Date().toISOString().split('T')[0],
-      updateUser: '시스템',
-      updateDate: new Date().toISOString().split('T')[0]
+        seq: null,
+        materialType: '',
+        systemMaterialId: '',
+        userMaterialId: '',
+        materialName: '',
+        materialStandard: '',
+        unit: '',
+        minQuantity: 0,
+        maxQuantity: 0,
+        manufacturerName: '',
+        supplierName: '',
+        materialStorage: '',
+        flagActive: 'Y',
+        createUser: '시스템',
+        createDate: new Date().toISOString().split('T')[0],
+        updateUser: '시스템',
+        updateDate: new Date().toISOString().split('T')[0],
+        id: `NEW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
-    
+
     setMaterialList([...materialList, newMaterial]);
+};
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      const materialsToSave = materialList.map(material => ({
+        ...material,
+        flagActive: material.flagActive,
+        updateDate: new Date().toISOString().split('T')[0],
+        updateUser: '시스템'
+      }));
+
+      await saveMaterials({
+        variables: {
+          materials: materialsToSave
+        }
+      });
+      
+      Message.showSuccess(Message.SAVE_SUCCESS);
+    } catch (error) {
+      Message.showError(error, setIsLoading);
+    }
   };
 
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
-  };
+  const handleDelete = async () => {
+    const selectedRows = materialList.filter(material => material.selected);
+    
+    if (selectedRows.length === 0) {
+      Message.showWarning(Message.NO_SELECTED_ROWS);
+      return;
+    }
 
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
-    Swal.fire({
-      title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
+    Message.showDeleteConfirm(async () => {
+      setIsLoading(true);
+      try {
+        await deleteMaterials({
+          variables: {
+            ids: selectedRows.map(row => row.id)
+          }
         });
+        
+        Message.showSuccess(Message.DELETE_SUCCESS);
+      } catch (error) {
+        Message.showError(error, setIsLoading);
       }
     });
   };
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      handleSearch({});
+    if (data?.materials) {
+      const materials = data.materials.map(material => ({
+        ...material,
+        id: material.id || `NEW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        flagActive: material.flagActive === null ? 'N' : (material.flagActive ? 'Y' : 'N')
+      }));
+      setMaterialList(materials);
       setIsLoading(false);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 원/부자재 목록 그리드 컬럼 정의
-  const materialColumns = [
-    { field: 'type', headerName: '자재종류', width: 100 },
-    { field: 'id', headerName: '자재 ID', width: 100 },
-    { field: 'name', headerName: '자재명', width: 180, flex: 1 },
-    { field: 'spec', headerName: '규격', width: 120 },
-    { field: 'unit', headerName: '단위', width: 70 },
-    { field: 'price', headerName: '단가', width: 80, type: 'number' },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number' },
-    { field: 'manufacturer', headerName: '제조사명', width: 120 },
-    { field: 'supplier', headerName: '공급업체명', width: 120 },
-    { field: 'warehouse', headerName: '보관창고', width: 120 },
-    { 
-      field: 'useYn', 
-      headerName: '사용여부', 
-      width: 100,
-      type: 'singleSelect',
-      valueOptions: ['Y', 'N'],
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
-      editable: true
     }
-  ];
+  }, [data]);
 
-  // 원/부자재 목록 그리드 버튼
+  const materialColumns = [
+    { field: 'materialType', headerName: '자재종류', width: 100 },
+    { field: 'systemMaterialId', headerName: '시스템자재ID', width: 120 },
+    { field: 'userMaterialId', headerName: '사용자자재ID', width: 120 },
+    { field: 'materialName', headerName: '자재명', width: 180, flex: 1 },
+    { field: 'materialStandard', headerName: '규격', width: 120 },
+    { field: 'unit', headerName: '단위', width: 70 },
+    { field: 'minQuantity', headerName: '최소수량', width: 80, type: 'number' },
+    { field: 'maxQuantity', headerName: '최대수량', width: 80, type: 'number' },
+    { field: 'manufacturerName', headerName: '제조사명', width: 120 },
+    { field: 'supplierName', headerName: '공급업체명', width: 120 },
+    { field: 'materialStorage', headerName: '보관창고', width: 120 },
+    {
+        field: 'flagActive',
+        headerName: '사용여부',
+        width: 100,
+        type: 'string',
+        valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용',
+        editable: true,
+        valueOptions: ['Y', 'N']
+    }
+];
+
+
   const materialGridButtons = [
     { label: '조회', onClick: handleSubmit(handleSearch), icon: null },
     { label: '행추가', onClick: handleAdd, icon: <AddIcon /> },
@@ -212,7 +268,6 @@ const MaterialManagement = (props) => {
         </Typography>
       </Box>
 
-      {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
       <SearchCondition 
         onSearch={handleSubmit(handleSearch)}
         onReset={handleReset}
@@ -271,15 +326,17 @@ const MaterialManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="useYn"
+            name="flagActive"
             control={control}
+            defaultValue=""
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label">사용여부</InputLabel>
+                <InputLabel id="flagActive-label">사용여부</InputLabel>
                 <Select
                   {...field}
-                  labelId="useYn-label"
+                  labelId="flagActive-label"
                   label="사용여부"
+                  value={field.value || ''}
                 >
                   <MenuItem value="">전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
@@ -290,7 +347,7 @@ const MaterialManagement = (props) => {
           />
         </Grid>
         <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
             <Stack direction="row" spacing={1} alignItems="center">
               <Controller
                 name="fromDate"
@@ -330,22 +387,23 @@ const MaterialManagement = (props) => {
         </Grid>
       </SearchCondition>
       
-      {/* 그리드 영역 */}
-      {!isLoading && (
-        <MuiDataGridWrapper
-          title="원/부자재 목록"
-          rows={materialList}
-          columns={materialColumns}
-          buttons={materialGridButtons}
-          height={500}
-          gridProps={{
-            editMode: 'row',
-            checkboxSelection: true
-          }}
-        />
-      )}
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <MuiDataGridWrapper
+            title="원/부자재 목록"
+            key={refreshKey}
+            rows={materialList}
+            columns={materialColumns}
+            buttons={materialGridButtons}
+            height={500}
+            gridProps={{
+              editMode: 'row',
+              checkboxSelection: true
+            }}
+          />
+        </Grid>
+      </Grid>
       
-      {/* 하단 정보 영역 */}
       <Box mt={2} p={2} sx={{ 
         bgcolor: getBgColor(), 
         borderRadius: 1,

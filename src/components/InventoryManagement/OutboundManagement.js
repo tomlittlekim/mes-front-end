@@ -11,7 +11,9 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -19,9 +21,12 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const OutboundManagement = (props) => {
   // 현재 테마 가져오기
@@ -57,7 +62,7 @@ const OutboundManagement = (props) => {
       productId: '',
       productName: '',
       productType: '',
-      destination: '',
+      warehouse: '',
       fromDate: null,
       toDate: null
     }
@@ -68,6 +73,7 @@ const OutboundManagement = (props) => {
   const [outboundList, setOutboundList] = useState([]);
   const [selectedOutbound, setSelectedOutbound] = useState(null);
   const [outboundDetail, setOutboundDetail] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
@@ -75,7 +81,7 @@ const OutboundManagement = (props) => {
       productId: '',
       productName: '',
       productType: '',
-      destination: '',
+      warehouse: '',
       fromDate: null,
       toDate: null
     });
@@ -299,6 +305,20 @@ const OutboundManagement = (props) => {
         >
           출고관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -362,17 +382,23 @@ const OutboundManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="destination"
+            name="warehouse"
             control={control}
             render={({ field }) => (
-              <TextField
-                {...field}
-                label="출고처"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="출고처를 입력하세요"
-              />
+              <FormControl variant="outlined" size="small" fullWidth>
+                <InputLabel id="warehouse-label">출고창고</InputLabel>
+                <Select
+                  {...field}
+                  labelId="warehouse-label"
+                  label="출고창고"
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="자재창고A">자재창고A</MenuItem>
+                  <MenuItem value="자재창고B">자재창고B</MenuItem>
+                  <MenuItem value="자재창고C">자재창고C</MenuItem>
+                  <MenuItem value="완제품창고">완제품창고</MenuItem>
+                </Select>
+              </FormControl>
             )}
           />
         </Grid>
@@ -448,24 +474,22 @@ const OutboundManagement = (props) => {
         </Grid>
       )}
       
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 출고관리 화면에서는 원자재, 부자재 등의 출고 정보를 효율적으로 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 출고목록에서 특정 출고건을 선택하면 해당 출고의 상세 정보를 확인하고 편집할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 승인 상태 관리 및 출고 창고 지정을 통해 자재의 흐름을 체계적으로 관리할 수 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="출고관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 출고관리 화면에서는 원자재, 부자재 등의 출고 정보를 효율적으로 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 출고목록에서 특정 출고건을 선택하면 해당 출고의 상세 정보를 확인하고 편집할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 승인 상태 관리 및 출고 창고 지정을 통해 자재의 흐름을 체계적으로 관리할 수 있습니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

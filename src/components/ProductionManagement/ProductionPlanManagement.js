@@ -11,7 +11,9 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack
+  Stack,
+  IconButton,
+  alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -20,9 +22,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import CachedIcon from '@mui/icons-material/Cached';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import HelpModal from '../Common/HelpModal';
 
 const ProductionPlanManagement = (props) => {
   // 현재 테마 가져오기
@@ -47,6 +51,7 @@ const ProductionPlanManagement = (props) => {
   const [planList, setPlanList] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [planDetail, setPlanDetail] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -362,6 +367,20 @@ const ProductionPlanManagement = (props) => {
         >
           생산계획관리
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode 
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -534,6 +553,23 @@ const ProductionPlanManagement = (props) => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="생산계획관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 생산계획관리에서는 생산 계획 정보를 등록하고 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 계획번호, 제품 정보, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 생산 계획 정보는 작업 지시, 생산 실적 관리 등에서 활용됩니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };
