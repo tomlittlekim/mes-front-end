@@ -39,26 +39,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-#    - name: Decode SSH Key
-#      run: |
-#        echo "${{ secrets.KEY_B64 }}" | base64 -d > key.pem
-#        chmod 600 key.pem
-
-    - name: executing remote ssh commands using ssh key
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.KEY }}
-        port: ${{ secrets.PORT }}
-        script: |
-          docker stop nginx || true
-          docker rm nginx || true
-          docker pull 8pin/imos:nginx
+    - name: SSH into server and execute commands
+    - run: |
+        echo "${{ secrets.KEY }}" > my_ec2_key.pem
+        chmod 600 my_ec2_key.pem
+        ssh -o StrictHostKeyChecking=no -i my_ec2_key.pem ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
           
-          docker run -d \
-            --name nginx \
-            --network imosNetwork \
-            -p 80:80 \
-            8pin/imos:nginx
-          docker system prune -a -f
+        docker stop nginx || true
+        docker rm nginx || true
+        docker pull 8pin/imos:nginx
+        
+        docker run -d \
+          --name nginx \
+          --network imosNetwork \
+          -p 80:80 \
+          8pin/imos:nginx
+        docker system prune -a -f
+        EOF
