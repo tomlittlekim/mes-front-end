@@ -4,6 +4,7 @@ export const RAW_SUB_MATERIAL_QUERY = `
         getRawSubMaterials(filter: $filter) {
             seq
             materialType
+            materialCategory
             systemMaterialId
             userMaterialId
             materialName
@@ -11,6 +12,7 @@ export const RAW_SUB_MATERIAL_QUERY = `
             unit
             minQuantity
             maxQuantity
+            baseQuantity
             manufacturerName
             supplierId
             materialStorage
@@ -28,6 +30,7 @@ export const COMPLETE_MATERIAL_QUERY = `
         getCompleteMaterials(filter: $filter) {
             seq
             materialType
+            materialCategory
             systemMaterialId
             userMaterialId
             materialName
@@ -35,6 +38,7 @@ export const COMPLETE_MATERIAL_QUERY = `
             unit
             minQuantity
             maxQuantity
+            baseQuantity
             manufacturerName
             supplierId
             materialStorage
@@ -53,6 +57,7 @@ export const HALF_MATERIAL_QUERY = `
         getHalfMaterials(filter: $filter) {
             seq
             materialType
+            materialCategory
             systemMaterialId
             userMaterialId
             materialName

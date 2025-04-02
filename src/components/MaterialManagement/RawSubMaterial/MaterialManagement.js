@@ -118,6 +118,7 @@ const MaterialManagement = ({tabId}) => {
         createNewRow: createNewMaterial,
         formatNewRow: row => ({
             materialType: row.materialType || '',
+            materialCategory: row.materialCategory || '',
             userMaterialId: row.userMaterialId || '',
             materialName: row.materialName || '',
             materialStandard: row.materialStandard || '',
@@ -132,6 +133,7 @@ const MaterialManagement = ({tabId}) => {
         formatUpdatedRow: row => ({
             systemMaterialId: row.systemMaterialId,
             materialType: row.materialType || '',
+            materialCategory: row.materialCategory || '',
             userMaterialId: row.userMaterialId || '',
             materialName: row.materialName || '',
             materialStandard: row.materialStandard || '',
@@ -161,6 +163,7 @@ const MaterialManagement = ({tabId}) => {
     const STRUCTURE = {
         seq: null,
         materialType: '',
+        materialCategory: '',
         systemMaterialId: '',
         userMaterialId: '',
         materialName: '',
@@ -183,6 +186,13 @@ const MaterialManagement = ({tabId}) => {
             valueOptions: [
                 { value: 'RAW_MATERIAL', label: '원자재' },
                 { value: 'SUB_MATERIAL', label: '부자재' },
+                // { value: 'HALF_PRODUCT', label: '반제품' },
+                // { value: 'COMPLETE_PRODUCT', label: '완제품' }
+            ], editable: true},
+        {field: 'materialCategory', headerName: '자재유형', width: 100, type: 'singleSelect',
+            valueOptions: [
+                { value: '잉크', label: '잉크' },
+                { value: '포장재', label: '포장재' },
                 // { value: 'HALF_PRODUCT', label: '반제품' },
                 // { value: 'COMPLETE_PRODUCT', label: '완제품' }
             ], editable: true},
@@ -249,6 +259,7 @@ const MaterialManagement = ({tabId}) => {
         defaultValues: DEFAULT_VALUES
     });
 
+    // 상태 관리
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [materialList, setMaterialList] = useState([]);
 
@@ -514,7 +525,7 @@ const MaterialManagement = ({tabId}) => {
                         columns={COLUMNS}
                         buttons={GRID_BUTTONS}
                         height={450}
-                        tabId={tabId + "-rawSubmaterials"}
+                        tabId={tabId + "-materials"}
                         onRowClick={handleSelectionModelChange}
                         gridProps={{
                             editMode: 'cell',
