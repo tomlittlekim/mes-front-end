@@ -18,28 +18,16 @@ import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
-import {useDomain, DOMAINS} from '../../contexts/DomainContext';
-import {MATERIAL_QUERY, MATERIAL_MUTATION, DELETE_MUTATION} from '../../graphql-queries/material-master/materialQueries';
-import {useGraphQL} from '../../apollo/useGraphQL';
 import {AdapterDateFns} from "@mui/x-date-pickers/AdapterDateFns";
 import {format} from 'date-fns';
 import ko from "date-fns/locale/ko";
-import {
-    handleGridAdd,
-    handleGridDelete,
-    handleGridSave,
-    handleGridSearch,
-    loadInitialData, useGridDataEffect
-} from "../../utils/grid/gridDataCallUtils";
-import {
-    createRowSelectHandler, createRowUpdateHandler, createRowAddHandler,
-    createSaveDataFormatter, createDeleteDataFormatter,
-    formatDateToYYYYMMDD,
-    formatFlagActive,
-    formatGridData,
-    generateId
-} from "../../utils/grid/gridUtils";
+import {EnhancedDataGridWrapper, SearchCondition} from "../../Common";
+import {MATERIAL_MUTATION, DELETE_MUTATION, MATERIAL_QUERY} from "../../../graphql-queries/material-master/materialQueries";
+import {useGraphQL} from "../../../apollo/useGraphQL";
+import {GridUtils} from "../../../utils/grid/gridUtils";
+import {GridDataCallUtils} from "../../../utils/grid/gridDataCallUtils";
+import {GridRowUtils} from "../../../utils/grid/gridRowUtils";
+import {DOMAINS, useDomain} from "../../../contexts/DomainContext";
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${MATERIAL_QUERY}`;
@@ -162,7 +150,7 @@ const MaterialManagement = ({tabId}) => {
     const [selectedRows, setSelectedRows] = useState([]);
 
     // 행 선택 핸들러
-    const handleMaterialSelect = createRowSelectHandler(materialList, setSelectedMaterial);
+    const handleMaterialSelect = GridRowUtils.createRowSelectHandler(materialList, setSelectedMaterial);
 
     // 체크박스 선택 핸들러
     const handleSelectionModelChange = (newSelection) => {
@@ -172,7 +160,7 @@ const MaterialManagement = ({tabId}) => {
     };
 
     // 행 수정 완료 핸들러
-    const handleProcessRowUpdate = createRowUpdateHandler(
+    const handleProcessRowUpdate = GridRowUtils.createRowUpdateHandler(
         setMaterialList,
         setAddRows,
         setUpdatedRows
@@ -204,11 +192,11 @@ const MaterialManagement = ({tabId}) => {
     };
 
     // 데이터 포맷팅 함수 정의
-    const formatMaterialData = (data) => formatGridData(data, 'materials', material => {
+    const formatMaterialData = (data) => GridUtils.formatGridData(data, 'materials', material => {
         return {
             ...material,
-            id: material.systemMaterialId || generateId('TEMP'),
-            flagActive: formatFlagActive(material.flagActive)
+            id: material.systemMaterialId || GridUtils.generateId('TEMP'),
+            flagActive: GridUtils.formatFlagActive(material.flagActive)
         };
     })
 
@@ -237,13 +225,13 @@ const MaterialManagement = ({tabId}) => {
     // 새로운 행 생성 함수 정의
     const createNewMaterial = () => ({
         ...STRUCTURE,
-        id: generateId('NEW'),
-        createDate: formatDateToYYYYMMDD(new Date()),
-        updateDate: formatDateToYYYYMMDD(new Date())
+        id: GridUtils.generateId('NEW'),
+        createDate: GridUtils.formatDateToYYYYMMDD(new Date()),
+        updateDate: GridUtils.formatDateToYYYYMMDD(new Date())
     });
 
     // 저장 데이터 포맷팅 함수
-    const formatMaterialForSave = createSaveDataFormatter(
+    const formatMaterialForSave = GridRowUtils.createSaveDataFormatter(
         // 신규 행 포맷팅
         row => ({
             materialType: row.materialType || '',
@@ -276,13 +264,13 @@ const MaterialManagement = ({tabId}) => {
     );
 
     // 삭제 데이터 포맷팅 함수
-    const formatMaterialForDelete = createDeleteDataFormatter(
+    const formatMaterialForDelete = GridRowUtils.createDeleteDataFormatter(
         row => row.systemMaterialId
     );
 
     // 초기 데이터 로드
     useEffect(() => {
-        loadInitialData({
+        GridDataCallUtils.loadInitialData({
             executeQuery,
             query: MATERIAL_GET,
             setData: setMaterialList,
@@ -293,7 +281,7 @@ const MaterialManagement = ({tabId}) => {
     }, []);
 
     const handleSearch = async (data) => {
-        await handleGridSearch({
+        await GridDataCallUtils.handleGridSearch({
             executeQuery,
             query: MATERIAL_GET,
             setData: setMaterialList,
@@ -307,7 +295,7 @@ const MaterialManagement = ({tabId}) => {
     const handleSave = async () => {
         const { createdRows: newRows, updatedRows: modifiedRows } = formatMaterialForSave(addRows, updatedRows);
 
-        await handleGridSave({
+        await GridDataCallUtils.handleGridSave({
             executeMutation,
             mutation: MATERIAL_SAVE,
             setLoading: setIsLoading,
@@ -325,7 +313,7 @@ const MaterialManagement = ({tabId}) => {
     };
 
     // 행 추가 핸들러
-    const handleAdd = createRowAddHandler(
+    const handleAdd = GridRowUtils.createRowAddHandler(
         createNewMaterial,
         setMaterialList,
         setAddRows
@@ -337,7 +325,7 @@ const MaterialManagement = ({tabId}) => {
         // 신규/기존 행 분리
         const { newRows, existingRows } = formatMaterialForDelete(selectedItems);
         
-        await handleGridDelete({
+        await GridDataCallUtils.handleGridDelete({
             executeMutation,
             mutation: MATERIAL_DELETE,
             setLoading: setIsLoading,
@@ -364,14 +352,13 @@ const MaterialManagement = ({tabId}) => {
         {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
     ];
 
-
-    // useEffect 대신 커스텀 훅 사용
-    useGridDataEffect({
-        data,
-        setData: setMaterialList,
-        setLoading: setIsLoading,
-        formatData: formatMaterialData
-    });
+    useEffect(() => {
+        if (data) {
+            const formattedData = formatMaterialData(data);
+            setMaterialList(formattedData);
+            setIsLoading(false);
+        }
+    }, [data]);
 
     return (
         <Box sx={{p: 0, minHeight: '100vh'}}>
@@ -529,7 +516,7 @@ const MaterialManagement = ({tabId}) => {
                         gridProps={{
                             editMode: 'cell',
                             checkboxSelection: true,
-                            getRowId: (row) => row.id || generateId('TEMP'),
+                            getRowId: (row) => row.id || GridUtils.generateId('TEMP'),
                             onProcessUpdate: handleProcessRowUpdate,
                             onSelectionModelChange: handleSelectionModelChange,
                             columnVisibilityModel: {

@@ -22,11 +22,11 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
-import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
-import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import HelpModal from '../Common/HelpModal';
+import {DOMAINS, useDomain} from "../../../contexts/DomainContext";
+import {EnhancedDataGridWrapper, SearchCondition} from "../../Common";
+import HelpModal from "../../Common/HelpModal";
 
 const HalfProductManagement = (props) => {
   // 현재 테마 가져오기
@@ -255,7 +255,7 @@ const HalfProductManagement = (props) => {
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
-      <SearchCondition 
+      <SearchCondition
         onSearch={handleSubmit(handleSearch)}
         onReset={handleReset}
       >
