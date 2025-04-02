@@ -45,7 +45,7 @@ const MaterialManagement = ({tabId}) => {
     const { generateId, formatDateToYYYYMMDD, formatFlagActive, formatGridData } = useGridUtils();
 
     // 데이터 포맷팅 함수 정의
-    const formatMaterialData = (data) => formatGridData(data, 'materials', material => {
+    const formatMaterialData = (data) => formatGridData(data, 'getRawSubMaterials', material => {
         return {
             ...material,
             id: material.systemMaterialId || generateId('TEMP'),
@@ -183,8 +183,8 @@ const MaterialManagement = ({tabId}) => {
             valueOptions: [
                 { value: 'RAW_MATERIAL', label: '원자재' },
                 { value: 'SUB_MATERIAL', label: '부자재' },
-                { value: 'HALF_PRODUCT', label: '반제품' },
-                { value: 'COMPLETE_PRODUCT', label: '완제품' }
+                // { value: 'HALF_PRODUCT', label: '반제품' },
+                // { value: 'COMPLETE_PRODUCT', label: '완제품' }
             ], editable: true},
         {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
         {field: 'userMaterialId', headerName: '사용자자재ID', width: 120, editable: true },
@@ -514,7 +514,7 @@ const MaterialManagement = ({tabId}) => {
                         columns={COLUMNS}
                         buttons={GRID_BUTTONS}
                         height={450}
-                        tabId={tabId + "-materials"}
+                        tabId={tabId + "-rawSubmaterials"}
                         onRowClick={handleSelectionModelChange}
                         gridProps={{
                             editMode: 'cell',

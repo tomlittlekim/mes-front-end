@@ -1,7 +1,7 @@
 // src/graphql/queries/materialQueries.js
 export const MATERIAL_QUERY = `
-    query getMaterials($filter: MaterialFilter) {
-        materials(filter: $filter) {
+    query getRawSubMaterials($filter: MaterialFilter) {
+        getRawSubMaterials(filter: $filter) {
             seq
             materialType
             systemMaterialId
