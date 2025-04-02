@@ -24,10 +24,11 @@ import ko from "date-fns/locale/ko";
 import {EnhancedDataGridWrapper, SearchCondition} from "../../Common";
 import {MATERIAL_MUTATION, DELETE_MUTATION, MATERIAL_QUERY} from "../../../graphql-queries/material-master/materialQueries";
 import {useGraphQL} from "../../../apollo/useGraphQL";
-import {GridUtils} from "../../../utils/grid/gridUtils";
-import {GridDataCallUtils} from "../../../utils/grid/gridDataCallUtils";
-import {GridRowUtils} from "../../../utils/grid/gridRowUtils";
+import {useGridUtils} from "../../../utils/grid/useGridUtils";
+import {useGridDataCall} from "../../../utils/grid/useGridDataCall";
+import {useGridRow} from "../../../utils/grid/useGridRow";
 import {DOMAINS, useDomain} from "../../../contexts/DomainContext";
+import Message from "../../../utils/message/Message";
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${MATERIAL_QUERY}`;
@@ -38,7 +39,114 @@ const MaterialManagement = ({tabId}) => {
     const theme = useTheme();
     const {domain} = useDomain();
     const isDarkMode = theme.palette.mode === 'dark';
-    const {executeQuery, executeMutation, loading, error, data} = useGraphQL();
+    const {executeQuery, executeMutation} = useGraphQL();
+
+    // 그리드 유틸리티 훅
+    const { generateId, formatDateToYYYYMMDD, formatFlagActive, formatGridData } = useGridUtils();
+
+    // 데이터 포맷팅 함수 정의
+    const formatMaterialData = (data) => formatGridData(data, 'materials', material => {
+        return {
+            ...material,
+            id: material.systemMaterialId || generateId('TEMP'),
+            flagActive: formatFlagActive(material.flagActive)
+        };
+    });
+
+    // 기본 필터 정의
+    const defaultMaterialFilter = {
+        systemMaterialId: '',
+        materialType: '',
+        userMaterialId: '',
+        materialName: '',
+        flagActive: null,
+        fromDate: null,
+        toDate: null
+    };
+
+    // 새로운 행 생성 함수 정의
+    const createNewMaterial = () => ({
+        ...STRUCTURE,
+        id: generateId('NEW'),
+        createDate: formatDateToYYYYMMDD(new Date()),
+        updateDate: formatDateToYYYYMMDD(new Date())
+    });
+
+    // 그리드 데이터 호출 훅
+    const {
+        loading: isLoading,
+        refreshKey,
+        loadInitialData,
+        handleGridSearch,
+        handleGridSave,
+        handleGridDelete,
+        refresh
+    } = useGridDataCall({
+        executeQuery,
+        executeMutation,
+        query: MATERIAL_GET,
+        mutation: MATERIAL_SAVE,
+        deleteMutation: MATERIAL_DELETE,
+        formatData: formatMaterialData,
+        defaultFilter: defaultMaterialFilter,
+        onSuccess: async () => {
+            const result = await refresh();
+            setMaterialList(result);
+        },
+        onDeleteSuccess: async () => {
+            const result = await refresh();
+            setMaterialList(result);
+        },
+        clearAddRows: () => setAddRows([]),
+        clearUpdatedRows: () => setUpdatedRows([])
+    });
+
+    // 그리드 행 관련 훅
+    const {
+        selectedRows,
+        addRows,
+        updatedRows,
+        setAddRows,
+        setUpdatedRows,
+        setSelectedRows,
+        handleRowSelect,
+        handleRowUpdate,
+        handleRowAdd,
+        formatSaveData,
+        formatDeleteData
+    } = useGridRow({
+        createNewRow: createNewMaterial,
+        formatNewRow: row => ({
+            materialType: row.materialType || '',
+            userMaterialId: row.userMaterialId || '',
+            materialName: row.materialName || '',
+            materialStandard: row.materialStandard || '',
+            unit: row.unit || '',
+            minQuantity: row.minQuantity || 0,
+            maxQuantity: row.maxQuantity || 0,
+            manufacturerName: row.manufacturerName || '',
+            supplierId: row.supplierId || '',
+            materialStorage: row.materialStorage || '',
+            flagActive: row.flagActive || 'Y'
+        }),
+        formatUpdatedRow: row => ({
+            systemMaterialId: row.systemMaterialId,
+            materialType: row.materialType || '',
+            userMaterialId: row.userMaterialId || '',
+            materialName: row.materialName || '',
+            materialStandard: row.materialStandard || '',
+            unit: row.unit || '',
+            minQuantity: row.minQuantity || 0,
+            maxQuantity: row.maxQuantity || 0,
+            manufacturerName: row.manufacturerName || '',
+            supplierId: row.supplierId || '',
+            materialStorage: row.materialStorage || '',
+            flagActive: row.flagActive || 'Y'
+        }),
+        formatExistingRow: row => ({
+            systemMaterialId: row.systemMaterialId
+        })
+    });
 
     /** 원부자재 관리 관련 상수 선언부 */
     const DEFAULT_VALUES = {
@@ -142,29 +250,29 @@ const MaterialManagement = ({tabId}) => {
     });
 
     const [selectedMaterial, setSelectedMaterial] = useState(null);
-    const [updatedRows, setUpdatedRows] = useState([]);
-    const [addRows, setAddRows] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [materialList, setMaterialList] = useState([]);
-    const [refreshKey, setRefreshKey] = useState(0);
-    const [selectedRows, setSelectedRows] = useState([]);
 
-    // 행 선택 핸들러
-    const handleMaterialSelect = GridRowUtils.createRowSelectHandler(materialList, setSelectedMaterial);
+    // 초기 데이터 로드
+    useEffect(() => {
+        const loadData = async () => {
+            const result = await loadInitialData();
+            setMaterialList(result);
+        };
+        loadData();
+    }, []);
 
     // 체크박스 선택 핸들러
     const handleSelectionModelChange = (newSelection) => {
-        setSelectedRows(newSelection);
-        const selectedItems = materialList.filter(row => newSelection.includes(row.id));
+        const selectionArray = Array.isArray(newSelection) ? newSelection : [newSelection];
+        const selectedItems = materialList.filter(row => selectionArray.includes(row.id));
         setSelectedMaterial(selectedItems[0] || null);
+        setSelectedRows(selectedItems);
     };
 
     // 행 수정 완료 핸들러
-    const handleProcessRowUpdate = GridRowUtils.createRowUpdateHandler(
-        setMaterialList,
-        setAddRows,
-        setUpdatedRows
-    );
+    const handleProcessRowUpdate = (newRow, oldRow) => {
+        return handleRowUpdate(newRow, oldRow, setMaterialList);
+    };
 
     const getTextColor = () => {
         if (domain === DOMAINS.PEMS) {
@@ -191,29 +299,9 @@ const MaterialManagement = ({tabId}) => {
         reset(DEFAULT_VALUES);
     };
 
-    // 데이터 포맷팅 함수 정의
-    const formatMaterialData = (data) => GridUtils.formatGridData(data, 'materials', material => {
-        return {
-            ...material,
-            id: material.systemMaterialId || GridUtils.generateId('TEMP'),
-            flagActive: GridUtils.formatFlagActive(material.flagActive)
-        };
-    })
-
-    // 기본 필터 정의
-    const defaultMaterialFilter = {
-        systemMaterialId: '',
-        materialType: '',
-        userMaterialId: '',
-        materialName: '',
-        flagActive: null,
-        fromDate: null,
-        toDate: null
-    };
-
     // 검색 파라미터 포맷팅 함수 정의
     const formatMaterialSearchParams = (data) => ({
-        systemMaterialId: data.systemMaterialId || '' ,
+        systemMaterialId: data.systemMaterialId || '',
         materialType: data.materialType || '',
         userMaterialId: data.materialId || '',
         materialName: data.materialName || '',
@@ -222,143 +310,52 @@ const MaterialManagement = ({tabId}) => {
         toDate: data.toDate ? format(data.toDate, 'yyyy-MM-dd') : null
     });
 
-    // 새로운 행 생성 함수 정의
-    const createNewMaterial = () => ({
-        ...STRUCTURE,
-        id: GridUtils.generateId('NEW'),
-        createDate: GridUtils.formatDateToYYYYMMDD(new Date()),
-        updateDate: GridUtils.formatDateToYYYYMMDD(new Date())
-    });
-
-    // 저장 데이터 포맷팅 함수
-    const formatMaterialForSave = GridRowUtils.createSaveDataFormatter(
-        // 신규 행 포맷팅
-        row => ({
-            materialType: row.materialType || '',
-            userMaterialId: row.userMaterialId || '',
-            materialName: row.materialName || '',
-            materialStandard: row.materialStandard || '',
-            unit: row.unit || '',
-            minQuantity: row.minQuantity || 0,
-            maxQuantity: row.maxQuantity || 0,
-            manufacturerName: row.manufacturerName || '',
-            supplierId: row.supplierId || '',
-            materialStorage: row.materialStorage || '',
-            flagActive: row.flagActive || 'Y'
-        }),
-        // 수정 행 포맷팅
-        row => ({
-            systemMaterialId: row.systemMaterialId,
-            materialType: row.materialType || '',
-            userMaterialId: row.userMaterialId || '',
-            materialName: row.materialName || '',
-            materialStandard: row.materialStandard || '',
-            unit: row.unit || '',
-            minQuantity: row.minQuantity || 0,
-            maxQuantity: row.maxQuantity || 0,
-            manufacturerName: row.manufacturerName || '',
-            supplierId: row.supplierId || '',
-            materialStorage: row.materialStorage || '',
-            flagActive: row.flagActive || 'Y'
-        })
-    );
-
-    // 삭제 데이터 포맷팅 함수
-    const formatMaterialForDelete = GridRowUtils.createDeleteDataFormatter(
-        row => row.systemMaterialId
-    );
-
-    // 초기 데이터 로드
-    useEffect(() => {
-        GridDataCallUtils.loadInitialData({
-            executeQuery,
-            query: MATERIAL_GET,
-            setData: setMaterialList,
-            setLoading: setIsLoading,
-            formatData: formatMaterialData,
-            defaultFilter: defaultMaterialFilter
-        });
-    }, []);
-
+    // 검색 핸들러
     const handleSearch = async (data) => {
-        await GridDataCallUtils.handleGridSearch({
-            executeQuery,
-            query: MATERIAL_GET,
-            setData: setMaterialList,
-            setRefreshKey,
-            formatData: formatMaterialData,
-            formatSearchParams: () => formatMaterialSearchParams(data)
-        });
+        const searchParams = formatMaterialSearchParams(data);
+        const result = await handleGridSearch(searchParams);
+        setMaterialList(result);
     };
 
-    // 저장 핸들러 수정
+    // 저장 핸들러
     const handleSave = async () => {
-        const { createdRows: newRows, updatedRows: modifiedRows } = formatMaterialForSave(addRows, updatedRows);
-
-        await GridDataCallUtils.handleGridSave({
-            executeMutation,
-            mutation: MATERIAL_SAVE,
-            setLoading: setIsLoading,
-            handleSearch,
-            data: {
-                createdRows: newRows,
-                updatedRows: modifiedRows
-            },
-            searchParams: getValues()
-        });
-
-        // 저장 후 상태 초기화
-        setAddRows([]);
-        setUpdatedRows([]);
+        const saveData = formatSaveData(addRows, updatedRows);
+        try {
+            await handleGridSave(saveData);
+        } catch (error) {
+            console.error('MaterialManagement handleSave Error:', error);
+        }
     };
 
-    // 행 추가 핸들러
-    const handleAdd = GridRowUtils.createRowAddHandler(
-        createNewMaterial,
-        setMaterialList,
-        setAddRows
-    );
-
+    // 삭제 핸들러
     const handleDelete = async () => {
-        const selectedItems = materialList.filter(row => selectedRows.includes(row.id));
-        
-        // 신규/기존 행 분리
-        const { newRows, existingRows } = formatMaterialForDelete(selectedItems);
-        
-        await GridDataCallUtils.handleGridDelete({
-            executeMutation,
-            mutation: MATERIAL_DELETE,
-            setLoading: setIsLoading,
-            handleSearch,
-            data: selectedItems,
-            searchParams: getValues(),
+        if (!selectedRows.length) {
+            Message.showWarning(Message.DELETE_SELECT_REQUIRED);
+            return;
+        }
+
+        const deleteData = formatDeleteData(selectedRows, row => ({
+            systemMaterialId: row.systemMaterialId
+        }));
+
+        // systemMaterialIds 배열로 변환
+        const systemMaterialIds = deleteData.existingRows.map(row => row.systemMaterialId);
+
+        await handleGridDelete({
+            data: selectedRows,
             setDataList: setMaterialList,
-            setAddRows,
-            mutationData: {
-                systemMaterialIds: existingRows
-            }
+            clearAddRows: () => setAddRows([]),
+            mutationData: { systemMaterialIds },
+            searchParams: formatMaterialSearchParams(getValues())
         });
-
-        // 삭제 후 상태 초기화
-        setSelectedMaterial(null);
-        setSelectedRows([]);
     };
-
 
     const GRID_BUTTONS = [
         {label: '조회', onClick: handleSubmit(handleSearch), icon: null},
-        {label: '행추가', onClick: handleAdd, icon: <AddIcon/>},
+        {label: '행추가', onClick: () => handleRowAdd(setMaterialList), icon: <AddIcon/>},
         {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
         {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
     ];
-
-    useEffect(() => {
-        if (data) {
-            const formattedData = formatMaterialData(data);
-            setMaterialList(formattedData);
-            setIsLoading(false);
-        }
-    }, [data]);
 
     return (
         <Box sx={{p: 0, minHeight: '100vh'}}>
@@ -512,11 +509,11 @@ const MaterialManagement = ({tabId}) => {
                         buttons={GRID_BUTTONS}
                         height={450}
                         tabId={tabId + "-materials"}
-                        onRowClick={handleMaterialSelect}
+                        onRowClick={handleSelectionModelChange}
                         gridProps={{
                             editMode: 'cell',
                             checkboxSelection: true,
-                            getRowId: (row) => row.id || GridUtils.generateId('TEMP'),
+                            getRowId: (row) => row.id || generateId('TEMP'),
                             onProcessUpdate: handleProcessRowUpdate,
                             onSelectionModelChange: handleSelectionModelChange,
                             columnVisibilityModel: {
