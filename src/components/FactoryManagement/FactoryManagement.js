@@ -171,6 +171,7 @@ const FactoryManagement = (props) => {
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({ query, variables })
     })
         .then((response) => {
@@ -223,6 +224,7 @@ const FactoryManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: createFactoryMutation,
         variables: {
@@ -304,6 +306,7 @@ const FactoryManagement = (props) => {
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
+          credentials: 'include', // 쿠키 자동 전송 설정
           body: JSON.stringify({
             query: deleteFactoryMutation,
             variables: {factoryId: selectedFactory.factoryId} // 선택된 공장의 factoryId를 사용
