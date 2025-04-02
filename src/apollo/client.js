@@ -7,26 +7,12 @@ const httpLink = createHttpLink({
     credentials: 'include' // CORS 설정
 });
 
-// 쿠키에서 JWT 토큰 가져오기 함수
-const getJwtToken = () => {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.startsWith('jwt=')) {
-            return cookie.substring(4); // 'jwt=' 이후의 값
-        }
-    }
-    return null;
-};
-
 // 인증 헤더 추가
 const authLink = setContext((_, { headers }) => {
-    const token = getJwtToken();
-    
     return {
         headers: {
             ...headers,
-            authorization: token ? `Bearer ${token}` : "",
+            // authorization: token ? `Bearer ${token}` : "",
         }
     };
 });
