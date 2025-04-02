@@ -17,7 +17,7 @@ function  useLocalStorageVO() {
         localStorage.setItem('auth', JSON.stringify(loginUser));
         if (loginUser.id >= 0) {
             localStorage.setItem('isAuthenticated', 'true');
-        } else localStorage.removeItem('isAuthenticated');
+        } else logout()
     }, [loginUser]);
 
     const setUserInfo = (auth) => {
@@ -34,6 +34,7 @@ function  useLocalStorageVO() {
     const logout = () => {
         localStorage.removeItem('auth');
         localStorage.removeItem('isAuthenticated');
+        setLoginUser({ id: -1 });
     }
 
     return { setUserInfo, logout, loginUser };
