@@ -22,7 +22,7 @@ import {AdapterDateFns} from "@mui/x-date-pickers/AdapterDateFns";
 import {format} from 'date-fns';
 import ko from "date-fns/locale/ko";
 import {EnhancedDataGridWrapper, SearchCondition} from "../../Common";
-import {MATERIAL_MUTATION, DELETE_MUTATION, MATERIAL_QUERY} from "../../../graphql-queries/material-master/materialQueries";
+import {MATERIAL_MUTATION, DELETE_MUTATION, RAW_SUB_MATERIAL_QUERY} from "../../../graphql-queries/material-master/materialQueries";
 import {useGraphQL} from "../../../apollo/useGraphQL";
 import {useGridUtils} from "../../../utils/grid/useGridUtils";
 import {useGridDataCall} from "../../../utils/grid/useGridDataCall";
@@ -31,7 +31,7 @@ import {DOMAINS, useDomain} from "../../../contexts/DomainContext";
 import Message from "../../../utils/message/Message";
 
 // GraphQL 쿼리 정의
-const MATERIAL_GET = gql`${MATERIAL_QUERY}`;
+const MATERIAL_GET = gql`${RAW_SUB_MATERIAL_QUERY}`;
 const MATERIAL_SAVE = gql`${MATERIAL_MUTATION}`;
 const MATERIAL_DELETE = gql`${DELETE_MUTATION}`;
 
