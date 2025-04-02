@@ -320,10 +320,16 @@ const MaterialManagement = ({tabId}) => {
     // 저장 핸들러
     const handleSave = async () => {
         const saveData = formatSaveData(addRows, updatedRows);
+        // 저장할 데이터가 없는 경우
+        if (!saveData.createdRows.length && !saveData.updatedRows.length) {
+            Message.showWarning(Message.NO_DATA_TO_SAVE);
+            return;
+        }
+
         try {
             await handleGridSave(saveData);
         } catch (error) {
-            console.error('MaterialManagement handleSave Error:', error);
+            console.error('Save Error:', error);
         }
     };
 
