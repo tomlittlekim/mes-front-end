@@ -12,7 +12,7 @@ import {
     Box,
     Typography,
     useTheme,
-    Stack
+    Stack, IconButton, alpha
 } from '@mui/material';
 import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
@@ -29,6 +29,8 @@ import {useGridDataCall} from "../../../utils/grid/useGridDataCall";
 import {useGridRow} from "../../../utils/grid/useGridRow";
 import {DOMAINS, useDomain} from "../../../contexts/DomainContext";
 import Message from "../../../utils/message/Message";
+import HelpModal from "../../Common/HelpModal";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${RAW_SUB_MATERIAL_QUERY}`;
@@ -262,6 +264,7 @@ const MaterialManagement = ({tabId}) => {
     // 상태 관리
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [materialList, setMaterialList] = useState([]);
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
     // 초기 데이터 로드
     useEffect(() => {
@@ -393,6 +396,20 @@ const MaterialManagement = ({tabId}) => {
                 >
                     원/부자재관리
                 </Typography>
+                <IconButton
+                    onClick={() => setIsHelpModalOpen(true)}
+                    sx={{
+                        ml: 1,
+                        color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                        '&:hover': {
+                            backgroundColor: isDarkMode
+                                ? alpha(theme.palette.primary.light, 0.1)
+                                : alpha(theme.palette.primary.main, 0.05)
+                        }
+                    }}
+                >
+                    <HelpOutlineIcon />
+                </IconButton>
             </Box>
 
             <SearchCondition
@@ -558,6 +575,23 @@ const MaterialManagement = ({tabId}) => {
                     </Typography>
                 </Stack>
             </Box>
+
+            {/* 도움말 모달 */}
+            <HelpModal
+                open={isHelpModalOpen}
+                onClose={() => setIsHelpModalOpen(false)}
+                title="원/부자재 관리 도움말"
+            >
+                <Typography variant="body2" color={getTextColor()}>
+                    • 원/부자재관리에서는 제품 생산에 필요한 원자재와 부자재 정보를 관리합니다.
+                </Typography>
+                <Typography variant="body2" color={getTextColor()}>
+                    • 행추가 버튼을 클릭하여 새로운 자재를 등록할 수 있습니다.
+                </Typography>
+                <Typography variant="body2" color={getTextColor()}>
+                    • 각 행을 직접 수정한 후 저장 버튼을 클릭하여 변경사항을 저장할 수 있습니다.
+                </Typography>
+            </HelpModal>
         </Box>
     );
 };
