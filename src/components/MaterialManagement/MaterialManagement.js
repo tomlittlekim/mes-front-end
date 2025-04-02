@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 import './MaterialManagement.css';
 import {useForm, Controller} from 'react-hook-form';
+import { gql } from '@apollo/client';
 import {
     TextField,
     FormControl,
@@ -39,6 +40,11 @@ import {
     formatGridData,
     generateId
 } from "../../utils/grid/gridUtils";
+
+// GraphQL 쿼리 정의
+const MATERIAL_GET = gql`${MATERIAL_QUERY}`;
+const MATERIAL_SAVE = gql`${MATERIAL_MUTATION}`;
+const MATERIAL_DELETE = gql`${DELETE_MUTATION}`;
 
 const MaterialManagement = ({tabId}) => {
     const theme = useTheme();
@@ -278,7 +284,7 @@ const MaterialManagement = ({tabId}) => {
     useEffect(() => {
         loadInitialData({
             executeQuery,
-            query: MATERIAL_QUERY,
+            query: MATERIAL_GET,
             setData: setMaterialList,
             setLoading: setIsLoading,
             formatData: formatMaterialData,
@@ -289,7 +295,7 @@ const MaterialManagement = ({tabId}) => {
     const handleSearch = async (data) => {
         await handleGridSearch({
             executeQuery,
-            query: MATERIAL_QUERY,
+            query: MATERIAL_GET,
             setData: setMaterialList,
             setRefreshKey,
             formatData: formatMaterialData,
@@ -303,7 +309,7 @@ const MaterialManagement = ({tabId}) => {
 
         await handleGridSave({
             executeMutation,
-            mutation: MATERIAL_MUTATION,
+            mutation: MATERIAL_SAVE,
             setLoading: setIsLoading,
             handleSearch,
             data: {
@@ -333,7 +339,7 @@ const MaterialManagement = ({tabId}) => {
         
         await handleGridDelete({
             executeMutation,
-            mutation: DELETE_MUTATION,
+            mutation: MATERIAL_DELETE,
             setLoading: setIsLoading,
             handleSearch,
             data: selectedItems,

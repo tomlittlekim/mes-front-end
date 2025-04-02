@@ -1,7 +1,5 @@
 // src/graphql/queries/materialQueries.js
-// @ts-nocheck
-import { gql } from '@apollo/client';
-export const MATERIAL_QUERY = gql`
+export const MATERIAL_QUERY = `
     query getMaterials($filter: MaterialFilter) {
         materials(filter: $filter) {
             seq
@@ -25,13 +23,13 @@ export const MATERIAL_QUERY = gql`
     }
 `;
 
-export const MATERIAL_MUTATION = gql`
+export const MATERIAL_MUTATION = `
     mutation saveMaterials($createdRows: [MaterialInput], $updatedRows: [MaterialUpdate]) {
         saveMaterials(createdRows: $createdRows, updatedRows: $updatedRows)
     }
 `;
 
-export const DELETE_MUTATION = gql`
+export const DELETE_MUTATION = `
     mutation deleteMaterials($systemMaterialIds: [String!]!) {
         deleteMaterials(systemMaterialIds: $systemMaterialIds)
     }
