@@ -51,8 +51,9 @@ const createFetch = (withAuth = true) => {
 export const dontLoginFetch = createFetch(true);
 export const apiFetch = createFetch(false);
 
+// query, mutation 모두 동작함
 export const graphFetch = async <T>(
-    query: string,
+    body: string, // query || mutation
     variables?: Record<string, any>,
     options?: FetchOptions
 ): Promise<T> => {
@@ -62,7 +63,7 @@ export const graphFetch = async <T>(
             "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ query, variables }),
+        body: JSON.stringify({ query: body, variables }),
         ...options,
     };
 
