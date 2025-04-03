@@ -829,8 +829,7 @@ const ProductionPlanManagement = (props) => {
             />
           </Grid>
           <Grid item xs={12} sm={12} md={3}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}
-                                  adapterLocale={ko}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
               <Controller
                   name="planDateRange"
                   control={control}
@@ -841,6 +840,7 @@ const ProductionPlanManagement = (props) => {
                           onRangeChange={handleDateRangeChange}
                           startLabel="시작일"
                           endLabel="종료일"
+                          label="계획시작일" // 기본값 "계획기간"에서 "계획시작일"로 변경
                           size="small"
                       />
                   )}

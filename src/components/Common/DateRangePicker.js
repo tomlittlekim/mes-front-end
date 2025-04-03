@@ -9,7 +9,10 @@ import {
   Typography,
   IconButton,
   useTheme,
-  alpha // alpha 함수 import 추가
+  alpha,
+  FormControl,
+  InputLabel,
+  FormHelperText
 } from '@mui/material';
 import { LocalizationProvider, DatePicker, StaticDatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -17,7 +20,7 @@ import { format, isValid, isAfter, isBefore, isEqual } from 'date-fns';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CloseIcon from '@mui/icons-material/Close';
 import ko from 'date-fns/locale/ko';
-import { useDomain, DOMAINS } from '../../contexts/DomainContext'; // 도메인 컨텍스트 추가
+import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 
 /**
  * 기간 선택을 위한 커스텀 DateRangePicker 컴포넌트
@@ -30,6 +33,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext'; // 도메인 
  * @param {Function} props.onRangeChange - 날짜 범위 변경 핸들러 (startDate, endDate)를 인자로 받음
  * @param {string} props.startLabel - 시작 날짜 레이블 (기본값: "시작일")
  * @param {string} props.endLabel - 종료 날짜 레이블 (기본값: "종료일")
+ * @param {string} props.label - 필드 레이블 (기본값: "계획기간")
  * @param {boolean} props.disabled - 비활성화 여부
  * @param {string} props.size - TextField 크기 (small, medium)
  * @returns {JSX.Element}
@@ -42,11 +46,12 @@ const DateRangePicker = ({
   onRangeChange,
   startLabel = "시작일",
   endLabel = "종료일",
+  label = "계획기간",
   disabled = false,
   size = "small"
 }) => {
   const theme = useTheme();
-  const { domain } = useDomain(); // 도메인 컨텍스트 사용
+  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -54,7 +59,7 @@ const DateRangePicker = ({
   const [tempEndDate, setTempEndDate] = useState(endDate);
   const [hoveredDate, setHoveredDate] = useState(null);
 
-  // 도메인별 스타일 함수 추가
+  // 도메인별 스타일 함수
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
@@ -199,9 +204,22 @@ const DateRangePicker = ({
 
   return (
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-        <Box>
-          {/* 날짜 범위 표시 필드 */}
+        <FormControl fullWidth size={size}>
+          <InputLabel
+              shrink
+              htmlFor="date-range-picker"
+              sx={{
+                backgroundColor: theme.palette.background.paper,
+                px: 0.5,
+                '&.Mui-focused': {
+                  color: domain === DOMAINS.PEMS ? getPrimaryColor() : undefined
+                }
+              }}
+          >
+            {label}
+          </InputLabel>
           <TextField
+              id="date-range-picker"
               fullWidth
               size={size}
               value={displayText()}
@@ -224,6 +242,10 @@ const DateRangePicker = ({
               sx={{
                 '& .MuiOutlinedInput-root': {
                   cursor: 'pointer'
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  // 라벨이 있는 경우 상단 여백 추가
+                  borderRadius: 1
                 }
               }}
           />
@@ -476,7 +498,7 @@ const DateRangePicker = ({
               </Stack>
             </Box>
           </Popover>
-        </Box>
+        </FormControl>
       </LocalizationProvider>
   );
 };
