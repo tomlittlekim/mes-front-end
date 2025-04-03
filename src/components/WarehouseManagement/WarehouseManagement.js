@@ -18,7 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
@@ -173,7 +173,9 @@ const WarehouseManagement = (props) => {
       } else {
         const rowsWithId = data.data.getWarehouse.map((row, index) => ({
           ...row,
-          id: row.warehouseId  // 또는 row.factoryId || index + 1
+          id: row.warehouseId ,
+          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
         }));
         setWarehouseList(rowsWithId);
         // setRefreshKey(prev => prev + 1);
@@ -200,10 +202,10 @@ const WarehouseManagement = (props) => {
       warehouseName: '',
       warehouseType: '',
       flagActive: 'Y',
-      createdUser: '자동입력',
-      createdDate: '자동입력',
-      updatedUser: '자동입력',
-      updatedDate: '자동입력'
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
     
     setWarehouseList([newWarehouse, ...warehouseList]);
@@ -384,7 +386,9 @@ const WarehouseManagement = (props) => {
         } else {
           const rowsWithId = data.data.getWarehouse.map((row, index) => ({
             ...row,
-            id: row.warehouseId  // 또는 row.factoryId || index + 1
+            id: row.warehouseId ,
+            createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+            updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
           }));
           setWarehouseList(rowsWithId);
         }
@@ -521,10 +525,10 @@ const WarehouseManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'createdUser', headerName: '등록자', width: 100 },
-    { field: 'createdDate', headerName: '등록일', width: 150 },
-    { field: 'updatedUser', headerName: '수정자', width: 100 },
-    { field: 'updatedDate', headerName: '수정일', width: 150 }
+    { field: 'createUser', headerName: '등록자', width: 100 },
+    { field: 'createDate', headerName: '등록일', width: 150 },
+    { field: 'updateUser', headerName: '수정자', width: 100 },
+    { field: 'updateDate', headerName: '수정일', width: 150 }
   ];
 
   // 창고 목록 그리드 버튼
@@ -677,7 +681,7 @@ const WarehouseManagement = (props) => {
       {!isLoading && (
         //   {/* 창고 기본 정보 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title="창고 목록"
               rows={warehouseList}
               columns={warehouseColumns}
@@ -688,6 +692,7 @@ const WarehouseManagement = (props) => {
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}
+              tabId={props.tabId + "-warehouse"}
             />
           </Grid>
       )}
