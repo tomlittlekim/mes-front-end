@@ -536,13 +536,14 @@ const EquipmentManagement = (props) => {
       valueOptions: factoryTypeOptions,
       flex:1
     },
-    { field: 'factoryName', headerName: '공장 명', width: 120 },
+    { field: 'factoryName', headerName: '공장 명', width: 100 },
     {
       field: 'lineId',
       headerName: '라인 ID',
       width: 100,
       editable: true,
       type: 'singleSelect',
+      flex:1,
       valueOptions: (params) => {
         // 각 행의 factoryId에 따라 라인 옵션 필터링
         const factoryId = params.row.factoryId;
@@ -551,21 +552,21 @@ const EquipmentManagement = (props) => {
             .map((line) => ({ value: line.lineId, label: line.lineId }));
       },
     },
-    { field: 'lineName', headerName: '라인 명', width: 120 },
-    { field: 'equipmentId', headerName: '설비 ID', width: 100 },
-    { field: 'equipmentSn', headerName: '설비 S/N', width: 120 , editable: true },
+    { field: 'lineName', headerName: '라인 명', width: 90 },
+    { field: 'equipmentId', headerName: '설비 ID', width: 100, flex: 1 },
+    { field: 'equipmentSn', headerName: '설비 S/N', width: 100 , editable: true },
     {
       field: 'equipmentType',
-      headerName: '설비 유형', width: 100,
+      headerName: '설비 유형', width: 90,
       editable: true,
       type: 'singleSelect',
       valueOptions: equipmentTypeOptions,
       flex:1
     },
-    { field: 'equipmentName', headerName: '설비 명', width: 150, editable: true },
+    { field: 'equipmentName', headerName: '설비 명', width: 120, editable: true },
     {
       field: 'equipmentStatus' ,
-      headerName: '상태' , width: 100,
+      headerName: '상태' , width: 90,
       editable: true,
       type: 'singleSelect',
       valueOptions: equipmentStatusOptions,
@@ -582,10 +583,10 @@ const EquipmentManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'createdUser', headerName: '등록자', width: 100 },
-    { field: 'createdDate', headerName: '등록일', width: 150 },
-    { field: 'updatedUser', headerName: '수정자', width: 100 },
-    { field: 'updatedDate', headerName: '수정일', width: 150 }
+    { field: 'createdUser', headerName: '등록자', width: 90 },
+    { field: 'createdDate', headerName: '등록일', width: 130 },
+    { field: 'updatedUser', headerName: '수정자', width: 90 },
+    { field: 'updatedDate', headerName: '수정일', width: 130 }
   ];
 
   // 설비 목록 그리드 버튼

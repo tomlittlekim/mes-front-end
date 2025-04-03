@@ -547,10 +547,10 @@ const CommonCodeManagement = (props) => {
 
   // 코드 DataGrid 컬럼 정의
   const codeColumns = [
-    { field: 'codeClassId', headerName: '코드그룹 ID', width: 120 },
-    { field: 'codeId', headerName: '코드ID', width: 120 },
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
+    { field: 'codeId', headerName: '코드ID', width: 150 },
     { field: 'codeName', headerName: '코드명', width: 80, editable: true },
-    { field: 'codeDesc', headerName: '설명', width: 200, flex: 1, editable: true },
+    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
     {
       field: 'flagActive',
       headerName: '사용여부',
@@ -562,11 +562,11 @@ const CommonCodeManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'sortOrder', headerName: '정렬순서', width: 100, type: 'number', editable: true },
-    { field: 'createUser', headerName: '작성자', width: 85},
-    { field: 'createDate', headerName: '작성일', width: 150},
-    { field: 'updateUser', headerName: '수정자', width: 85},
-    { field: 'updateDate', headerName: '수정일', width: 150}
+    { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
+    { field: 'createUser', headerName: '작성자', width: 90},
+    { field: 'createDate', headerName: '작성일', width: 135},
+    { field: 'updateUser', headerName: '수정자', width: 90},
+    { field: 'updateDate', headerName: '수정일', width: 135}
   ];
 
   // 코드 그룹 그리드 버튼
