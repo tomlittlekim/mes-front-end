@@ -31,6 +31,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
 import { alpha } from '@mui/material';
+import {getRoleGroup, getUserGroup} from "../../api/userApi";
 
 const UserManagement = (props) => {
   // 현재 테마 가져오기
@@ -66,11 +67,15 @@ const UserManagement = (props) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [authorityOptions, setAuthorityOptions] = useState([]);
+  const [req, setReq] = useState({
+
+  });
   
   // React Hook Form 설정 - 검색
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
-      userId: '',
+      loginId: '',
       userName: '',
       departmentName: '',
       authorityName: ''
@@ -80,7 +85,7 @@ const UserManagement = (props) => {
   // React Hook Form 설정 - 상세 정보
   const { control: detailControl, handleSubmit: handleDetailSubmit, reset: resetDetail, setValue } = useForm({
     defaultValues: {
-      userId: '',
+      loginId: '',
       userName: '',
       password: '',
       email: '',
@@ -88,21 +93,19 @@ const UserManagement = (props) => {
       departmentName: '',
       position: '',
       authorityName: '',
-      isActive: 'Y'
+      flagActive: 'Y'
     }
   });
 
   // 컬럼 정의 - 사용자 목록
   const userColumns = [
-    { field: 'id', headerName: 'ID', width: 70, hide: true },
-    { field: 'userId', headerName: '사용자 ID', flex: 1 },
+    { field: 'loginId', headerName: '사용자 ID', flex: 1 },
     { field: 'userName', headerName: '이름', flex: 1 },
     { field: 'departmentName', headerName: '부서', flex: 1 },
     { field: 'position', headerName: '직책', flex: 1 },
     { field: 'authorityName', headerName: '권한', flex: 1 },
-    { field: 'lastLoginDate', headerName: '최근 로그인', flex: 1 },
-    { 
-      field: 'isActive', 
+    {
+      field: 'flagActive', 
       headerName: '상태', 
       flex: 0.7,
       renderCell: (params) => (
@@ -131,7 +134,7 @@ const UserManagement = (props) => {
   // 초기화 함수 - 검색
   const handleReset = () => {
     reset({
-      userId: '',
+      loginId: '',
       userName: '',
       departmentName: '',
       authorityName: ''
@@ -147,25 +150,27 @@ const UserManagement = (props) => {
   // 사용자 목록 검색
   const handleSearch = (data) => {
     console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 1, userId: 'admin', userName: '관리자', departmentName: '시스템관리팀', position: '팀장', authorityName: '총관리자', email: 'admin@example.com', phoneNumber: '010-1234-5678', lastLoginDate: '2024-03-25 14:30:22', isActive: 'Y' },
-      { id: 2, userId: 'user1', userName: '김철수', departmentName: '생산관리팀', position: '과장', authorityName: '관리자', email: 'user1@example.com', phoneNumber: '010-2345-6789', lastLoginDate: '2024-03-24 09:15:47', isActive: 'Y' },
-      { id: 3, userId: 'user2', userName: '이영희', departmentName: '품질관리팀', position: '대리', authorityName: '일반사용자', email: 'user2@example.com', phoneNumber: '010-3456-7890', lastLoginDate: '2024-03-23 16:45:33', isActive: 'Y' },
-      { id: 4, userId: 'user3', userName: '박지민', departmentName: '영업팀', position: '주임', authorityName: '일반사용자', email: 'user3@example.com', phoneNumber: '010-4567-8901', lastLoginDate: '2024-03-22 11:20:15', isActive: 'Y' },
-      { id: 5, userId: 'user4', userName: '최준호', departmentName: '구매팀', position: '사원', authorityName: '일반사용자', email: 'user4@example.com', phoneNumber: '010-5678-9012', lastLoginDate: '2024-03-21 13:55:01', isActive: 'Y' },
-      { id: 6, userId: 'user5', userName: '정민서', departmentName: '재무팀', position: '과장', authorityName: '관리자', email: 'user5@example.com', phoneNumber: '010-6789-0123', lastLoginDate: '2024-03-20 10:10:42', isActive: 'N' }
-    ];
-    
-    setUserList(dummyData);
-    setSelectedUser(null);
-    setIsEditMode(false);
-    setIsLoading(false);
+
+    getUserGroup().then((data) => {
+      if (data.errors) {} else {
+        setUserList(data.getUserGroup);
+        setSelectedUser(null);
+        setIsEditMode(false);
+        setIsLoading(false);
+      }
+    })
   };
 
   // 초기 데이터 로드
-  useEffect(() => {
+  useEffect( () => {
+    getRoleGroup().then((data) => {
+      if (data.errors) {} else {
+        debugger
+        console.log(data.getRoles);
+        setAuthorityOptions(data.getRoles)
+        console.log(authorityOptions);
+      }
+    })
     handleSearch({});
   }, []);
 
@@ -189,7 +194,7 @@ const UserManagement = (props) => {
   const handleAddUser = () => {
     setSelectedUser(null);
     resetDetail({
-      userId: '',
+      loginId: '',
       userName: '',
       password: '',
       email: '',
@@ -197,7 +202,7 @@ const UserManagement = (props) => {
       departmentName: '',
       position: '',
       authorityName: '',
-      isActive: 'Y'
+      flagActive: 'Y'
     });
     setIsEditMode(true);
   };
@@ -306,6 +311,8 @@ const UserManagement = (props) => {
     });
   };
 
+
+
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
       <Box sx={{ 
@@ -346,22 +353,6 @@ const UserManagement = (props) => {
         onSearch={handleSubmit(handleSearch)}
         onReset={handleReset}
       >
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="userId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="사용자 ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="사용자 ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="userName"
@@ -406,11 +397,11 @@ const UserManagement = (props) => {
                   labelId="authority-label"
                   label="권한"
                 >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="총관리자">총관리자</MenuItem>
-                  <MenuItem value="관리자">관리자</MenuItem>
-                  <MenuItem value="일반사용자">일반사용자</MenuItem>
-                  <MenuItem value="게스트">게스트</MenuItem>
+                  {authorityOptions.map((item) => (
+                      <MenuItem value={item.roleId}>
+                        {item.roleName}
+                      </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             )}
@@ -488,7 +479,7 @@ const UserManagement = (props) => {
                       
                       <Grid item xs={12} sm={6}>
                         <Controller
-                          name="userId"
+                          name="loginId"
                           control={detailControl}
                           render={({ field }) => (
                             <TextField
@@ -622,10 +613,11 @@ const UserManagement = (props) => {
                                 labelId="user-authority-label"
                                 label="권한"
                               >
-                                <MenuItem value="총관리자">총관리자</MenuItem>
-                                <MenuItem value="관리자">관리자</MenuItem>
-                                <MenuItem value="일반사용자">일반사용자</MenuItem>
-                                <MenuItem value="게스트">게스트</MenuItem>
+                                {authorityOptions.map((item) => (
+                                    <MenuItem value={item.roleId}>
+                                      {item.roleName}
+                                    </MenuItem>
+                                ))}
                               </Select>
                             </FormControl>
                           )}
@@ -634,7 +626,7 @@ const UserManagement = (props) => {
                       
                       <Grid item xs={12} sm={6}>
                         <Controller
-                          name="isActive"
+                          name="flagActive"
                           control={detailControl}
                           render={({ field }) => (
                             <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
