@@ -41,14 +41,10 @@ const CommonCodeManagement = (props) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // 코드 그룹 데이터
-  const [codeGroups, setCodeGroups] = useState([
-
-  ]);
+  const [codeGroups, setCodeGroups] = useState([]);
 
   // 코드 데이터
-  const [codes, setCodes] = useState([
-
-  ]);
+  const [codes, setCodes] = useState([]);
 
   // 선택된 코드 그룹
   const [selectedCodeGroup, setSelectedCodeGroup] = useState(null);
@@ -263,6 +259,7 @@ const CommonCodeManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: creatCodeClassMutation,
         variables: {
@@ -322,6 +319,7 @@ const CommonCodeManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query,
         variables
@@ -415,6 +413,7 @@ const CommonCodeManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: createCodeMutation,
         variables: {
@@ -477,6 +476,7 @@ const CommonCodeManagement = (props) => {
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
+          credentials: 'include', // 쿠키 자동 전송 설정
           body: JSON.stringify({
             query: deleteCodeMutation,
             variables: {codeId: selectedCode.codeId} // 선택된 공장의 factoryId를 사용
@@ -540,17 +540,17 @@ const CommonCodeManagement = (props) => {
 
   // 코드 그룹 DataGrid 컬럼 정의
   const codeGroupColumns = [
-    { field: 'codeClassId', headerName: '코드클레스ID', width: 130 },
-    { field: 'codeClassName', headerName: '코드클레스명', width: 130, editable: true },
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
+    { field: 'codeClassName', headerName: '코드그룹 명', width: 130, editable: true },
     { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
   ];
 
   // 코드 DataGrid 컬럼 정의
   const codeColumns = [
-    { field: 'codeClassId', headerName: '코드클레스ID', width: 120 },
-    { field: 'codeId', headerName: '코드ID', width: 120 },
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
+    { field: 'codeId', headerName: '코드ID', width: 150 },
     { field: 'codeName', headerName: '코드명', width: 80, editable: true },
-    { field: 'codeDesc', headerName: '설명', width: 200, flex: 1, editable: true },
+    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
     {
       field: 'flagActive',
       headerName: '사용여부',
@@ -562,11 +562,11 @@ const CommonCodeManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'sortOrder', headerName: '정렬순서', width: 100, type: 'number', editable: true },
-    { field: 'createUser', headerName: '작성자', width: 85},
-    { field: 'createDate', headerName: '작성일', width: 150},
-    { field: 'updateUser', headerName: '수정자', width: 85},
-    { field: 'updateDate', headerName: '수정일', width: 150}
+    { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
+    { field: 'createUser', headerName: '작성자', width: 90},
+    { field: 'createDate', headerName: '작성일', width: 135},
+    { field: 'updateUser', headerName: '수정자', width: 90},
+    { field: 'updateDate', headerName: '수정일', width: 135}
   ];
 
   // 코드 그룹 그리드 버튼
@@ -645,6 +645,7 @@ const CommonCodeManagement = (props) => {
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({ query, variables })
     })
         .then((response) => {

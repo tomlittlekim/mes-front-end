@@ -1,4 +1,4 @@
-import { dontLoginFetch, apiFetch } from "./fetchConfig";
+import { dontLoginFetch, apiFetch, graphFetch } from "./fetchConfig";
 
 export interface UserOutPut {
     userId: number;
@@ -19,3 +19,30 @@ export const signIn = async (req: any): Promise<UserOutPut> => {
         throw error;
     }
 }
+
+const userGroupQuery =`
+  query {
+    getUserGroup {
+      id
+      loginId
+      userName
+      departmentName
+      position
+      authorityName
+      email
+      phoneNumber
+      flagActive
+    }
+  }
+`
+export const getUserGroup = (req) => graphFetch(userGroupQuery, req)
+
+const rolesQuery = `
+    query {
+      getRoles {
+        roleId
+        roleName
+      }
+    }
+  `;
+export const getRoleGroup = () => graphFetch(rolesQuery)

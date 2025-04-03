@@ -16,7 +16,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
@@ -170,7 +170,9 @@ const LineManagement = (props) => {
       } else {
         const rowsWithId = data.data.getLines.map((row, index) => ({
           ...row,
-          id: row.lineId  // 또는 row.factoryId || index + 1
+          id: row.lineId ,
+          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
         }));
         setLineList(rowsWithId);
         // setRefreshKey(prev => prev + 1);
@@ -251,6 +253,7 @@ const LineManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: createLineMutation,
         variables: {
@@ -311,6 +314,7 @@ const LineManagement = (props) => {
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
+          credentials: 'include', // 쿠키 자동 전송 설정
           body: JSON.stringify({
             query: deleteLineMutation,
             variables: {lineId: selectedLine.lineId} // 선택된 공장의 factoryId를 사용
@@ -364,6 +368,7 @@ const LineManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query
       })
@@ -425,7 +430,9 @@ const LineManagement = (props) => {
         } else {
           const rowsWithId = data.data.getLines.map((row, index) => ({
             ...row,
-            id: row.lineId  // 또는 row.factoryId || index + 1
+            id: row.lineId,  // 또는 row.factoryId || index + 1
+            createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+            updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
           }));
           setLineList(rowsWithId);
         }
@@ -439,6 +446,15 @@ const LineManagement = (props) => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    console.log('addRows changed:', addRows);
+  }, [addRows]);
+
+  useEffect(() => {
+    console.log('updatedRows changed:', updatedRows);
+  }, [updatedRows]);
+
+
   // 라인 목록 그리드 컬럼 정의
   const lineColumns = [
     {
@@ -447,11 +463,12 @@ const LineManagement = (props) => {
       width: 100,
       editable: true,
       type: 'singleSelect',
-      valueOptions: factoryTypeOptions
+      valueOptions: factoryTypeOptions,
+      flex: 1
     },
     { field: 'factoryName', headerName: '공장 명', width: 130 },
     { field: 'factoryCode', headerName: '공장 코드', width: 100 },
-    { field: 'lineId', headerName: '라인 ID', width: 100 },
+    { field: 'lineId', headerName: '라인 ID', width: 100, flex: 1 },
     { field: 'lineName', headerName: '라인 명', width: 100 , editable: true },
     // {
     //   field: 'status',
@@ -506,6 +523,7 @@ const LineManagement = (props) => {
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({ query, variables })
     })
         .then((response) => {
@@ -671,7 +689,7 @@ const LineManagement = (props) => {
       {!isLoading && (
         //   {/* 라인 목록 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title="라인 목록"
               rows={lineList}
               columns={lineColumns}
@@ -682,6 +700,7 @@ const LineManagement = (props) => {
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}
+              tabId={props.tabId + "-lines"}
             />
           </Grid>
       )}

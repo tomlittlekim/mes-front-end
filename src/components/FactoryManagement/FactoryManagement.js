@@ -21,7 +21,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { EnhancedDataGridWrapper, SearchCondition } from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -171,6 +171,7 @@ const FactoryManagement = (props) => {
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({ query, variables })
     })
         .then((response) => {
@@ -223,6 +224,7 @@ const FactoryManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: createFactoryMutation,
         variables: {
@@ -267,7 +269,7 @@ const FactoryManagement = (props) => {
       updateDate: '자동입력'
     };
 
-    setFactoryList([...factoryList, newFactory]);
+    setFactoryList([newFactory, ...factoryList]);
 
   };
 
@@ -304,6 +306,7 @@ const FactoryManagement = (props) => {
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
+          credentials: 'include', // 쿠키 자동 전송 설정
           body: JSON.stringify({
             query: deleteFactoryMutation,
             variables: {factoryId: selectedFactory.factoryId} // 선택된 공장의 factoryId를 사용
@@ -386,11 +389,6 @@ const FactoryManagement = (props) => {
 
     return () => clearTimeout(timer);
   }, []);
-
-
-  useEffect(() => {
-    console.log('selected changed:', selectedFactory);
-  }, [selectedFactory]);
 
   // 공장 목록 그리드 컬럼 정의
   const factoryColumns = [
@@ -560,12 +558,9 @@ const FactoryManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 공장 목록 그리드 */}
           <Grid item xs={12}>
             <EnhancedDataGridWrapper
               title="공장 목록"
-              key={refreshKey}
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
@@ -574,11 +569,10 @@ const FactoryManagement = (props) => {
               tabId={props.tabId + "-factories"}
               gridProps={{
                 editMode: 'cell',
-                onProcessRowUpdate: handleProcessRowUpdate
+                onProcessUpdate: handleProcessRowUpdate
               }}
             />
           </Grid>
-        </Grid>
       )}
       
       {/* 하단 정보 영역 */}

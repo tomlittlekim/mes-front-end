@@ -16,10 +16,11 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
+import Message from '../../utils/message/Message'; // Message 유틸리티 클래스 임포트
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -225,12 +226,36 @@ const CustomerManagement = (props) => {
     }
   `;
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      businessRegNo: '사업자등록 번호'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
     const createdVendorInputs = addRows.map(transformRowForMutation);
     const updatedVendorInputs = updatedRows.map(transformRowForUpdate);
 
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: createVendorMutation,
         variables: {
@@ -292,6 +317,7 @@ const CustomerManagement = (props) => {
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
+          credentials: 'include', // 쿠키 자동 전송 설정
           body: JSON.stringify({
             query: deleteVendorMutation,
             variables: {vendorId: selectedVendor.vendorId}
@@ -373,6 +399,7 @@ const CustomerManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query,
         variables
@@ -448,7 +475,7 @@ const CustomerManagement = (props) => {
 
   // 거래처 목록 그리드 컬럼 정의
   const customerColumns = [
-    { field: 'vendorId', headerName: '거래처코드', width: 120 },
+    { field: 'vendorId', headerName: '거래처코드', width: 140, flex: 1 },
     { field: 'vendorName', headerName: '거래처명', width: 120 , editable: true},
     {
       field: 'vendorType',
@@ -458,10 +485,29 @@ const CustomerManagement = (props) => {
       type: 'singleSelect',
       valueOptions: vendorTypeOptions
     },
-    { field: 'businessRegNo', headerName: '사업자등록 번호', width: 100, editable: true },
+    {
+      field: 'businessRegNo',
+      headerName: '사업자등록 번호',
+      width: 100,
+      editable: true,
+      flex: 1,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     { field: 'ceoName', headerName: '대표자명', width: 100, editable: true },
     { field: 'businessType', headerName: '업종/업태', width: 100, editable: true },
-    { field: 'address', headerName: '주소', width: 200, flex:1 ,editable: true  },
+    { field: 'address', headerName: '주소', width: 150 ,editable: true  },
     { field: 'telNo', headerName: '전화번호', width: 130, editable: true },
     {
       field: 'flagActive',
@@ -474,10 +520,10 @@ const CustomerManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'createUser', headerName: '작성자', width: 100},
-    { field: 'createDate', headerName: '작성일', width: 200},
-    { field: 'updateUser', headerName: '수정자', width: 100},
-    { field: 'updateDate', headerName: '수정일', width: 200}
+    { field: 'createUser', headerName: '작성자', width: 90},
+    { field: 'createDate', headerName: '작성일', width: 150},
+    { field: 'updateUser', headerName: '수정자', width: 90},
+    { field: 'updateDate', headerName: '수정일', width: 150}
   ];
 
   // 거래처 목록 그리드 버튼
@@ -499,6 +545,7 @@ const CustomerManagement = (props) => {
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({ query, variables })
     })
         .then((response) => {
@@ -627,7 +674,7 @@ const CustomerManagement = (props) => {
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid item xs={12} md={6}>
-              <MuiDataGridWrapper
+              <EnhancedDataGridWrapper
                   title="거래처 목록"
                   rows={vendorList}
                   columns={customerColumns}
@@ -638,6 +685,7 @@ const CustomerManagement = (props) => {
                     editMode: 'cell',
                     onProcessUpdate: handleProcessRowUpdate
                   }}
+                  tabId={props.tabId + "-customer"}
               />
             </Grid>
         )}

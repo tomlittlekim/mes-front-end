@@ -18,7 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
@@ -36,7 +36,7 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      flagActive: ''
+      flagActive: null
     }
   });
 
@@ -81,7 +81,7 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      flagActive: ''
+      flagActive: null
     });
   };
 
@@ -144,9 +144,46 @@ const WarehouseManagement = (props) => {
 
   // 검색 실행 함수
   const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    setSelectedWarehouse(null);
+    setUpdatedRows([]);
+    setAddRows([]);
+
+    const query = `
+      query getWarehouse($filter: WarehouseFilter) {
+        getWarehouse(filter: $filter) {
+          factoryId
+          factoryName
+          warehouseId
+          warehouseName
+          warehouseType
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `;
+
+    fetchGraphQL(
+        GRAPHQL_URL,
+        query,
+        data
+    ).then((data) => {
+      if (data.errors) {
+      } else {
+        const rowsWithId = data.data.getWarehouse.map((row, index) => ({
+          ...row,
+          id: row.warehouseId ,
+          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
+        }));
+        setWarehouseList(rowsWithId);
+        // setRefreshKey(prev => prev + 1);
+      }
+      setIsLoading(false);
+    }).catch((err) => {
+      setIsLoading(false);
+    });
   };
 
   // 창고 선택 핸들러
@@ -165,10 +202,10 @@ const WarehouseManagement = (props) => {
       warehouseName: '',
       warehouseType: '',
       flagActive: 'Y',
-      createdUser: '자동입력',
-      createdDate: '자동입력',
-      updatedUser: '자동입력',
-      updatedDate: '자동입력'
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
     
     setWarehouseList([newWarehouse, ...warehouseList]);
@@ -177,16 +214,16 @@ const WarehouseManagement = (props) => {
 
   const transformRowForMutation = (row) => ({
     factoryId: row.factoryId,
-    lineName: row.lineName,
-    lineDesc: row.lineDesc,
+    warehouseName: row.warehouseName,
+    warehouseType: row.warehouseType,
     flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
-    lineId: row.lineId,
+    warehouseId: row.warehouseId,
     factoryId: row.factoryId,
-    lineName: row.lineName,
-    lineDesc: row.lineDesc,
+    warehouseName: row.warehouseName,
+    warehouseType: row.warehouseType,
     flagActive: row.flagActive
   });
 
@@ -218,6 +255,7 @@ const WarehouseManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query: createWarehouseMutation,
         variables: {
@@ -256,7 +294,13 @@ const WarehouseManagement = (props) => {
       });
       return;
     }
-    
+
+    const deleteWarehouseMutation = `
+      mutation deleteWarehouse($warehouseId: String!) {
+        deleteWarehouse(warehouseId: $warehouseId)
+      }
+    `;
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -268,35 +312,93 @@ const WarehouseManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        const updatedList = warehouseList.filter(w => w.id !== selectedWarehouse.id);
-        setWarehouseList(updatedList);
-        setSelectedWarehouse(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        // 백엔드 삭제 요청 (GraphQL)
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'include', // 쿠키 자동 전송 설정
+          body: JSON.stringify({
+            query: deleteWarehouseMutation,
+            variables: {warehouseId: selectedWarehouse.warehouseId}
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = warehouseList.filter(f => f.id !== selectedWarehouse.id);
+                setWarehouseList(updatedList);
+                setSelectedWarehouse(null);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
       }
     });
   };
-
-  useEffect(()=>{
-    console.log("addRows", addRows)
-  },[addRows]);
-
-  useEffect(()=>{
-    console.log("updatedRows", updatedRows)
-  },[updatedRows]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      handleSearch({});
-      setIsLoading(false);
+      const query = `
+      query getWarehouse($filter: WarehouseFilter) {
+        getWarehouse(filter: $filter) {
+          factoryId
+          factoryName
+          warehouseId
+          warehouseName
+          warehouseType
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `;
+
+      fetchGraphQL(
+          GRAPHQL_URL,
+          query,
+          getValues()
+      ).then((data) => {
+        if (data.errors) {
+        } else {
+          const rowsWithId = data.data.getWarehouse.map((row, index) => ({
+            ...row,
+            id: row.warehouseId ,
+            createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+            updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
+          }));
+          setWarehouseList(rowsWithId);
+        }
+        setIsLoading(false);
+      })
+          .catch((err) => {
+            setIsLoading(false);
+          });
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -318,6 +420,7 @@ const WarehouseManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query,
         variables
@@ -358,6 +461,7 @@ const WarehouseManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({
         query
       })
@@ -421,10 +525,10 @@ const WarehouseManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'createdUser', headerName: '등록자', width: 100 },
-    { field: 'createdDate', headerName: '등록일', width: 150 },
-    { field: 'updatedUser', headerName: '수정자', width: 100 },
-    { field: 'updatedDate', headerName: '수정일', width: 150 }
+    { field: 'createUser', headerName: '등록자', width: 100 },
+    { field: 'createDate', headerName: '등록일', width: 150 },
+    { field: 'updateUser', headerName: '수정자', width: 100 },
+    { field: 'updateDate', headerName: '수정일', width: 150 }
   ];
 
   // 창고 목록 그리드 버튼
@@ -433,6 +537,31 @@ const WarehouseManagement = (props) => {
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
+
+
+  /**
+   * 공통 GraphQL API 호출 함수
+   * @param {string} url - GraphQL 엔드포인트 URL
+   * @param {string} query - GraphQL 쿼리 문자열
+   * @param {object} filter - 쿼리에 전달할 filter 객체
+   * @returns {Promise<object>} - GraphQL 응답 JSON
+   */
+  function fetchGraphQL(url, query, filter) {
+    const variables = { filter };
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
+      body: JSON.stringify({ query, variables })
+    })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        });
+  }
+
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -530,11 +659,13 @@ const WarehouseManagement = (props) => {
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label">사용여부</InputLabel>
+                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
                 <Select
                   {...field}
                   labelId="flagActive-label"
                   label="사용여부"
+                  displayEmpty
+                  notched
                 >
                   <MenuItem value={null}>전체</MenuItem>
                   <MenuItem value="Y">사용</MenuItem>
@@ -550,7 +681,7 @@ const WarehouseManagement = (props) => {
       {!isLoading && (
         //   {/* 창고 기본 정보 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
+            <EnhancedDataGridWrapper
               title="창고 목록"
               rows={warehouseList}
               columns={warehouseColumns}
@@ -561,6 +692,7 @@ const WarehouseManagement = (props) => {
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}
+              tabId={props.tabId + "-warehouse"}
             />
           </Grid>
       )}

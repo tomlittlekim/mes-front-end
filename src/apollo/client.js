@@ -9,11 +9,10 @@ const httpLink = createHttpLink({
 
 // 인증 헤더 추가
 const authLink = setContext((_, { headers }) => {
-    const token = localStorage.getItem('token'); // 또는 다른 인증 토큰
     return {
         headers: {
             ...headers,
-            authorization: token ? `Bearer ${token}` : "",
+            // authorization: token ? `Bearer ${token}` : "",
         }
     };
 });

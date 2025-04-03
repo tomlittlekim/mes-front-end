@@ -1,39 +1,126 @@
 import React, { useState, useEffect } from 'react';
 import './WorkOrderManagement.css';
 import { useForm, Controller } from 'react-hook-form';
-import { 
-  TextField, 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
+import {
+  TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Select,
-  Grid, 
-  Box, 
-  Typography, 
+  Grid,
+  Box,
+  Typography,
   useTheme,
   Stack,
   IconButton,
-  alpha
+  alpha,
+  Button
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import PrintIcon from '@mui/icons-material/Print';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
-import Swal from 'sweetalert2';
+import { EnhancedDataGridWrapper, SearchCondition } from '../Common';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
+import { GRAPHQL_URL } from '../../config';
+import { format } from 'date-fns';
+import Message from '../../utils/message/Message';
+import ko from "date-fns/locale/ko";
 
 const WorkOrderManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
-  
+
+  // React Hook Form 설정
+  const { control, handleSubmit, reset, getValues } = useForm({
+    defaultValues: {
+      prodPlanId: '',
+      productId: '',
+      planStartDate: null,
+      planEndDate: null
+    }
+  });
+
+  // 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+  const [planList, setPlanList] = useState([]);
+  const [workOrderList, setWorkOrderList] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [updatedWorkOrders, setUpdatedWorkOrders] = useState([]);
+  const [addWorkOrders, setAddWorkOrders] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  const CustomDateEditor = (props) => {
+    const { id, field, value, api } = props;
+
+    const handleChange = (newValue) => {
+      api.setEditCellValue({ id, field, value: newValue });
+      setTimeout(() => {
+        api.commitCellChange({ id, field });
+        api.setCellMode(id, field, 'view');
+      }, 200);
+    };
+
+    return (
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+              value={value ? new Date(value) : null}
+              onChange={handleChange}
+              format="yyyy-MM-dd"
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  variant: 'outlined',
+                  size: 'small',
+                  sx: { m: 0, p: 0 },
+                  onKeyDown: (e) => {
+                    if (e.key === 'Escape') {
+                      api.setCellMode(id, field, 'view');
+                    }
+                  }
+                },
+                popper: {
+                  sx: {
+                    zIndex: 9999
+                  }
+                }
+              }}
+          />
+        </LocalizationProvider>
+    );
+  };
+
+  // API 통신 시 Date 객체를 문자열로 변환하는 함수
+  function formatDateToString(dateObj) {
+    if (!dateObj) return null;
+
+    if (typeof dateObj === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateObj)) return dateObj;
+
+      try {
+        return format(new Date(dateObj), 'yyyy-MM-dd');
+      } catch (error) {
+        console.error("Invalid date string:", dateObj);
+        return null;
+      }
+    }
+
+    try {
+      return format(dateObj, 'yyyy-MM-dd');
+    } catch (error) {
+      console.error("Error formatting date:", dateObj);
+      return null;
+    }
+  }
+
   // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
@@ -41,541 +128,889 @@ const WorkOrderManagement = (props) => {
     }
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
-  
+
   const getBgColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
     }
     return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
   };
-  
+
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
     }
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
-  
-  // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      workOrderId: '',
-      productName: '',
-      workStatus: '',
-      facility: '',
-      fromDate: null,
-      toDate: null
-    }
-  });
 
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [workOrderList, setWorkOrderList] = useState([]);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
-  const [workOrderDetail, setWorkOrderDetail] = useState(null);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  // GraphQL fetch 함수
+  function fetchGraphQL(url, query, variables) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    });
+  }
 
   // 초기화 함수
   const handleReset = () => {
     reset({
-      workOrderId: '',
-      productName: '',
-      workStatus: '',
-      facility: '',
-      fromDate: null,
-      toDate: null
+      prodPlanId: '',
+      productId: '',
+      planStartDate: null,
+      planEndDate: null
     });
   };
 
   // 검색 실행 함수
   const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'WO2024001', orderDate: '2024-04-15', productId: 'PD001', product: '제품A', productType: '완제품', planId: 'PP2024001', facility: '1공장 3라인', quantity: 1000, startDate: '2024-04-17', endDate: '2024-04-20', status: '작업대기', priority: '높음', note: '주문량 증가로 인한 생산' },
-      { id: 'WO2024002', orderDate: '2024-04-16', productId: 'PD002', product: '제품B', productType: '완제품', planId: 'PP2024002', facility: '1공장 2라인', quantity: 500, startDate: '2024-04-18', endDate: '2024-04-20', status: '작업중', priority: '중간', note: '재고 보충용' },
-      { id: 'WO2024003', orderDate: '2024-04-17', productId: 'PD003', product: '반제품C', productType: '반제품', planId: 'PP2024003', facility: '2공장 1라인', quantity: 2000, startDate: '2024-04-21', endDate: '2024-04-25', status: '작업대기', priority: '낮음', note: '' },
-      { id: 'WO2024004', orderDate: '2024-04-18', productId: 'PD004', product: '제품D', productType: '완제품', planId: 'PP2024004', facility: '1공장 1라인', quantity: 300, startDate: '2024-04-19', endDate: '2024-04-20', status: '완료', priority: '긴급', note: '납기일 임박' }
-    ];
-    
-    setWorkOrderList(dummyData);
+    setIsLoading(true);
+    setUpdatedWorkOrders([]);
+    setAddWorkOrders([]);
+    setSelectedPlan(null);
     setSelectedWorkOrder(null);
-    setWorkOrderDetail(null);
+    setWorkOrderList([]);
+
+    // GraphQL 쿼리 작성 - 생산계획과 작업지시를 한 번에 조회
+    const query = `
+      query getProductionPlansWithWorkOrders($filter: ProductionPlanFilter) {
+        productionPlansWithWorkOrders(filter: $filter) {
+          id
+          site
+          compCd
+          prodPlanId
+          orderId
+          productId
+          planQty
+          planStartDate
+          planEndDate
+          flagActive
+          createUser
+          createDate
+          updateUser
+          updateDate
+          workOrders {
+            id
+            site
+            compCd
+            workOrderId
+            prodPlanId
+            productId
+            orderQty
+            shiftType
+            state
+            flagActive
+            createUser
+            createDate
+            updateUser
+            updateDate
+          }
+        }
+      }
+    `;
+
+    // 날짜 형식 변환 - null 값도 허용
+    const filterData = {
+      ...data,
+      planStartDate: data.planStartDate ? formatDateToString(data.planStartDate) : null,
+      planEndDate: data.planEndDate ? formatDateToString(data.planEndDate) : null
+    };
+
+    fetchGraphQL(GRAPHQL_URL, query, { filter: filterData })
+    .then((response) => {
+      if (response.errors) {
+        console.error("GraphQL errors:", response.errors);
+        Message.showError({ message: '데이터를 불러오는데 실패했습니다.' }, setIsLoading);
+      } else {
+        const plansWithWorkOrders = response.data.productionPlansWithWorkOrders;
+
+        // 생산계획 목록 처리
+        const rowsWithId = plansWithWorkOrders.map((plan) => ({
+          ...plan,
+          id: plan.prodPlanId,
+          // 서버에서 받은 데이터 변환
+          planQty: plan.planQty ? Number(plan.planQty) : 0,
+          planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
+          planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
+          createDate: plan.createDate ? new Date(plan.createDate) : null,
+          updateDate: plan.updateDate ? new Date(plan.updateDate) : null
+        }));
+
+        setPlanList(rowsWithId);
+
+        setRefreshKey(prev => prev + 1);
+        setIsLoading(false);
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching data:", error);
+      Message.showError({ message: '데이터를 불러오는데 실패했습니다.' }, setIsLoading);
+    });
+  };
+
+  // 생산계획 선택 핸들러
+  const handlePlanSelect = (params) => {
+    setSelectedWorkOrder(null);
+    const selectedPlanRow = planList.find(p => p.id === params.id);
+    setSelectedPlan(selectedPlanRow);
+
+    if (selectedPlanRow && selectedPlanRow.workOrders) {
+      // 선택한 계획에 연결된 작업지시 표시
+      const workOrders = selectedPlanRow.workOrders.map(order => ({
+        ...order,
+        id: order.workOrderId,
+        orderQty: order.orderQty ? Number(order.orderQty) : 0,
+        createDate: order.createDate ? new Date(order.createDate) : null,
+        updateDate: order.updateDate ? new Date(order.updateDate) : null
+      }));
+
+      setWorkOrderList(workOrders);
+    } else {
+      setWorkOrderList([]);
+    }
   };
 
   // 작업지시 선택 핸들러
   const handleWorkOrderSelect = (params) => {
-    const workOrder = workOrderList.find(o => o.id === params.id);
+    const workOrder = workOrderList.find(wo => wo.id === params.id);
     setSelectedWorkOrder(workOrder);
-    
-    if (!workOrder) return;
-    
-    // 작업지시 상세 정보 (실제로는 API 호출)
-    const detailData = {
-      ...workOrder,
-      workCenter: 'WC001',
-      shift: '주간',
-      worker: '홍길동',
-      supervisor: '김관리',
-      setupTime: 30,
-      inspectionTime: 20,
-      materialList: '원자재A, 원자재B',
-      bomId: 'BOM001',
-      qualityTarget: 98,
-      actualQuantity: workOrder.status === '완료' ? workOrder.quantity : 0,
-      defectQuantity: workOrder.status === '완료' ? Math.floor(workOrder.quantity * 0.02) : 0,
-      registDate: '2024-04-10',
-      updateDate: '2024-04-10',
-      registUser: '김계획',
-      updateUser: '김계획'
-    };
-    
-    setWorkOrderDetail([detailData]);
   };
 
-  // 등록 버튼 클릭 핸들러
-  const handleAdd = () => {
-    const newWorkOrder = {
-      id: `NEW_${Date.now()}`,
-      orderDate: new Date().toISOString().split('T')[0],
-      productId: '',
-      product: '',
-      productType: '',
-      planId: '',
-      facility: '',
-      quantity: 0,
-      startDate: '',
-      endDate: '',
-      status: '작업대기',
-      priority: '중간',
-      note: '',
-      workCenter: '',
-      shift: '주간',
-      worker: '',
-      supervisor: '',
-      setupTime: 0,
-      inspectionTime: 0,
-      materialList: '',
-      bomId: '',
-      qualityTarget: 98,
-      actualQuantity: 0,
-      defectQuantity: 0,
-      registDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0],
-      registUser: '시스템',
-      updateUser: '시스템'
-    };
-    
-    setWorkOrderList([...workOrderList, newWorkOrder]);
-    setSelectedWorkOrder(newWorkOrder);
-    setWorkOrderDetail([newWorkOrder]);
-  };
+  // 작업지시 행 업데이트 처리 핸들러
+  function handleWorkOrderRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
 
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
-    if (!selectedWorkOrder) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '저장할 작업지시를 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
+    // 깊은 복제로 원본 데이터 보존
+    const processedRow = { ...newRow };
+
+    // orderQty 필드 명시적 처리
+    if (processedRow.orderQty === undefined || processedRow.orderQty === null || processedRow.orderQty === '') {
+      processedRow.orderQty = 0;
+    } else if (typeof processedRow.orderQty === 'string') {
+      // 문자열인 경우 숫자로 변환
+      processedRow.orderQty = Number(processedRow.orderQty.replace(/,/g, ''));
+      if (isNaN(processedRow.orderQty)) processedRow.orderQty = 0;
     }
-    
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
+
+    // 그리드 상태 업데이트
+    setWorkOrderList((prev) => {
+      return prev.map((row) => row.id === oldRow.id ? { ...row, ...processedRow } : row);
     });
-  };
 
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
-    if (!selectedWorkOrder) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 작업지시를 선택해주세요.',
-        confirmButtonText: '확인'
+    if (isNewRow) {
+      setAddWorkOrders((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(row => row.id === oldRow.id);
+        if (existingIndex !== -1) {
+          const updatedRows = [...prevAddRows];
+          updatedRows[existingIndex] = { ...updatedRows[existingIndex], ...processedRow };
+          return updatedRows;
+        } else {
+          return [...prevAddRows, processedRow];
+        }
       });
+    } else {
+      setUpdatedWorkOrders((prevUpdatedRows) => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.workOrderId === oldRow.workOrderId);
+        if (existingIndex !== -1) {
+          const updatedRows = [...prevUpdatedRows];
+          updatedRows[existingIndex] = { ...updatedRows[existingIndex], ...processedRow };
+          return updatedRows;
+        } else {
+          return [...prevUpdatedRows, processedRow];
+        }
+      });
+    }
+
+    return processedRow;
+  }
+
+  // 작업지시 등록 버튼 클릭 핸들러
+  const handleAddWorkOrder = () => {
+    if (!selectedPlan) {
+      Message.showWarning('생산계획을 먼저 선택해주세요.');
       return;
     }
-    
-    Swal.fire({
-      title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const updatedList = workOrderList.filter(o => o.id !== selectedWorkOrder.id);
-        setWorkOrderList(updatedList);
-        setSelectedWorkOrder(null);
-        setWorkOrderDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
+
+    const currentDate = new Date();
+    const currentUser = sessionStorage.getItem('userName') || '시스템';
+    const newId = `NEW_${Date.now()}`;
+
+    const newWorkOrder = {
+      id: newId,
+      workOrderId: '자동입력',
+      prodPlanId: selectedPlan.prodPlanId,
+      productId: selectedPlan.productId,
+      orderQty: selectedPlan.planQty || 0,
+      shiftType: 'DAY',
+      state: 'PLANNED',
+      flagActive: true,
+      createUser: currentUser,
+      createDate: currentDate,
+      updateUser: currentUser,
+      updateDate: currentDate
+    };
+
+    // 그리드에 새 행 추가
+    setWorkOrderList(prev => [...prev, newWorkOrder]);
+
+    // addWorkOrders에도 추가
+    setAddWorkOrders(prev => [...prev, newWorkOrder]);
+  };
+
+  // 작업지시 일괄 생성 버튼 클릭 핸들러
+  const handleCreateFromPlan = () => {
+    if (!selectedPlan) {
+      Message.showWarning('생산계획을 먼저 선택해주세요.');
+      return;
+    }
+
+    // 이미 작업지시가 있는지 확인
+    if (workOrderList.length > 0) {
+      Message.showWarning('이미 작업지시가 존재합니다. 기존 작업지시를 확인해주세요.');
+      return;
+    }
+
+    // GraphQL 뮤테이션
+    const createFromPlanMutation = `
+      mutation CreateWorkOrderFromPlan($prodPlanId: String!, $shiftType: String, $initialState: String) {
+        createWorkOrderFromProductionPlan(
+          prodPlanId: $prodPlanId, 
+          shiftType: $shiftType, 
+          initialState: $initialState
+        )
+      }
+    `;
+
+    fetchGraphQL(GRAPHQL_URL, createFromPlanMutation, {
+      variables: {
+        prodPlanId: selectedPlan.prodPlanId,
+        shiftType: "DAY",
+        initialState: "PLANNED"
+      }
+    })
+    .then((response) => {
+      if (response.errors) {
+        console.error("GraphQL errors:", response.errors);
+        Message.showError({ message: '작업지시 생성 중 오류가 발생했습니다.' });
+      } else {
+        // 성공 메시지와 함께 데이터 새로고침
+        Message.showSuccess('작업지시가 생성되었습니다.', () => {
+          // 현재 선택된 생산계획 ID 저장
+          const currentPlanId = selectedPlan.prodPlanId;
+
+          // 데이터 새로 조회 후 동일한 생산계획 선택 상태 유지
+          handleSearch(getValues()).then(() => {
+            // 생산계획 목록이 로드된 후 동일한 계획 찾아서 선택
+            const plan = planList.find(p => p.prodPlanId === currentPlanId);
+            if (plan) {
+              setSelectedPlan(plan);
+
+              // 선택한 계획의 작업지시 목록 업데이트
+              if (plan.workOrders) {
+                const workOrders = plan.workOrders.map(order => ({
+                  ...order,
+                  id: order.workOrderId,
+                  orderQty: order.orderQty ? Number(order.orderQty) : 0,
+                  createDate: order.createDate ? new Date(order.createDate) : null,
+                  updateDate: order.updateDate ? new Date(order.updateDate) : null
+                }));
+
+                setWorkOrderList(workOrders);
+              }
+            }
+          });
         });
       }
+    })
+    .catch((error) => {
+      console.error("Error creating work order:", error);
+      Message.showError({ message: '작업지시 생성 중 예외가 발생했습니다.' });
     });
   };
 
-  // 작업지시서 출력 핸들러
-  const handlePrint = () => {
-    if (!selectedWorkOrder) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '출력할 작업지시를 선택해주세요.',
-        confirmButtonText: '확인'
-      });
+  // 작업지시 저장 버튼 클릭 핸들러
+  const handleSaveWorkOrder = () => {
+    // 중요: 항상 현재 그리드 상태에서 데이터를 가져옴
+    const newRows = workOrderList.filter(row => row.id.startsWith('NEW_'));
+
+    if (newRows.length === 0 && updatedWorkOrders.length === 0) {
+      Message.showWarning('저장할 데이터가 없습니다.');
       return;
     }
-    
-    Swal.fire({
-      icon: 'info',
-      title: '작업지시서 출력',
-      text: '작업지시서가 출력됩니다.',
-      confirmButtonText: '확인'
+
+    // GraphQL 뮤테이션 작성
+    const saveWorkOrderMutation = `
+      mutation SaveWorkOrder($createdRows: [WorkOrderInput], $updatedRows: [WorkOrderUpdate]) {
+        saveWorkOrder(createdRows: $createdRows, updatedRows: $updatedRows)
+      }
+    `;
+
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldNames) => {
+      for (const row of rows) {
+        for (const field of fieldNames) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${field} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = ['prodPlanId', 'productId'];
+    if (!validateRequiredFields(newRows, requiredFields) ||
+        !validateRequiredFields(updatedWorkOrders, requiredFields)) {
+      return;
+    }
+
+    // 생성할 행 변환 - GraphQL 스키마에 맞게 필드 조정
+    const createdWorkOrderInputs = newRows.map(row => ({
+      prodPlanId: row.prodPlanId || '',
+      productId: row.productId || '',
+      orderQty: parseFloat(row.orderQty) || 0,
+      shiftType: row.shiftType || 'DAY',
+      state: row.state || 'PLANNED',
+      flagActive: row.flagActive === undefined ? true : Boolean(row.flagActive)
+    }));
+
+    // 업데이트할 행 변환 - GraphQL 스키마에 맞게 필드 조정
+    const updatedWorkOrderInputs = updatedWorkOrders.map(updatedRow => {
+      // 그리드에서 최신 데이터 찾기
+      const currentRow = workOrderList.find(row => row.workOrderId === updatedRow.workOrderId) || updatedRow;
+
+      return {
+        workOrderId: currentRow.workOrderId,
+        prodPlanId: currentRow.prodPlanId || '',
+        productId: currentRow.productId || '',
+        orderQty: parseFloat(currentRow.orderQty) || 0,
+        shiftType: currentRow.shiftType || 'DAY',
+        state: currentRow.state || 'PLANNED',
+        flagActive: currentRow.flagActive === undefined ? true : Boolean(currentRow.flagActive)
+      };
+    });
+
+    console.log("저장할 데이터:", {
+      createdRows: createdWorkOrderInputs,
+      updatedRows: updatedWorkOrderInputs
+    });
+
+    // API 호출
+    fetchGraphQL(GRAPHQL_URL, saveWorkOrderMutation, {
+      createdRows: createdWorkOrderInputs,
+      updatedRows: updatedWorkOrderInputs
+    })
+    .then((data) => {
+      if (data.errors) {
+        console.error("GraphQL errors:", data.errors);
+        let errorMessage = '저장 중 오류가 발생했습니다.';
+        if (data.errors[0] && data.errors[0].message) {
+          errorMessage = data.errors[0].message;
+        }
+        Message.showError({ message: errorMessage });
+      } else {
+        // 저장 성공 후 상태 초기화
+        setAddWorkOrders([]);
+        setUpdatedWorkOrders([]);
+        // 저장 성공 메시지와 함께 데이터 새로고침
+        Message.showSuccess('저장이 완료되었습니다.', () => {
+          handleSearch(getValues());
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Error saving work order:", error);
+      Message.showError({ message: '저장 중 예외가 발생했습니다: ' + error.message });
+    });
+  };
+
+  // 작업지시 삭제 버튼 클릭 핸들러
+  const handleDeleteWorkOrder = () => {
+    if (!selectedWorkOrder) {
+      Message.showWarning('삭제할 작업지시를 선택해주세요.');
+      return;
+    }
+
+    // 신규 추가된 행이면 바로 목록에서만 삭제
+    if (selectedWorkOrder.id.startsWith('NEW_')) {
+      const updatedList = workOrderList.filter(wo => wo.id !== selectedWorkOrder.id);
+      setWorkOrderList(updatedList);
+      setSelectedWorkOrder(null);
+      return;
+    }
+
+    const deleteWorkOrderMutation = `
+      mutation DeleteWorkOrder($workOrderId: String!) {
+        deleteWorkOrder(workOrderId: $workOrderId)
+      }
+    `;
+
+    // Message 클래스의 삭제 확인 다이얼로그 사용
+    Message.showDeleteConfirm(() => {
+      fetchGraphQL(GRAPHQL_URL, deleteWorkOrderMutation, {
+        workOrderId: selectedWorkOrder.workOrderId
+      })
+      .then((data) => {
+        if (data.errors) {
+          console.error("GraphQL errors:", data.errors);
+          Message.showError({ message: '삭제 중 오류가 발생했습니다.' });
+        } else {
+          const updatedList = workOrderList.filter(wo => wo.id !== selectedWorkOrder.id);
+          setWorkOrderList(updatedList);
+          setSelectedWorkOrder(null);
+          Message.showSuccess('삭제가 완료되었습니다.');
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting work order:", error);
+        Message.showError({ message: '삭제 중 예외가 발생했습니다.' });
+      });
     });
   };
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
       handleSearch({});
-      setIsLoading(false);
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
+  // 생산계획 목록 그리드 컬럼 정의
+  const planColumns = [
+    {
+      field: 'prodPlanId',
+      headerName: '생산계획ID',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'orderId',
+      headerName: '주문번호',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'productId',
+      headerName: '제품ID',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'planQty',
+      headerName: '계획수량',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+          <Typography variant="body2">
+            {params.value ? Number(params.value).toLocaleString() : '0'}
+          </Typography>
+      )
+    },
+    {
+      field: 'planStartDate',
+      headerName: '계획시작일',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        let displayValue = '';
+        if (params.value) {
+          try {
+            const date = new Date(params.value);
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+          } catch (e) {
+            displayValue = '';
+          }
+        }
+
+        return (
+            <Typography variant="body2">
+              {displayValue}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'planEndDate',
+      headerName: '계획종료일',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        let displayValue = '';
+        if (params.value) {
+          try {
+            const date = new Date(params.value);
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+          } catch (e) {
+            displayValue = '';
+          }
+        }
+
+        return (
+            <Typography variant="body2">
+              {displayValue}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'flagActive',
+      headerName: '사용여부',
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      valueFormatter: (params) => params.value ? '사용' : '미사용'
+    }
+  ];
+
   // 작업지시 목록 그리드 컬럼 정의
   const workOrderColumns = [
-    { field: 'id', headerName: '작업지시ID', width: 110 },
-    { field: 'orderDate', headerName: '지시일자', width: 110 },
-    { field: 'productId', headerName: '제품코드', width: 100 },
-    { field: 'product', headerName: '제품명', width: 150, flex: 1 },
-    { field: 'productType', headerName: '제품유형', width: 100 },
-    { field: 'planId', headerName: '계획ID', width: 110 },
-    { field: 'facility', headerName: '설비', width: 120 },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number' },
-    { field: 'startDate', headerName: '시작일', width: 110 },
-    { field: 'endDate', headerName: '종료일', width: 110 },
-    { 
-      field: 'status', 
-      headerName: '상태', 
+    {
+      field: 'workOrderId',
+      headerName: '작업지시ID',
+      width: 150,
+      editable: true,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'prodPlanId',
+      headerName: '생산계획ID',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'productId',
+      headerName: '제품ID',
+      width: 150,
+      editable: true,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'orderQty',
+      headerName: '지시수량',
+      width: 120,
+      editable: true,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+          <Typography variant="body2">
+            {params.value ? Number(params.value).toLocaleString() : '0'}
+          </Typography>
+      )
+    },
+    {
+      field: 'shiftType',
+      headerName: '근무조',
       width: 100,
-      cellClassName: (params) => {
-        if (params.value === '작업대기') return 'status-wait';
-        if (params.value === '작업중') return 'status-inprogress';
-        if (params.value === '완료') return 'status-completed';
-        return '';
+      editable: true,
+      headerAlign: 'center',
+      align: 'center',
+      type: 'singleSelect',
+      valueOptions: ['DAY', 'NIGHT']
+    },
+    {
+      field: 'state',
+      headerName: '상태',
+      width: 120,
+      editable: true,
+      headerAlign: 'center',
+      align: 'center',
+      type: 'singleSelect',
+      valueOptions: ['PLANNED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED'],
+      valueFormatter: (params) => {
+        const stateMap = {
+          'PLANNED': '계획',
+          'CONFIRMED': '확정',
+          'IN_PROGRESS': '작업중',
+          'COMPLETED': '완료',
+          'CANCELED': '취소'
+        };
+        return stateMap[params.value] || params.value;
       }
     },
-    { 
-      field: 'priority', 
-      headerName: '우선순위', 
+    {
+      field: 'flagActive',
+      headerName: '사용여부',
       width: 100,
-      cellClassName: (params) => {
-        if (params.value === '긴급') return 'priority-urgent';
-        if (params.value === '높음') return 'priority-high';
-        if (params.value === '중간') return 'priority-medium';
-        if (params.value === '낮음') return 'priority-low';
-        return '';
+      type: 'boolean',
+      editable: true,
+      headerAlign: 'center',
+      align: 'center',
+      valueFormatter: (params) => params.value ? '사용' : '미사용'
+    },
+    {
+      field: 'createUser',
+      headerName: '등록자',
+      width: 120,
+      editable: false,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'createDate',
+      headerName: '등록일',
+      width: 120,
+      editable: false,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        if (!params.value) return <Typography variant="body2"></Typography>;
+
+        try {
+          const date = new Date(params.value);
+          const displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+          return <Typography variant="body2">{displayValue}</Typography>;
+        } catch (e) {
+          return <Typography variant="body2"></Typography>;
+        }
       }
-    },
-    { field: 'note', headerName: '비고', width: 150 }
+    }
   ];
-  
-  // 작업지시 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'id', headerName: '작업지시ID', width: 110, editable: true },
-    { field: 'orderDate', headerName: '지시일자', width: 110, editable: true },
-    { field: 'productId', headerName: '제품코드', width: 100, editable: true },
-    { field: 'product', headerName: '제품명', width: 150, editable: true },
-    { field: 'productType', headerName: '제품유형', width: 100, editable: true, type: 'singleSelect', valueOptions: ['완제품', '반제품', '부자재'] },
-    { field: 'planId', headerName: '계획ID', width: 110, editable: true },
-    { field: 'facility', headerName: '설비', width: 120, editable: true },
-    { field: 'workCenter', headerName: '작업장', width: 100, editable: true },
-    { field: 'quantity', headerName: '계획수량', width: 100, type: 'number', editable: true },
-    { field: 'actualQuantity', headerName: '실적수량', width: 100, type: 'number', editable: true },
-    { field: 'defectQuantity', headerName: '불량수량', width: 100, type: 'number', editable: true },
-    { field: 'materialList', headerName: '소요자재', width: 200, editable: true },
-    { field: 'bomId', headerName: 'BOM ID', width: 100, editable: true },
-    { field: 'shift', headerName: '근무조', width: 80, editable: true, type: 'singleSelect', valueOptions: ['주간', '야간', '교대'] },
-    { field: 'worker', headerName: '작업자', width: 100, editable: true },
-    { field: 'supervisor', headerName: '관리자', width: 100, editable: true },
-    { field: 'setupTime', headerName: '셋업시간', width: 100, type: 'number', editable: true },
-    { field: 'inspectionTime', headerName: '검사시간', width: 100, type: 'number', editable: true },
-    { field: 'qualityTarget', headerName: '품질목표(%)', width: 110, type: 'number', editable: true },
-    { field: 'startDate', headerName: '시작일', width: 110, editable: true },
-    { field: 'endDate', headerName: '종료일', width: 110, editable: true },
-    { 
-      field: 'status', 
-      headerName: '상태', 
-      width: 100, 
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: ['작업대기', '작업중', '완료', '취소']
-    },
-    { 
-      field: 'priority', 
-      headerName: '우선순위', 
-      width: 100, 
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: ['긴급', '높음', '중간', '낮음']
-    },
-    { field: 'note', headerName: '비고', width: 150, editable: true },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
-  ];
+
+  // 생산계획 목록 그리드 버튼
+  const planGridButtons = [];
 
   // 작업지시 목록 그리드 버튼
   const workOrderGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> }
+    { label: '등록', onClick: handleAddWorkOrder, icon: <AddIcon /> },
+    { label: '계획기반생성', onClick: handleCreateFromPlan, icon: <PlaylistAddIcon /> },
+    { label: '저장', onClick: handleSaveWorkOrder, icon: <SaveIcon /> },
+    { label: '삭제', onClick: handleDeleteWorkOrder, icon: <DeleteIcon /> }
   ];
 
-  // 작업지시 상세 그리드 버튼
-  const detailGridButtons = [
-    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> },
-    { label: '지시서', onClick: handlePrint, icon: <PrintIcon /> }
-  ];
+  // 행의 셀 편집 모드 커스텀 속성
+  const gridProps = {
+    editMode: 'cell',
+    processRowUpdate: handleWorkOrderRowUpdate,
+    onProcessRowUpdateError: (error) => {
+      console.error('데이터 업데이트 오류:', error);
+    },
+    slots: {
+      // 날짜 필드에 커스텀 에디터 적용
+      editCell: (params) => {
+        if (params.field === 'planStartDate' || params.field === 'planEndDate') {
+          return <CustomDateEditor {...params} />;
+        }
+        return null; // 다른 필드는 기본 에디터 사용
+      }
+    }
+  };
 
   return (
-    <Box sx={{ p: 0, minHeight: '100vh' }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: 2,
-        borderBottom: `1px solid ${getBorderColor()}`,
-        pb: 1
-      }}>
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            fontWeight: 600,
-            color: getTextColor()
-          }}
-        >
-          작업지시관리
-        </Typography>
-        <IconButton
-          onClick={() => setIsHelpModalOpen(true)}
-          sx={{
-            ml: 1,
-            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: isDarkMode 
-                ? alpha(theme.palette.primary.light, 0.1)
-                : alpha(theme.palette.primary.main, 0.05)
-            }
-          }}
-        >
-          <HelpOutlineIcon />
-        </IconButton>
-      </Box>
-
-      {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
-      <SearchCondition 
-        onSearch={handleSubmit(handleSearch)}
-        onReset={handleReset}
-      >
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="workOrderId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="작업지시ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="작업지시ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="제품명"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="제품명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="workStatus"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="workStatus-label">상태</InputLabel>
-                <Select
-                  {...field}
-                  labelId="workStatus-label"
-                  label="상태"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="작업대기">작업대기</MenuItem>
-                  <MenuItem value="작업중">작업중</MenuItem>
-                  <MenuItem value="완료">완료</MenuItem>
-                  <MenuItem value="취소">취소</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="facility"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Controller
-                name="fromDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="시작일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
-              />
-              <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-              <Controller
-                name="toDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="종료일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
-              />
-            </Stack>
-          </LocalizationProvider>
-        </Grid>
-      </SearchCondition>
-      
-      {/* 그리드 영역 */}
-      {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 작업지시 기본 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title="작업지시목록"
-              rows={workOrderList}
-              columns={workOrderColumns}
-              buttons={workOrderGridButtons}
-              height={450}
-              onRowClick={handleWorkOrderSelect}
-            />
-          </Grid>
-          
-          {/* 작업지시 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`작업지시상세정보 ${selectedWorkOrder ? '- ' + selectedWorkOrder.id : ''}`}
-              rows={workOrderDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
-              gridProps={{
-                editMode: 'row'
+      <Box sx={{ p: 0, minHeight: '100vh' }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          mb: 2,
+          borderBottom: `1px solid ${getBorderColor()}`,
+          pb: 1
+        }}>
+          <Typography
+              variant="h5"
+              component="h2"
+              sx={{
+                fontWeight: 600,
+                color: getTextColor()
               }}
+          >
+            작업지시관리
+          </Typography>
+          <IconButton
+              onClick={() => setIsHelpModalOpen(true)}
+              sx={{
+                ml: 1,
+                color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                '&:hover': {
+                  backgroundColor: isDarkMode
+                      ? alpha(theme.palette.primary.light, 0.1)
+                      : alpha(theme.palette.primary.main, 0.05)
+                }
+              }}
+          >
+            <HelpOutlineIcon />
+          </IconButton>
+        </Box>
+
+        {/* 검색 조건 영역 */}
+        <SearchCondition
+            onSearch={handleSubmit(handleSearch)}
+            onReset={handleReset}
+        >
+          <Grid item xs={12} sm={6} md={3}>
+            <Controller
+                name="prodPlanId"
+                control={control}
+                render={({ field }) => (
+                    <TextField
+                        {...field}
+                        label="생산계획ID"
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        placeholder="생산계획ID를 입력하세요"
+                    />
+                )}
             />
           </Grid>
-        </Grid>
-      )}
-      
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 작업지시관리 화면에서는 생산계획에 따른 작업지시를 효율적으로 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 작업지시목록에서 특정 작업지시를 선택하면 해당 작업지시의 상세 정보를 확인할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 작업지시 등록, 수정, 삭제 기능과 작업지시서 출력을 통해 효율적인 생산 관리를 수행할 수 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+          <Grid item xs={12} sm={6} md={3}>
+            <Controller
+                name="productId"
+                control={control}
+                render={({ field }) => (
+                    <TextField
+                        {...field}
+                        label="제품ID"
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        placeholder="제품ID를 입력하세요"
+                    />
+                )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={12} md={6}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Controller
+                    name="planStartDate"
+                    control={control}
+                    render={({ field }) => (
+                        <DatePicker
+                            {...field}
+                            label="계획시작일"
+                            slotProps={{
+                              textField: {
+                                size: "small",
+                                fullWidth: true
+                              }
+                            }}
+                        />
+                    )}
+                />
+                <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
+                <Controller
+                    name="planEndDate"
+                    control={control}
+                    render={({ field }) => (
+                        <DatePicker
+                            {...field}
+                            label="계획종료일"
+                            slotProps={{
+                              textField: {
+                                size: "small",
+                                fullWidth: true
+                              }
+                            }}
+                        />
+                    )}
+                />
+              </Stack>
+            </LocalizationProvider>
+          </Grid>
+        </SearchCondition>
 
-      {/* 도움말 모달 */}
-      <HelpModal
-        open={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="작업지시관리 도움말"
-      >
-        <Typography variant="body2" color={getTextColor()}>
-          • 작업지시관리에서는 생산 작업 지시 정보를 등록하고 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 작업지시번호, 제품 정보, 생산수량, 작업일자 등을 관리하여 작업 지시를 체계적으로 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 작업 지시 정보는 생산 실적 관리, 재고 관리 등에서 활용됩니다.
-        </Typography>
-      </HelpModal>
-    </Box>
+        {/* 그리드 영역 */}
+        {!isLoading && (
+            <Grid container spacing={2}>
+              {/* 생산계획 그리드 - 왼쪽 */}
+              <Grid item xs={12} md={6}>
+                <EnhancedDataGridWrapper
+                    title="생산계획목록"
+                    key={refreshKey}
+                    rows={planList}
+                    columns={planColumns}
+                    buttons={planGridButtons}
+                    height={450}
+                    onRowClick={handlePlanSelect}
+                    tabId={props.tabId + "-production-plans"}
+                    selectedItem={selectedPlan}
+                />
+              </Grid>
+
+              {/* 작업지시 그리드 - 오른쪽 */}
+              <Grid item xs={12} md={6}>
+                <EnhancedDataGridWrapper
+                    title={`작업지시목록 ${selectedPlan ? '- ' + selectedPlan.prodPlanId : ''}`}
+                    key={refreshKey + "-workorders"}
+                    rows={workOrderList}
+                    columns={workOrderColumns}
+                    buttons={workOrderGridButtons}
+                    height={450}
+                    onRowClick={handleWorkOrderSelect}
+                    tabId={props.tabId + "-work-orders"}
+                    gridProps={{
+                      editMode: 'cell',
+                      processRowUpdate: handleWorkOrderRowUpdate,
+                      onProcessRowUpdateError: (error) => {
+                        console.error('데이터 업데이트 오류:', error);
+                      }
+                    }}
+                    selectedItem={selectedWorkOrder}
+                />
+              </Grid>
+            </Grid>
+        )}
+
+        {/* 하단 정보 영역 */}
+        <Box mt={2} p={2} sx={{
+          bgcolor: getBgColor(),
+          borderRadius: 1,
+          border: `1px solid ${getBorderColor()}`
+        }}>
+          <Stack spacing={1}>
+            <Typography variant="body2" color={getTextColor()}>
+              • 작업지시관리 화면에서는 생산계획에 따른 작업지시를 효율적으로 관리할 수 있습니다.
+            </Typography>
+            <Typography variant="body2" color={getTextColor()}>
+              • 좌측 생산계획 목록에서 계획을 선택하면 우측에 해당 계획에 대한 작업지시 목록이 표시됩니다.
+            </Typography>
+            <Typography variant="body2" color={getTextColor()}>
+              • 작업지시는 개별 등록 또는 생산계획 기반 일괄 생성이 가능합니다.
+            </Typography>
+          </Stack>
+        </Box>
+
+        {/* 도움말 모달 */}
+        <HelpModal
+            open={isHelpModalOpen}
+            onClose={() => setIsHelpModalOpen(false)}
+            title="작업지시관리 도움말"
+        >
+          <Typography component="div" color={getTextColor()} paragraph>
+            • 작업지시관리에서는 생산계획에 따른 작업지시를 등록하고 관리할 수 있습니다.
+          </Typography>
+          <Typography component="div" color={getTextColor()} paragraph>
+            • 왼쪽 생산계획 목록에서 계획을 선택하면 오른쪽에 해당 계획과 연계된 작업지시 목록이 표시됩니다.
+          </Typography>
+          <Typography component="div" color={getTextColor()} paragraph>
+            • 작업지시 정보는 생산 실적 관리, 품질 관리 등에서 활용됩니다.
+          </Typography>
+          <Typography component="div" color={getTextColor()} paragraph>
+            • 작업지시는 수동으로 등록하거나 생산계획을 기반으로 일괄 생성할 수 있습니다.
+          </Typography>
+          <Typography component="div" color={getTextColor()} paragraph>
+            • 작업지시의 상태(계획, 확정, 작업중, 완료 등)를 관리하여 생산 진행 상황을 실시간으로 파악할 수 있습니다.
+          </Typography>
+        </HelpModal>
+      </Box>
   );
 };
 
-export default WorkOrderManagement; 
+export default WorkOrderManagement;

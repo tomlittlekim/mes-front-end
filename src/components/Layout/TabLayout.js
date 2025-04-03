@@ -76,7 +76,7 @@ const getTabComponent = (tabId) => {
       return <MemoizedCustomerManagement tabId={tabId} />;
     case 'ci-warehouse':
       return <MemoizedWarehouseManagement tabId={tabId} />;
-    case 'pi-wip':
+    case 'pi-material-management':
       return <MemoizedMaterialManagement tabId={tabId} />;
     case 'pi-half-product':
       return <MemoizedHalfProductManagement tabId={tabId} />;

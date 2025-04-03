@@ -14,6 +14,9 @@ class Message {
   static CONFIRM = '확인';
   static WARNING = '경고';
   static NO_SELECTED_ROWS = '선택된 행이 없습니다.';
+  static NO_DATA_TO_SAVE = '저장할 데이터가 없습니다.';
+  static ERROR_DURING_SAVE = '저장 중 오류가 발생했습니다.';
+  static ERROR_DURING_DELETE = '저장 중 오류가 발생했습니다.';
 
   // 성공 메시지 표시
   static showSuccess(message, callback) {

@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 
-function  useLocalStorageVO() {
+function useLocalStorageVO() {
     const [loginUser, setLoginUser] = useState(() => {
         const stored = localStorage.getItem("auth");
         return stored ? JSON.parse(stored) : {
@@ -22,7 +22,7 @@ function  useLocalStorageVO() {
 
     const setUserInfo = (auth) => {
         setLoginUser({
-            id: auth.userId,
+            id: auth.id,
             loginId: auth.loginId,
             userNm: auth.userNm,
             userEmail: auth.email,
@@ -34,6 +34,7 @@ function  useLocalStorageVO() {
     const logout = () => {
         localStorage.removeItem('auth');
         localStorage.removeItem('isAuthenticated');
+        setLoginUser({ id: -1 });
     }
 
     return { setUserInfo, logout, loginUser };
