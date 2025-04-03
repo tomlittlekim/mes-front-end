@@ -19,7 +19,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
@@ -199,7 +199,9 @@ const EquipmentManagement = (props) => {
       } else {
         const rowsWithId = data.data.getEquipments.map((row, index) => ({
           ...row,
-          id: row.equipmentId
+          id: row.equipmentId,
+          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
         }));
         setEquipmentList(rowsWithId);
         // setRefreshKey(prev => prev + 1);
@@ -380,10 +382,10 @@ const EquipmentManagement = (props) => {
       equipmentName: '',
       status: '',
       flagActive: null,
-      createdUser: '자동입력',
-      createdDate: '자동입력',
-      updatedUser: '자동입력',
-      updatedDate: '자동입력'
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
     };
     
     setEquipmentList([newEquipment, ...equipmentList]);
@@ -424,7 +426,9 @@ const EquipmentManagement = (props) => {
         } else {
           const rowsWithId = data.data.getEquipments.map((row, index) => ({
             ...row,
-            id: row.equipmentId
+            id: row.equipmentId,
+            createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+            updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
           }));
           setEquipmentList(rowsWithId);
         }
@@ -583,10 +587,10 @@ const EquipmentManagement = (props) => {
         { value: 'N', label: '미사용' }
       ]
     },
-    { field: 'createdUser', headerName: '등록자', width: 90 },
-    { field: 'createdDate', headerName: '등록일', width: 130 },
-    { field: 'updatedUser', headerName: '수정자', width: 90 },
-    { field: 'updatedDate', headerName: '수정일', width: 130 }
+    { field: 'createUser', headerName: '등록자', width: 90 },
+    { field: 'createDate', headerName: '등록일', width: 130 },
+    { field: 'updateUser', headerName: '수정자', width: 90 },
+    { field: 'updateDate', headerName: '수정일', width: 130 }
   ];
 
   // 설비 목록 그리드 버튼
@@ -858,7 +862,8 @@ const EquipmentManagement = (props) => {
       
       {/* 그리드 영역 */}
       {!isLoading && (
-            <MuiDataGridWrapper
+          <Grid item xs={12} md={6}>
+            <EnhancedDataGridWrapper
               title="설비 목록"
               rows={equipmentList}
               columns={equipmentColumns}
@@ -869,7 +874,9 @@ const EquipmentManagement = (props) => {
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}
+              tabId={props.tabId + "-equip"}
             />
+          </Grid>
       )}
       
       {/* 하단 정보 영역 */}
