@@ -22,7 +22,7 @@ function  useLocalStorageVO() {
 
     const setUserInfo = (auth) => {
         setLoginUser({
-            id: auth.userId,
+            id: auth.id,
             loginId: auth.loginId,
             userNm: auth.userNm,
             userEmail: auth.email,

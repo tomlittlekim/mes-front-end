@@ -35,7 +35,7 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
       icon: '📋',
       isActive: false,
       subItems: [
-        { id: 'pi-wip', name: '원/부자재관리' },
+        { id: 'pi-material-management', name: '원/부자재관리' },
         { id: 'pi-half-product', name: '반제품관리' },
         { id: 'pi-product', name: '제품관리' },
         { id: 'pi-bom', name: 'BOM관리' }

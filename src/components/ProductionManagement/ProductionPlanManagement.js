@@ -28,7 +28,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
 import { format } from 'date-fns';
-import Message from '../../utils/Message'; // Message 유틸리티 클래스 임포트
+import Message from '../../utils/message/Message'; // Message 유틸리티 클래스 임포트
 import ko from "date-fns/locale/ko";
 
 const ProductionPlanManagement = (props) => {
@@ -154,6 +154,7 @@ const ProductionPlanManagement = (props) => {
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
       body: JSON.stringify({ query, variables })
     })
     .then((response) => {
@@ -388,6 +389,7 @@ const ProductionPlanManagement = (props) => {
     fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정 추가
       body: JSON.stringify({
         query: saveProductionPlanMutation,
         variables: {
@@ -452,6 +454,7 @@ const ProductionPlanManagement = (props) => {
       fetch(GRAPHQL_URL, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
+        credentials: 'include', // 쿠키 자동 전송 설정 추가
         body: JSON.stringify({
           query: deleteProductionPlanMutation,
           variables: {prodPlanId: selectedPlan.prodPlanId}

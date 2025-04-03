@@ -28,7 +28,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
 import { format } from 'date-fns';
-import Message from '../../utils/Message';
+import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
 
 const WorkOrderManagement = (props) => {

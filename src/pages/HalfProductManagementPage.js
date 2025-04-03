@@ -1,6 +1,6 @@
 import React from 'react';
-import HalfProductManagement from '../components/HalfProduct/HalfProductManagement';
 import PageLayout from '../components/Layout/PageLayout';
+import HalfProductManagement from "../components/MaterialManagement/HalfProductMaterial/HalfProductManagement";
 
 const HalfProductManagementPage = (props) => {
   return (

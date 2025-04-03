@@ -1,6 +1,6 @@
 import React from 'react';
-import ProductManagement from '../components/ProductManagement/ProductManagement';
 import PageLayout from '../components/Layout/PageLayout';
+import ProductManagement from "../components/MaterialManagement/ProductMaterial/ProductManagement";
 
 const ProductManagementPage = (props) => {
   return (
