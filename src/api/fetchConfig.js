@@ -25,17 +25,20 @@ const createFetch = (withAuth = true) => {
             fetchOptions.body = JSON.stringify(data);
         }
 
-        const url = method === "GET" && data
-            ? `${REST_URL}${path}?${new URLSearchParams(data).toString()}`
-            : `${REST_URL}${path}`;
+        const queryString = method === "GET" && data
+            ? `?${new URLSearchParams(data).toString()}`
+            : "";
 
-        const response = await fetch(url, fetchOptions);
+        const relativeUrl = `${path}${queryString}`;
+        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        const fullUrl = isLocalhost ? REST_URL + relativeUrl : relativeUrl;
+
+        const response = await fetch(fullUrl, fetchOptions);
         console.log(response);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-
 
         return response;
     };
@@ -67,7 +70,9 @@ export const graphFetch = async <T>(
         ...options,
     };
 
-    const response = await fetch(GRAPHQL_URL, fetchOptions);
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const url = isLocalhost ? GRAPHQL_URL : "/graphql";
+    const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
         throw new Error(`GraphQL HTTP error! status: ${response.status}`);
