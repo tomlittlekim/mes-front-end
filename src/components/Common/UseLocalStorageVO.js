@@ -34,6 +34,7 @@ function useLocalStorageVO() {
     const logout = () => {
         localStorage.removeItem('auth');
         localStorage.removeItem('isAuthenticated');
+        setLoginUser({ id: -1 });
     }
 
     return { setUserInfo, logout, loginUser };

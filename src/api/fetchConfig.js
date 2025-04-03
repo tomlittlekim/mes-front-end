@@ -51,13 +51,10 @@ const createFetch = (withAuth = true) => {
 export const dontLoginFetch = createFetch(true);
 export const apiFetch = createFetch(false);
 
-interface GraphQLRequest {
-    query: string;
-    variables?: Record<string, any>;
-}
-
+// query, mutation 모두 동작함
 export const graphFetch = async <T>(
-    body: GraphQLRequest,
+    body: string, // query || mutation
+    variables?: Record<string, any>,
     options?: FetchOptions
 ): Promise<T> => {
     const fetchOptions: RequestInit = {
@@ -65,8 +62,8 @@ export const graphFetch = async <T>(
         headers: {
             "Content-Type": "application/json",
         },
-        credentials: "same-origin",
-        body: JSON.stringify(body),
+        credentials: "include",
+        body: JSON.stringify({ query: body, variables }),
         ...options,
     };
 
