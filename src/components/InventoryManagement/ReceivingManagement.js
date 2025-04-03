@@ -20,12 +20,15 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MuiDataGridWrapper, SearchCondition, EnhancedDataGridWrapper } from '../Common';
+import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
+import DateRangePicker from '../Common/DateRangePicker';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
+import ko from "date-fns/locale/ko";
+
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -56,16 +59,39 @@ const ReceivingManagement = (props) => {
   };
   
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, getValues, setValue } = useForm({
     defaultValues: {
-      productId: '',
-      productName: '',
-      productType: '',
-      supplier: '',
-      fromDate: null,
-      toDate: null
+      hasInvoice: '',
+      inManagementId: '',
+      inType: '',
+      manufacturerName: '',
+      materialName: '',
+      dateRange: {
+        startDate: null,
+        endDate: null
+      },
+      supplierName: '',
+      userMaterialId: ''
     }
   });
+
+  // 초기화 함수
+  const handleReset = () => {
+    reset({
+      hasInvoice: '',
+      inManagementId: '',
+      inType: '',
+      manufacturerName: '',
+      materialName: '',
+      dateRange: {
+        startDate: null,
+        endDate: null
+      },
+      supplierName: '',
+      userMaterialId: ''
+    });
+  };
+  
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
@@ -83,24 +109,16 @@ const ReceivingManagement = (props) => {
   const [addRows,setAddRows] = useState([]);
   const [updatedDetailRows, setUpdatedDetailRows] = useState([]); // 수정된 필드만 저장하는 객체
 
-
-  // 초기화 함수
-  const handleReset = () => {
-    reset({
-      productId: '',
-      productName: '',
-      productType: '',
-      supplier: '',
-      fromDate: null,
-      toDate: null
-    });
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = (startDate, endDate) => {
+    setValue('dateRange', { startDate, endDate });
   };
 
   // GraphQL 쿼리 정의
   const INVENTORY_QUERIES = {
     GET_INVENTORY_LIST: `
-      query getInventoryList($filter: InventoryInMFilter) {
-        getInventoryList(filter: $filter) {
+      query getInventoryInManagementList($filter: InventoryInManagementFilter) {
+        getInventoryInManagementList(filter: $filter) {
           seq
           site
           compCd
@@ -187,13 +205,21 @@ const ReceivingManagement = (props) => {
     setUpdatedDetailRows([]);
     setAddRows([]);
 
+    console.log('data', data);
+    console.log('getValues', getValues());
+
     try {
       // 필터 객체 생성
       const filter = {
-        site: data.site || null, 
-        compCd: data.compCd || null, 
-        factoryId: data.factoryId || null,
-        warehouseId: data.warehouseId || null,
+        hasInvoice: data.hasInvoice || null,
+        inManagementId: data.inManagementId || null,
+        inType: data.inType || null,
+        manufacturerName: data.manufacturerName || null,
+        materialName: data.materialName || null,
+        supplierName: data.supplierName || null,
+        userMaterialId: data.userMaterialId || null,
+        startDate: data.startDate || null,
+        endDate: data.endDate || null,
       };
 
       // GraphQL 요청 보내기
@@ -203,9 +229,9 @@ const ReceivingManagement = (props) => {
       );
       
       // 응답 처리
-      if (result && result.getInventoryList) {
+      if (result && result.getInventoryInManagementList) {
         // 받아온 데이터로 상태 업데이트
-        setReceivingList(result.getInventoryList.map(item => ({
+        setReceivingList(result.getInventoryInManagementList.map(item => ({
           id: item.inManagementId,
           inManagementId: item.inManagementId,
           inType: "",
@@ -358,7 +384,7 @@ const ReceivingManagement = (props) => {
       credentials: 'include',
       body: JSON.stringify({
         query: `
-          mutation saveInventory($createdRows: [InventoryInMInput]) {
+          mutation saveInventory($createdRows: [InventoryInManagementInput]) {
             saveInventory(createdRows: $createdRows)
           }
         `,
@@ -786,53 +812,35 @@ const ReceivingManagement = (props) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="productId"
+            name="inManagementId"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label="품목코드"
+                label="입고관리ID"
                 variant="outlined"
                 size="small"
                 fullWidth
-                placeholder="품목코드를 입력하세요"
+                placeholder="입고관리ID를 입력하세요"
               />
             )}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="productName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="품목명"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="품목명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productType"
+            name="inType"
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="productType-label">품목유형</InputLabel>
+                <InputLabel id="productType-label">입고유형</InputLabel>
                 <Select
                   {...field}
                   labelId="productType-label"
                   label="품목유형"
                 >
                   <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="원자재">원자재</MenuItem>
-                  <MenuItem value="부자재">부자재</MenuItem>
-                  <MenuItem value="반제품">반제품</MenuItem>
-                  <MenuItem value="완제품">완제품</MenuItem>
+                  <MenuItem value="원자재">자재입고</MenuItem>
+                  <MenuItem value="부자재">기타입고</MenuItem>
                 </Select>
               </FormControl>
             )}
@@ -840,7 +848,7 @@ const ReceivingManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="supplier"
+            name="supplierName"
             control={control}
             render={({ field }) => (
               <TextField
@@ -854,44 +862,92 @@ const ReceivingManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Controller
-                name="fromDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="시작일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="manufacturerName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="제조사"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="제조사를 입력하세요"
               />
-              <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-              <Controller
-                name="toDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="종료일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="userMaterialId"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="자재ID"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="자재ID를 입력하세요"
               />
-            </Stack>
-          </LocalizationProvider>
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="materialName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="자재명"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="자재명을 입력하세요"
+              />
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="hasInvoice"
+            control={control}
+            render={({ field }) => (
+              <FormControl variant="outlined" size="small" fullWidth>
+                <InputLabel id="hasInvoice-label">거래명세서</InputLabel>
+                <Select
+                  {...field}
+                  labelId="hasInvoice-label"
+                  label="거래명세서"
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="Y">있음</MenuItem>
+                  <MenuItem value="N">없음</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+        <LocalizationProvider dateAdapter={AdapterDateFns}
+                                  adapterLocale={ko}>
+              <Controller
+                  name="dateRange"
+                  control={control}
+                  render={({field}) => (
+                      <DateRangePicker
+                          startDate={field.value.startDate}
+                          endDate={field.value.endDate}
+                          onRangeChange={handleDateRangeChange}
+                          startLabel="시작일"
+                          endLabel="종료일"
+                          size="small"
+                      />
+                  )}
+              />
+            </LocalizationProvider>
         </Grid>
       </SearchCondition>
       
