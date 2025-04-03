@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 
-function  useLocalStorageVO() {
+function useLocalStorageVO() {
     const [loginUser, setLoginUser] = useState(() => {
         const stored = localStorage.getItem("auth");
         return stored ? JSON.parse(stored) : {

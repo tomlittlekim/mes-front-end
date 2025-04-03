@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import './ProductionPlanManagement.css';
-import { useForm, Controller } from 'react-hook-form';
+import {useForm, Controller} from 'react-hook-form';
+import useLocalStorageVO from '../Common/UseLocalStorageVO';
 import {
   TextField,
   FormControl,
@@ -16,35 +17,41 @@ import {
   alpha,
   Checkbox
 } from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
+import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { EnhancedDataGridWrapper, SearchCondition } from '../Common';
-import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
+import {useDomain, DOMAINS} from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
-import { GRAPHQL_URL } from '../../config';
-import { format } from 'date-fns';
+import DateRangePicker from '../Common/DateRangePicker';
+import {GRAPHQL_URL} from '../../config';
+import {format} from 'date-fns';
 import Message from '../../utils/message/Message'; // Message 유틸리티 클래스 임포트
 import ko from "date-fns/locale/ko";
 
 const ProductionPlanManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
-  const { domain } = useDomain();
+  const {domain} = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
 
+  // useLocalStorageVO 훅 추가
+  const {loginUser} = useLocalStorageVO();
+
   // React Hook Form 설정
-  const { control, handleSubmit, reset, getValues } = useForm({
+  const { control, handleSubmit, reset, getValues, setValue } = useForm({
     defaultValues: {
       prodPlanId: '',
       orderId: '',
       productId: '',
-      planStartDate: null,
-      planEndDate: null
+      planDateRange: {
+        startDate: null,
+        endDate: null
+      }
     }
   });
 
@@ -58,15 +65,15 @@ const ProductionPlanManagement = (props) => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const CustomDateEditor = (props) => {
-    const { id, field, value, api } = props;
+    const {id, field, value, api} = props;
 
     const handleChange = (newValue) => {
       // DataGrid API를 사용하여 셀 값을 업데이트
-      api.setEditCellValue({ id, field, value: newValue });
+      api.setEditCellValue({id, field, value: newValue});
 
       // 변경 후 자동으로 편집 모드 종료 (선택적)
       setTimeout(() => {
-        api.commitCellChange({ id, field });
+        api.commitCellChange({id, field});
         api.setCellMode(id, field, 'view');
       }, 200);
     };
@@ -82,7 +89,7 @@ const ProductionPlanManagement = (props) => {
                   fullWidth: true,
                   variant: 'outlined',
                   size: 'small',
-                  sx: { m: 0, p: 0 },
+                  sx: {m: 0, p: 0},
                   // 키보드 상호작용 처리
                   onKeyDown: (e) => {
                     if (e.key === 'Escape') {
@@ -101,13 +108,18 @@ const ProductionPlanManagement = (props) => {
         </LocalizationProvider>
     );
   };
+
   // API 통신 시 Date 객체를 문자열로 변환하는 함수 개선
   function formatDateToString(dateObj) {
-    if (!dateObj) return null;
+    if (!dateObj) {
+      return null;
+    }
 
     // 이미 적절한 형식의 문자열인 경우
     if (typeof dateObj === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}/.test(dateObj)) return dateObj;
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateObj)) {
+        return dateObj;
+      }
 
       try {
         return format(new Date(dateObj), 'yyyy-MM-dd');
@@ -150,12 +162,12 @@ const ProductionPlanManagement = (props) => {
 
   // GraphQL fetch 함수
   function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
+    const variables = {filter};
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
+      body: JSON.stringify({query, variables})
     })
     .then((response) => {
       if (!response.ok) {
@@ -171,8 +183,10 @@ const ProductionPlanManagement = (props) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
-      planStartDate: null,
-      planEndDate: null
+      planDateRange: {
+        startDate: null,
+        endDate: null
+      }
     });
   };
 
@@ -204,24 +218,47 @@ const ProductionPlanManagement = (props) => {
     `;
 
     // 날짜 형식 변환 - null 값도 허용
-    const filterData = {
-      ...data,
-      planStartDate: data.planStartDate ? format(data.planStartDate, 'yyyy-MM-dd') : null,
-      planEndDate: data.planEndDate ? format(data.planEndDate, 'yyyy-MM-dd') : null
-    };
+    const filterData = {...data};
+
+    // planDateRange 객체에서 시작일과 종료일 추출하여 필터 데이터로 변환
+    if (filterData.planDateRange) {
+      if (filterData.planDateRange.startDate) {
+        try {
+          filterData.planStartDate = format(filterData.planDateRange.startDate,
+              'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid startDate:", error);
+          filterData.planStartDate = null;
+        }
+      }
+
+      if (filterData.planDateRange.endDate) {
+        try {
+          filterData.planEndDate = format(filterData.planDateRange.endDate,
+              'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid endDate:", error);
+          filterData.planEndDate = null;
+        }
+      }
+
+      // planDateRange 객체 제거 (GraphQL에 불필요한 데이터 전송 방지)
+      delete filterData.planDateRange;
+    }
 
     fetchGraphQL(GRAPHQL_URL, query, filterData)
     .then((response) => {
       if (response.errors) {
         console.error("GraphQL errors:", response.errors);
-        Message.showError({ message: '데이터를 불러오는데 실패했습니다.' }, setIsLoading);
+        Message.showError({message: '데이터를 불러오는데 실패했습니다.'}, setIsLoading);
       } else {
         const rowsWithId = response.data.productionPlans.map((plan) => ({
           ...plan,
           id: plan.prodPlanId,
           // 서버에서 받은 데이터 변환
           planQty: plan.planQty ? Number(plan.planQty) : 0,
-          planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
+          planStartDate: plan.planStartDate ? new Date(plan.planStartDate)
+              : null,
           planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
           createDate: plan.createDate ? new Date(plan.createDate) : null,
           updateDate: plan.updateDate ? new Date(plan.updateDate) : null
@@ -233,8 +270,13 @@ const ProductionPlanManagement = (props) => {
     })
     .catch((error) => {
       console.error("Error fetching production plans:", error);
-      Message.showError({ message: '데이터를 불러오는데 실패했습니다.' }, setIsLoading);
+      Message.showError({message: '데이터를 불러오는데 실패했습니다.'}, setIsLoading);
     });
+  };
+
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = (startDate, endDate) => {
+    setValue('planDateRange', { startDate, endDate });
   };
 
   // 계획 선택 핸들러
@@ -248,28 +290,33 @@ const ProductionPlanManagement = (props) => {
     const isNewRow = oldRow.id.startsWith('NEW_');
 
     // 깊은 복제로 원본 데이터 보존
-    const processedRow = { ...newRow };
+    const processedRow = {...newRow};
 
     // planQty 필드 명시적 처리
-    if (processedRow.planQty === undefined || processedRow.planQty === null || processedRow.planQty === '') {
+    if (processedRow.planQty === undefined || processedRow.planQty === null
+        || processedRow.planQty === '') {
       processedRow.planQty = 0;
     } else if (typeof processedRow.planQty === 'string') {
       // 문자열인 경우 숫자로 변환
       processedRow.planQty = Number(processedRow.planQty.replace(/,/g, ''));
-      if (isNaN(processedRow.planQty)) processedRow.planQty = 0;
+      if (isNaN(processedRow.planQty)) {
+        processedRow.planQty = 0;
+      }
     }
 
     // 그리드 상태 업데이트
     setPlanList((prev) => {
-      return prev.map((row) => row.id === oldRow.id ? { ...row, ...processedRow } : row);
+      return prev.map(
+          (row) => row.id === oldRow.id ? {...row, ...processedRow} : row);
     });
 
     if (isNewRow) {
       setAddRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(row => row.id === oldRow.id);
+        const existingIndex = prevAddRows.findIndex(
+            row => row.id === oldRow.id);
         if (existingIndex !== -1) {
           const updatedRows = [...prevAddRows];
-          updatedRows[existingIndex] = { ...updatedRows[existingIndex], ...processedRow };
+          updatedRows[existingIndex] = {...updatedRows[existingIndex], ...processedRow};
           return updatedRows;
         } else {
           return [...prevAddRows, processedRow];
@@ -277,10 +324,11 @@ const ProductionPlanManagement = (props) => {
       });
     } else {
       setUpdatedRows((prevUpdatedRows) => {
-        const existingIndex = prevUpdatedRows.findIndex(row => row.prodPlanId === oldRow.prodPlanId);
+        const existingIndex = prevUpdatedRows.findIndex(
+            row => row.prodPlanId === oldRow.prodPlanId);
         if (existingIndex !== -1) {
           const updatedRows = [...prevUpdatedRows];
-          updatedRows[existingIndex] = { ...updatedRows[existingIndex], ...processedRow };
+          updatedRows[existingIndex] = {...updatedRows[existingIndex], ...processedRow};
           return updatedRows;
         } else {
           return [...prevUpdatedRows, processedRow];
@@ -290,10 +338,11 @@ const ProductionPlanManagement = (props) => {
 
     return processedRow;
   }
+
   // 등록 버튼 클릭 핸들러
   const handleAdd = () => {
     const currentDate = new Date();
-    const currentUser = sessionStorage.getItem('userName') || '시스템';
+    const currentUser = loginUser.loginId;
     const newId = `NEW_${Date.now()}`;
     const newPlan = {
       id: newId,
@@ -311,10 +360,10 @@ const ProductionPlanManagement = (props) => {
     };
 
     // 그리드에 새 행 추가
-    setPlanList(prev => [...prev, newPlan]);
+    setPlanList(prev => [newPlan, ...prev]);
 
     // addRows에도 추가
-    setAddRows(prev => [...prev, newPlan]);
+    setAddRows(prev => [newPlan, ...prev]);
   };
 
   // 저장 버튼 클릭 핸들러 개선
@@ -338,8 +387,9 @@ const ProductionPlanManagement = (props) => {
     const validateRequiredFields = (rows, fieldNames) => {
       for (const row of rows) {
         for (const field of fieldNames) {
-          if (row[field] === undefined || row[field] === null || row[field] === '') {
-            Message.showError({ message: `${field} 필드는 필수 입력값입니다.` });
+          if (row[field] === undefined || row[field] === null || row[field]
+              === '') {
+            Message.showError({message: `${field} 필드는 필수 입력값입니다.`});
             return false;
           }
         }
@@ -367,7 +417,8 @@ const ProductionPlanManagement = (props) => {
     // 업데이트할 행 변환 - GraphQL 스키마에 맞게 필드 조정
     const updatedPlanInputs = updatedRows.map(updatedRow => {
       // 그리드에서 최신 데이터 찾기
-      const currentRow = planList.find(row => row.prodPlanId === updatedRow.prodPlanId) || updatedRow;
+      const currentRow = planList.find(
+          row => row.prodPlanId === updatedRow.prodPlanId) || updatedRow;
 
       return {
         prodPlanId: currentRow.prodPlanId,
@@ -376,7 +427,8 @@ const ProductionPlanManagement = (props) => {
         planQty: parseFloat(currentRow.planQty) || 0,
         planStartDate: formatDateToString(currentRow.planStartDate),
         planEndDate: formatDateToString(currentRow.planEndDate),
-        flagActive: currentRow.flagActive === undefined ? true : Boolean(currentRow.flagActive)
+        flagActive: currentRow.flagActive === undefined ? true : Boolean(
+            currentRow.flagActive)
       };
     });
 
@@ -388,7 +440,7 @@ const ProductionPlanManagement = (props) => {
     // API 호출
     fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       credentials: 'include', // 쿠키 자동 전송 설정 추가
       body: JSON.stringify({
         query: saveProductionPlanMutation,
@@ -411,7 +463,7 @@ const ProductionPlanManagement = (props) => {
         if (data.errors[0] && data.errors[0].message) {
           errorMessage = data.errors[0].message;
         }
-        Message.showError({ message: errorMessage });
+        Message.showError({message: errorMessage});
       } else {
         // 저장 성공 후 상태 초기화
         setAddRows([]);
@@ -424,7 +476,7 @@ const ProductionPlanManagement = (props) => {
     })
     .catch((error) => {
       console.error("Error saving production plan:", error);
-      Message.showError({ message: '저장 중 예외가 발생했습니다: ' + error.message });
+      Message.showError({message: '저장 중 예외가 발생했습니다: ' + error.message});
     });
   };
 
@@ -464,7 +516,7 @@ const ProductionPlanManagement = (props) => {
       .then((data) => {
         if (data.errors) {
           console.error("GraphQL errors:", data.errors);
-          Message.showError({ message: '삭제 중 오류가 발생했습니다.' });
+          Message.showError({message: '삭제 중 오류가 발생했습니다.'});
         } else {
           const updatedList = planList.filter(p => p.id !== selectedPlan.id);
           setPlanList(updatedList);
@@ -474,7 +526,7 @@ const ProductionPlanManagement = (props) => {
       })
       .catch((error) => {
         console.error("Error deleting production plan:", error);
-        Message.showError({ message: '삭제 중 예외가 발생했습니다.' });
+        Message.showError({message: '삭제 중 예외가 발생했습니다.'});
       });
     });
   };
@@ -520,7 +572,8 @@ const ProductionPlanManagement = (props) => {
         const showRequired = isNewRow && (!params.value || params.value === '');
 
         return (
-            <Typography variant="body2" sx={{ color: showRequired ? '#f44336' : 'inherit' }}>
+            <Typography variant="body2"
+                        sx={{color: showRequired ? '#f44336' : 'inherit'}}>
               {showRequired ? '필수 입력' : params.value || ''}
             </Typography>
         );
@@ -589,7 +642,8 @@ const ProductionPlanManagement = (props) => {
               {displayValue}
             </Typography>
         );
-      }    },
+      }
+    },
     {
       field: 'flagActive',
       headerName: '사용여부',
@@ -617,7 +671,9 @@ const ProductionPlanManagement = (props) => {
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
-        if (!params.value) return <Typography variant="body2"></Typography>;
+        if (!params.value) {
+          return <Typography variant="body2"></Typography>;
+        }
 
         try {
           const date = new Date(params.value);
@@ -644,7 +700,9 @@ const ProductionPlanManagement = (props) => {
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
-        if (!params.value) return <Typography variant="body2"></Typography>;
+        if (!params.value) {
+          return <Typography variant="body2"></Typography>;
+        }
 
         try {
           const date = new Date(params.value);
@@ -658,9 +716,9 @@ const ProductionPlanManagement = (props) => {
   ];
   // 생산계획 목록 그리드 버튼
   const planGridButtons = [
-    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
+    {label: '등록', onClick: handleAdd, icon: <AddIcon/>},
+    {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
+    {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
   ];
 
   const gridProps = {
@@ -672,7 +730,8 @@ const ProductionPlanManagement = (props) => {
     slots: {
       // 날짜 필드에 커스텀 에디터 적용
       editCell: (params) => {
-        if (params.field === 'planStartDate' || params.field === 'planEndDate') {
+        if (params.field === 'planStartDate' || params.field
+            === 'planEndDate') {
           return <CustomDateEditor {...params} />;
         }
         return null; // 다른 필드는 기본 에디터 사용
@@ -681,7 +740,7 @@ const ProductionPlanManagement = (props) => {
   };
 
   return (
-      <Box sx={{ p: 0, minHeight: '100vh' }}>
+      <Box sx={{p: 0, minHeight: '100vh'}}>
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
@@ -703,7 +762,8 @@ const ProductionPlanManagement = (props) => {
               onClick={() => setIsHelpModalOpen(true)}
               sx={{
                 ml: 1,
-                color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                color: isDarkMode ? theme.palette.primary.light
+                    : theme.palette.primary.main,
                 '&:hover': {
                   backgroundColor: isDarkMode
                       ? alpha(theme.palette.primary.light, 0.1)
@@ -711,7 +771,7 @@ const ProductionPlanManagement = (props) => {
                 }
               }}
           >
-            <HelpOutlineIcon />
+            <HelpOutlineIcon/>
           </IconButton>
         </Box>
 
@@ -724,7 +784,7 @@ const ProductionPlanManagement = (props) => {
             <Controller
                 name="prodPlanId"
                 control={control}
-                render={({ field }) => (
+                render={({field}) => (
                     <TextField
                         {...field}
                         label="계획ID"
@@ -740,7 +800,7 @@ const ProductionPlanManagement = (props) => {
             <Controller
                 name="orderId"
                 control={control}
-                render={({ field }) => (
+                render={({field}) => (
                     <TextField
                         {...field}
                         label="주문번호"
@@ -756,7 +816,7 @@ const ProductionPlanManagement = (props) => {
             <Controller
                 name="productId"
                 control={control}
-                render={({ field }) => (
+                render={({field}) => (
                     <TextField
                         {...field}
                         label="제품ID"
@@ -769,42 +829,22 @@ const ProductionPlanManagement = (props) => {
             />
           </Grid>
           <Grid item xs={12} sm={12} md={3}>
-            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Controller
-                    name="planStartDate"
-                    control={control}
-                    render={({ field }) => (
-                        <DatePicker
-                            {...field}
-                            label="시작일"
-                            slotProps={{
-                              textField: {
-                                size: "small",
-                                fullWidth: true
-                              }
-                            }}
-                        />
-                    )}
-                />
-                <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-                <Controller
-                    name="planEndDate"
-                    control={control}
-                    render={({ field }) => (
-                        <DatePicker
-                            {...field}
-                            label="종료일"
-                            slotProps={{
-                              textField: {
-                                size: "small",
-                                fullWidth: true
-                              }
-                            }}
-                        />
-                    )}
-                />
-              </Stack>
+            <LocalizationProvider dateAdapter={AdapterDateFns}
+                                  adapterLocale={ko}>
+              <Controller
+                  name="planDateRange"
+                  control={control}
+                  render={({field}) => (
+                      <DateRangePicker
+                          startDate={field.value.startDate}
+                          endDate={field.value.endDate}
+                          onRangeChange={handleDateRangeChange}
+                          startLabel="시작일"
+                          endLabel="종료일"
+                          size="small"
+                      />
+                  )}
+              />
             </LocalizationProvider>
           </Grid>
         </SearchCondition>
