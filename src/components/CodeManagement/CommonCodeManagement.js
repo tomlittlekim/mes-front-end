@@ -540,7 +540,7 @@ const CommonCodeManagement = (props) => {
 
   // 코드 그룹 DataGrid 컬럼 정의
   const codeGroupColumns = [
-    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130 },
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
     { field: 'codeClassName', headerName: '코드그룹 명', width: 130, editable: true },
     { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
   ];
