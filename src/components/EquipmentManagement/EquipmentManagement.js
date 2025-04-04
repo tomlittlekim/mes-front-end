@@ -24,6 +24,7 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import {GRAPHQL_URL} from "../../config";
+import Message from "../../utils/message/Message";
 
 const EquipmentManagement = (props) => {
   // 현재 테마 가져오기
@@ -177,6 +178,8 @@ const EquipmentManagement = (props) => {
           lineId
           lineName
           equipmentId
+          equipmentBuyDate
+          equipmentBuyVendor
           equipmentSn
           equipmentType
           equipmentName
@@ -222,6 +225,8 @@ const EquipmentManagement = (props) => {
   const transformRowForMutation = (row) => ({
     factoryId: row.factoryId,
     lineId: row.lineId,
+    equipmentBuyDate: row.equipmentBuyDate,
+    equipmentBuyVendor: row.equipmentBuyVendor,
     equipmentSn: row.equipmentSn,
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
@@ -233,6 +238,8 @@ const EquipmentManagement = (props) => {
     factoryId: row.factoryId,
     lineId: row.lineId,
     equipmentId: row.equipmentId,
+    equipmentBuyDate: row.equipmentBuyDate,
+    equipmentBuyVendor: row.equipmentBuyVendor,
     equipmentSn: row.equipmentSn,
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
@@ -260,6 +267,30 @@ const EquipmentManagement = (props) => {
         saveEquipment(createdRows: $createdRows, updatedRows: $updatedRows)
     }
   `;
+
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      equipmentName: '설비명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
 
     const createdEquipmentInputs = addRows.map(transformRowForMutation);
     const updatedEquipmentInputs = updatedRows.map(transformRowForUpdate);
@@ -312,6 +343,19 @@ const EquipmentManagement = (props) => {
         deleteEquipment(equipmentId: $equipmentId)
       }
     `;
+
+    const isDeleteAddRows = addRows.find(f => f.id === selectedEquipment.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedEquipment.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedEquipment.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedEquipment.id);
+      setUpdatedRows(updatedRowsLit)
+    }
 
     Swal.fire({
       title: '삭제 확인',
@@ -377,10 +421,12 @@ const EquipmentManagement = (props) => {
       lineId: '',
       lineName: '',
       equipmentId: '자동입력',
+      equipmentBuyDate: '',
+      equipmentBuyVendor: '',
       equipmentSn: '',
       equipmentType: '',
       equipmentName: '',
-      status: '',
+      equipmentStatus: '',
       flagActive: null,
       createUser: '자동입력',
       createDate: '자동입력',
@@ -404,6 +450,8 @@ const EquipmentManagement = (props) => {
           lineId
           lineName
           equipmentId
+          equipmentBuyDate
+          equipmentBuyVendor
           equipmentSn
           equipmentType
           equipmentName
@@ -534,20 +582,18 @@ const EquipmentManagement = (props) => {
     {
       field: 'factoryId',
       headerName: '공장 ID',
-      width: 100,
+      width: 140,
       editable: true,
       type: 'singleSelect',
-      valueOptions: factoryTypeOptions,
-      flex:1
+      valueOptions: factoryTypeOptions
     },
     { field: 'factoryName', headerName: '공장 명', width: 100 },
     {
       field: 'lineId',
       headerName: '라인 ID',
-      width: 100,
+      width: 140,
       editable: true,
       type: 'singleSelect',
-      flex:1,
       valueOptions: (params) => {
         // 각 행의 factoryId에 따라 라인 옵션 필터링
         const factoryId = params.row.factoryId;
@@ -557,17 +603,36 @@ const EquipmentManagement = (props) => {
       },
     },
     { field: 'lineName', headerName: '라인 명', width: 90 },
-    { field: 'equipmentId', headerName: '설비 ID', width: 100, flex: 1 },
+    { field: 'equipmentId', headerName: '설비 ID', width: 140 },
+    { field: 'equipmentBuyDate', headerName: '설비 구입일', width: 120, editable: true },
+    { field: 'equipmentBuyVendor', headerName: '설비 구입처', width: 120, editable: true },
     { field: 'equipmentSn', headerName: '설비 S/N', width: 100 , editable: true },
     {
       field: 'equipmentType',
       headerName: '설비 유형', width: 90,
       editable: true,
       type: 'singleSelect',
-      valueOptions: equipmentTypeOptions,
-      flex:1
+      valueOptions: equipmentTypeOptions
     },
-    { field: 'equipmentName', headerName: '설비 명', width: 120, editable: true },
+    {
+      field: 'equipmentName',
+      headerName: '설비 명',
+      width: 120,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     {
       field: 'equipmentStatus' ,
       headerName: '상태' , width: 90,
