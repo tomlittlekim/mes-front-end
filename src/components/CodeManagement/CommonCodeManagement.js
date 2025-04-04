@@ -318,7 +318,7 @@ const CommonCodeManagement = (props) => {
 
     setAddCodeRows([]);
     setUpdatedCodeRows([]);
-
+//ㄴ
     const query = `
       query getCodes($codeClassId: String!) {
         getCodes(codeClassId: $codeClassId) {
