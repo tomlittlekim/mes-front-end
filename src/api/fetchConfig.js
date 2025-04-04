@@ -1,8 +1,8 @@
-const GRAPHQL_URL = 'http://localhost:8080/graphql';
-const REST_URL = 'http://localhost:8080';
-
 type FetchMethod = "GET" | "POST" | "PUT" | "DELETE";
 type FetchOptions = Omit<RequestInit, "method" | "headers" | "body">;
+
+const GRAPHQL_URL = 'http://localhost:8080/graphql';
+const REST_URL = 'http://localhost:8080';
 
 const createFetch = (withAuth = true) => {
     const base = async <T>(
