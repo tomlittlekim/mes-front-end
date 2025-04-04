@@ -1,4 +1,5 @@
-import { REST_URL, GRAPHQL_URL } from '../config';
+const GRAPHQL_URL = 'http://localhost:8080/graphql';
+const REST_URL = 'http://localhost:8080';
 
 type FetchMethod = "GET" | "POST" | "PUT" | "DELETE";
 type FetchOptions = Omit<RequestInit, "method" | "headers" | "body">;
