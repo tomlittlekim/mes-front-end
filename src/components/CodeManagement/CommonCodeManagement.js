@@ -22,6 +22,7 @@ import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
+import Message from "../../utils/message/Message";
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -239,6 +240,29 @@ const CommonCodeManagement = (props) => {
     }
   `;
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      codeClassName: '코드그룹명'
+    };
+
+    if (!validateRequiredFields(addCodeClassRows, requiredFields) ||
+        !validateRequiredFields(updatedCodeClassRows, requiredFields)) {
+      return;
+    }
+
     const createdCodeClassInputs = addCodeClassRows.map(transformRowForMutation);
     const updatedCodeClassInputs = updatedCodeClassRows.map(transformRowForUpdate);
 
@@ -401,6 +425,29 @@ const CommonCodeManagement = (props) => {
       return;
     }
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      codeName: '코드명'
+    };
+
+    if (!validateRequiredFields(addCodeRows, requiredFields) ||
+        !validateRequiredFields(updatedCodeRows, requiredFields)) {
+      return;
+    }
+
     const createCodeMutation = `
       mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
         saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -460,6 +507,18 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
+    const isDeleteAddRows = addCodeRows.find(f => f.id === selectedCode.id)
+    const isDeleteUpdateRows = updatedCodeRows.find(f => f.id === selectedCode.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addCodeRows.filter(f => f.id !== selectedCode.id);
+      setAddCodeRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedCodeRows.filter(f => f.id !== selectedCode.id);
+      setUpdatedCodeRows(updatedRowsLit)
+    }
 
     Swal.fire({
       title: '삭제 확인',
@@ -541,7 +600,25 @@ const CommonCodeManagement = (props) => {
   // 코드 그룹 DataGrid 컬럼 정의
   const codeGroupColumns = [
     { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
-    { field: 'codeClassName', headerName: '코드그룹 명', width: 130, editable: true },
+    {
+      field: 'codeClassName',
+      headerName: '코드그룹명',
+      width: 130,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
   ];
 
@@ -549,7 +626,26 @@ const CommonCodeManagement = (props) => {
   const codeColumns = [
     { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
     { field: 'codeId', headerName: '코드ID', width: 150 },
-    { field: 'codeName', headerName: '코드명', width: 80, editable: true },
+    {
+      field: 'codeName',
+      headerName: '코드명',
+      width: 80,
+      editable: true
+      ,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
     {
       field: 'flagActive',

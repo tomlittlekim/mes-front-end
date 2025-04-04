@@ -241,6 +241,7 @@ const CustomerManagement = (props) => {
 
     // 필수 필드 검증
     const requiredFields = {
+      vendorName: '거래처명',
       businessRegNo: '사업자등록 번호'
     };
 
@@ -300,6 +301,19 @@ const CustomerManagement = (props) => {
         deleteVendor(vendorId: $vendorId)
       }
     `;
+
+    const isDeleteAddRows = addRows.find(f => f.id === selectedVendor.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedVendor.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedVendor.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedVendor.id);
+      setUpdatedRows(updatedRowsLit)
+    }
 
 
     Swal.fire({
@@ -476,7 +490,25 @@ const CustomerManagement = (props) => {
   // 거래처 목록 그리드 컬럼 정의
   const customerColumns = [
     { field: 'vendorId', headerName: '거래처코드', width: 140, flex: 1 },
-    { field: 'vendorName', headerName: '거래처명', width: 120 , editable: true},
+    {
+      field: 'vendorName',
+      headerName: '거래처명',
+      width: 120 ,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     {
       field: 'vendorType',
       headerName: '거래처 유형',

@@ -22,6 +22,7 @@ import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../C
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
+import Message from "../../utils/message/Message";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -243,6 +244,31 @@ const WarehouseManagement = (props) => {
       return;
     }
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      warehouseName: '창고명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
+
+
     const createWarehouseMutation = `
       mutation saveWarehouse($createdRows: [WarehouseInput], $updatedRows: [WarehouseUpdate]) {
         saveWarehouse(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -293,6 +319,19 @@ const WarehouseManagement = (props) => {
         confirmButtonText: '확인'
       });
       return;
+    }
+
+    const isDeleteAddRows = addRows.find(f => f.id === selectedWarehouse.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedWarehouse.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedWarehouse.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedWarehouse.id);
+      setUpdatedRows(updatedRowsLit)
     }
 
     const deleteWarehouseMutation = `
@@ -505,7 +544,25 @@ const WarehouseManagement = (props) => {
     },
     { field: 'factoryName', headerName: '공장명', width: 150 },
     { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
-    { field: 'warehouseName', headerName: '창고 명', width: 100, editable: true },
+    {
+      field: 'warehouseName',
+      headerName: '창고 명',
+      width: 100,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     {
       field: 'warehouseType',
       headerName: '창고 유형',
