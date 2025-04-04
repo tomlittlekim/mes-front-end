@@ -47,14 +47,13 @@ const BomManagement = (props) => {
   const { executeQuery } = useGraphQL();
 
   // 그리드 유틸리티 훅
-  const { generateId, formatDateToYYYYMMDD, formatFlagActive, formatGridData } = useGridUtils();
+  const { generateId, formatDateToYYYYMMDD, formatGridData } = useGridUtils();
 
   // 데이터 포맷팅 함수 정의
   const formatBomData = (data) => formatGridData(data, 'getBomList', bom => {
     return {
       ...bom,
-      id: bom.bomId || generateId('TEMP'),
-      flagActive: formatFlagActive(bom.flagActive)
+      id: bom.bomId || generateId('TEMP')
     };
   });
 
@@ -284,7 +283,7 @@ const BomManagement = (props) => {
         const formattedDetails = result.data.getBomDetail.map(detail => ({
           ...detail,
           id: detail.bomDetailId || generateId('DETAIL'),
-          flagActive: formatFlagActive(detail.flagActive)
+          flagActive: detail.flagActive
         }));
         setBomDetail(formattedDetails);
       }
