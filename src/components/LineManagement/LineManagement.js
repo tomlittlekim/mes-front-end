@@ -21,6 +21,7 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const LineManagement = (props) => {
   // 현재 테마 가져오기
@@ -162,14 +163,13 @@ const LineManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        {filter: data}
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getLines.map((row, index) => ({
+        const rowsWithId = data.getLines.map((row, index) => ({
           ...row,
           id: row.lineId ,
           createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -275,20 +275,13 @@ const LineManagement = (props) => {
     const createdLineInputs = addRows.map(transformRowForMutation);
     const updatedLineInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createLineMutation,
-        variables: {
+    graphFetch(
+        createLineMutation,
+        {
           createdRows: createdLineInputs,
           updatedRows: updatedLineInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -350,17 +343,13 @@ const LineManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteLineMutation,
-            variables: {lineId: selectedLine.lineId} // 선택된 공장의 factoryId를 사용
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+
+
+
+        graphFetch(
+            deleteLineMutation,
+            { lineId: selectedLine.lineId }
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -404,30 +393,21 @@ const LineManagement = (props) => {
       }
     `;
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+
+    graphFetch(
         query
-      })
-    }).then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        }).then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridFactory.map((row) => ({
+            const options = data.getGridFactory.map((row) => ({
               value: row.factoryId,
               label: row.factoryId
             }));
             setFactoryTypeOptions(options);
 
-            const models = data.data.getGridFactory.map((row) => ({
+            const models = data.getGridFactory.map((row) => ({
               factoryId: row.factoryId,
               factoryName: row.factoryName,
               factoryCode: row.factoryCode
@@ -436,6 +416,7 @@ const LineManagement = (props) => {
 
           }
         }).catch((err) => console.error(err));
+
   }, []);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
@@ -460,14 +441,13 @@ const LineManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          {filter: getValues()}
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getLines.map((row, index) => ({
+          const rowsWithId = data.getLines.map((row, index) => ({
             ...row,
             id: row.lineId,  // 또는 row.factoryId || index + 1
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -484,15 +464,6 @@ const LineManagement = (props) => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    console.log('addRows changed:', addRows);
-  }, [addRows]);
-
-  useEffect(() => {
-    console.log('updatedRows changed:', updatedRows);
-  }, [updatedRows]);
-
 
   // 라인 목록 그리드 컬럼 정의
   const lineColumns = [
@@ -567,29 +538,6 @@ const LineManagement = (props) => {
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>

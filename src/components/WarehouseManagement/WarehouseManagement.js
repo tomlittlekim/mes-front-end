@@ -23,6 +23,7 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -165,14 +166,13 @@ const WarehouseManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        {filter: data}
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getWarehouse.map((row, index) => ({
+        const rowsWithId = data.getWarehouse.map((row, index) => ({
           ...row,
           id: row.warehouseId ,
           createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -278,20 +278,13 @@ const WarehouseManagement = (props) => {
     const createdWarehouseInputs = addRows.map(transformRowForMutation);
     const updatedWarehouseInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createWarehouseMutation,
-        variables: {
+    graphFetch(
+        createWarehouseMutation,
+        {
           createdRows: createdWarehouseInputs,
           updatedRows: updatedWarehouseInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -352,17 +345,12 @@ const WarehouseManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteWarehouseMutation,
-            variables: {warehouseId: selectedWarehouse.warehouseId}
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+
+
+        graphFetch(
+            deleteWarehouseMutation,
+            {warehouseId: selectedWarehouse.warehouseId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -416,14 +404,13 @@ const WarehouseManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          {filter: getValues() }
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getWarehouse.map((row, index) => ({
+          const rowsWithId = data.getWarehouse.map((row, index) => ({
             ...row,
             id: row.warehouseId ,
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -456,27 +443,15 @@ const WarehouseManagement = (props) => {
       codeClassId: "CD20250401114109083"
     };
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+    graphFetch(
         query,
         variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridCodes.map((row) => ({
+            const options = data.getGridCodes.map((row) => ({
               value: row.codeId,
               label: row.codeName
             }));
@@ -497,30 +472,20 @@ const WarehouseManagement = (props) => {
       }
     `;
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query
-      })
-    }).then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      return response.json();
-    }).then((data) => {
+    graphFetch(
+        query,
+    ).then((data) => {
       if (data.errors) {
         console.error(data.errors);
       } else {
         // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.data.getGridFactory.map((row) => ({
+        const options = data.getGridFactory.map((row) => ({
           value: row.factoryId,
           label: row.factoryId
         }));
         setFactoryTypeOptions(options);
 
-        const models = data.data.getGridFactory.map((row) => ({
+        const models = data.getGridFactory.map((row) => ({
           factoryId: row.factoryId,
           factoryName: row.factoryName,
           factoryCode: row.factoryCode
@@ -596,28 +561,7 @@ const WarehouseManagement = (props) => {
   ];
 
 
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
+
 
 
   return (

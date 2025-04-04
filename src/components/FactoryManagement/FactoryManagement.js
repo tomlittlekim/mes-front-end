@@ -27,6 +27,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
 import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const FactoryManagement = (props) => {
   // 현재 테마 가져오기
@@ -80,14 +81,13 @@ const FactoryManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        { filter: data }
     ).then((data) => {
           if (data.errors) {
           } else {
-            const rowsWithId = data.data.factories.map((row, index) => ({
+            const rowsWithId = data.factories.map((row, index) => ({
               ...row,
               id: row.factoryId  // 또는 row.factoryId || index + 1
             }));
@@ -158,31 +158,6 @@ const FactoryManagement = (props) => {
     // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
     return { ...oldRow, ...newRow };
   }
-
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
-
 
   // 공장 선택 핸들러
   const handleFactorySelect = (params) => {
@@ -259,20 +234,14 @@ const FactoryManagement = (props) => {
     const createdFactoryInputs = addRows.map(transformRowForMutation);
     const updatedFactoryInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createFactoryMutation,
-        variables: {
+
+    graphFetch(
+        createFactoryMutation,
+        {
           createdRows: createdFactoryInputs,
           updatedRows: updatedFactoryInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -354,17 +323,11 @@ const FactoryManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteFactoryMutation,
-            variables: {factoryId: selectedFactory.factoryId} // 선택된 공장의 factoryId를 사용
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+
+        graphFetch(
+            deleteFactoryMutation,
+            {factoryId: selectedFactory.factoryId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -418,14 +381,14 @@ const FactoryManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+
+      graphFetch(
           query,
-          getValues()
+          { filter:  getValues() }
       ).then((data) => {
             if (data.errors) {
             } else {
-              const rowsWithId = data.data.factories.map((row, index) => ({
+              const rowsWithId = data.factories.map((row, index) => ({
                 ...row,
                 id: row.factoryId  // 또는 row.factoryId || index + 1
               }));

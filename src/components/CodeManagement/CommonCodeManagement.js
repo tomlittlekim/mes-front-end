@@ -23,6 +23,7 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -71,14 +72,13 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          { filter: getValues() }
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getCodeClass.map((row, index) => ({
+          const rowsWithId = data.getCodeClass.map((row, index) => ({
             ...row,
             id: row.codeClassId  // 또는 row.factoryId || index + 1
           }));
@@ -111,14 +111,13 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        { filter: data }
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getCodeClass.map((row, index) => ({
+        const rowsWithId = data.getCodeClass.map((row, index) => ({
           ...row,
           id: row.codeClassId  // 또는 row.factoryId || index + 1
         }));
@@ -280,20 +279,13 @@ const CommonCodeManagement = (props) => {
     }
 
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: creatCodeClassMutation,
-        variables: {
+    graphFetch(
+        creatCodeClassMutation,
+        {
           createdRows: createdCodeClassInputs,
           updatedRows: updatedCodeClassInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -318,7 +310,7 @@ const CommonCodeManagement = (props) => {
 
     setAddCodeRows([]);
     setUpdatedCodeRows([]);
-//ㄴ
+
     const query = `
       query getCodes($codeClassId: String!) {
         getCodes(codeClassId: $codeClassId) {
@@ -336,30 +328,15 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
-    const variables = {
-      codeClassId: codeGroup.codeClassId
-    }
-
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+    graphFetch(
         query,
-        variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+        { codeClassId: codeGroup.codeClassId }
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL Errors:", data.errors);
           } else {
-            const rowsWithId = data.data.getCodes.map((row) => ({
+            console.log(data);
+            const rowsWithId = data.getCodes.map((row) => ({
               ...row,
               id: row.codeId
             }));
@@ -457,20 +434,13 @@ const CommonCodeManagement = (props) => {
     const createdCodeInputs = addCodeRows.map(transformCodeRowForMutation);
     const updatedCodeInputs = updatedCodeRows.map(transformCodeRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createCodeMutation,
-        variables: {
+    graphFetch(
+        createCodeMutation,
+        {
           createdRows: createdCodeInputs,
           updatedRows: updatedCodeInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -532,17 +502,10 @@ const CommonCodeManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteCodeMutation,
-            variables: {codeId: selectedCode.codeId} // 선택된 공장의 factoryId를 사용
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+        graphFetch(
+            deleteCodeMutation,
+            { codeId: selectedCode.codeId }
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -728,29 +691,6 @@ const CommonCodeManagement = (props) => {
     sortOrder: row.sortOrder,
     flagActive: row.flagActive
   });
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>

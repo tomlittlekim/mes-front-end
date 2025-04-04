@@ -20,7 +20,8 @@ import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../C
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
-import Message from '../../utils/message/Message'; // Message 유틸리티 클래스 임포트
+import Message from '../../utils/message/Message';
+import {graphFetch} from "../../api/fetchConfig"; // Message 유틸리티 클래스 임포트
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -156,14 +157,14 @@ const CustomerManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+
+    graphFetch(
         query,
-        data
+        {filter:data}
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getVendors.map((row, index) => ({
+        const rowsWithId = data.getVendors.map((row, index) => ({
           ...row,
           id: row.vendorId  // 또는 row.factoryId || index + 1
         }));
@@ -253,20 +254,14 @@ const CustomerManagement = (props) => {
     const createdVendorInputs = addRows.map(transformRowForMutation);
     const updatedVendorInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createVendorMutation,
-        variables: {
+
+    graphFetch(
+        createVendorMutation,
+        {
           createdRows: createdVendorInputs,
           updatedRows: updatedVendorInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -328,17 +323,10 @@ const CustomerManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteVendorMutation,
-            variables: {vendorId: selectedVendor.vendorId}
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+        graphFetch(
+            deleteVendorMutation,
+            {vendorId: selectedVendor.vendorId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -410,27 +398,15 @@ const CustomerManagement = (props) => {
       codeClassId: "CD20250331110039125"
     };
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+    graphFetch(
         query,
         variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridCodes.map((row) => ({
+            const options = data.getGridCodes.map((row) => ({
               value: row.codeId,
               label: row.codeName
             }));
@@ -464,14 +440,13 @@ const CustomerManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          {filter: getValues()}
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getVendors.map((row, index) => ({
+          const rowsWithId = data.getVendors.map((row, index) => ({
             ...row,
             id: row.vendorId  // 또는 row.factoryId || index + 1
           }));
@@ -564,30 +539,6 @@ const CustomerManagement = (props) => {
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
-
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
