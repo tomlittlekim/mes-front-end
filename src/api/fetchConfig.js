@@ -56,6 +56,7 @@ export const dontLoginFetch = createFetch(true);
 export const apiFetch = createFetch(false);
 
 // query, mutation 모두 동작함
+// variables 의 캡슐화는 req 고정
 export const graphFetch = async <T>(
     body: string, // query || mutation
     variables?: Record<string, any>,
@@ -82,7 +83,6 @@ export const graphFetch = async <T>(
     const json = await response.json();
 
     if (json.errors) {
-        console.error("GraphQL Errors:", json.errors);
         throw new Error(json.errors[0]?.message || "GraphQL Error");
     }
 

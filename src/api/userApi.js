@@ -21,21 +21,21 @@ export const signIn = async (req: any): Promise<UserOutPut> => {
 }
 
 const userGroupQuery =`
-  query {
-    getUserGroup {
+  query getUserGroup($req: UserGroupRequest!) {
+    getUserGroup(req: $req) {
       id
       loginId
       userName
-      departmentName
-      position
-      authorityName
-      email
-      phoneNumber
+      departmentId
+      positionId
+      roleId
+      userEmail
+      phoneNum
       flagActive
     }
   }
 `
-export const getUserGroup = (req) => graphFetch(userGroupQuery, req)
+export const getUserGroup = (req) => graphFetch(userGroupQuery, {req: req})
 
 const rolesQuery = `
     query {
