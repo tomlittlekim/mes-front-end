@@ -68,14 +68,8 @@ const UserManagement = (props) => {
   const [authorityOptions, setAuthorityOptions] = useState([]);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [positionOptions, setPositionOptions] = useState([]);
+  const [isExists, setIsExists] = useState(false);
 
-  // 검색 조건 상태 관리
-  const [searchCondition, setSearchCondition] = useState({
-    userName: null,
-    departmentId: null,
-    positionId: null,
-    roleId: null
-  });
 
   // 상세 정보 상태 관리
   const [detailInfo, setDetailInfo] = useState({
@@ -110,8 +104,8 @@ const UserManagement = (props) => {
   };
 
   // 검색 핸들러
-  const onSearch = () => {
-    handleSearch(searchCondition);
+  const onSearch = (data) => {
+    handleSearch(data);
   };
 
   // 초기화 핸들러
@@ -628,16 +622,60 @@ const UserManagement = (props) => {
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <TextField
-                                label="사용자 ID"
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                disabled={selectedUser && !isEditMode}
-                                required
-                                value={detailInfo.loginId || ''}
-                                onChange={(e) => handleDetailChange('loginId', e.target.value)}
-                              />
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                  label="사용자 ID"
+                                  variant="outlined"
+                                  size="small"
+                                  fullWidth
+                                  disabled={selectedUser && !isEditMode}
+                                  required
+                                  value={detailInfo.loginId || ''}
+                                  onChange={(e) => handleDetailChange('loginId', e.target.value)}
+                                />
+                                {(!selectedUser || isEditMode) && (
+                                  <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    onClick={() => {
+                                      if (!detailInfo.loginId) {
+                                        Swal.fire({
+                                          icon: 'warning',
+                                          title: '알림',
+                                          text: '사용자 ID를 입력해주세요.',
+                                          confirmButtonText: '확인'
+                                        });
+                                        return;
+                                      }
+                                      
+                                      // 여기에 실제 중복 체크 API 호출 로직 추가
+                                      const isDuplicate = userList.some(user => 
+                                        user.loginId === detailInfo.loginId && user.id !== detailInfo.id
+                                      );
+
+                                      if (isDuplicate) {
+                                        Swal.fire({
+                                          icon: 'error',
+                                          title: '중복 확인',
+                                          text: '이미 사용 중인 ID입니다.',
+                                          confirmButtonText: '확인'
+                                        });
+                                      } else {
+                                        Swal.fire({
+                                          icon: 'success',
+                                          title: '중복 확인',
+                                          text: '사용 가능한 ID입니다.',
+                                          confirmButtonText: '확인'
+                                        });
+                                      }
+                                    }}
+                                    sx={{minWidth: '75px', height: '40px'}}
+                                  >
+                                    중복체크
+                                  </Button>
+                                )}
+                              </Box>
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
