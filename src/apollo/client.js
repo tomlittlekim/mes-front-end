@@ -2,8 +2,11 @@
 import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const GRAPHQL_URL = isLocalhost ? 'http://localhost:8080/graphql' : '/graphql';
+
 const httpLink = createHttpLink({
-    uri: 'http://localhost:8080/graphql',
+    uri: GRAPHQL_URL,
     credentials: 'include' // CORS 설정
 });
 

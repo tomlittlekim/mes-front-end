@@ -44,14 +44,13 @@ const MaterialManagement = ({tabId}) => {
     const {executeQuery, executeMutation} = useGraphQL();
 
     // 그리드 유틸리티 훅
-    const { generateId, formatDateToYYYYMMDD, formatFlagActive, formatGridData } = useGridUtils();
+    const { generateId, formatDateToYYYYMMDD, formatGridData } = useGridUtils();
 
     // 데이터 포맷팅 함수 정의
     const formatMaterialData = (data) => formatGridData(data, 'getRawSubMaterials', material => {
         return {
             ...material,
-            id: material.systemMaterialId || generateId('TEMP'),
-            flagActive: formatFlagActive(material.flagActive)
+            id: material.systemMaterialId || generateId('TEMP')
         };
     });
 
