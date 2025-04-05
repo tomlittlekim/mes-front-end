@@ -95,7 +95,7 @@ export const useGridDataCall = ({
     /**
      * 그리드 데이터 삭제
      */
-    const handleGridDelete = useCallback(async ({data, setDataList, clearAddRows, mutationData, searchParams}) => {
+    const handleGridDelete = useCallback(async ({ data, setDataList, clearAddRows, mutationData, searchParams, deleteMessage }) => {
         Message.showDeleteConfirm(async () => {
             try {
                 setLoading(true);
@@ -118,7 +118,7 @@ export const useGridDataCall = ({
             } finally {
                 setLoading(false);
             }
-        });
+        }, deleteMessage);
     }, [executeQuery, executeMutation, query, deleteMutation, formatData, onDeleteSuccess]);
 
     return {

@@ -198,47 +198,45 @@ const ProductionPlanManagement = (props) => {
 
     // GraphQL 쿼리 작성
     const query = `
-      query getProductionPlans($filter: ProductionPlanFilter) {
-        productionPlans(filter: $filter) {
-          site
-          compCd
-          prodPlanId
-          orderId
-          productId
-          planQty
-          planStartDate
-          planEndDate
-          flagActive
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
+    query getProductionPlans($filter: ProductionPlanFilter) {
+      productionPlans(filter: $filter) {
+        site
+        compCd
+        prodPlanId
+        orderId
+        productId
+        planQty
+        planStartDate
+        planEndDate
+        flagActive
+        createUser
+        createDate
+        updateUser
+        updateDate
       }
-    `;
+    }
+  `;
 
     // 날짜 형식 변환 - null 값도 허용
     const filterData = {...data};
 
-    // planDateRange 객체에서 시작일과 종료일 추출하여 필터 데이터로 변환
+    // planDateRange 객체에서 시작일 범위를 추출하여 필터 데이터로 변환
     if (filterData.planDateRange) {
       if (filterData.planDateRange.startDate) {
         try {
-          filterData.planStartDate = format(filterData.planDateRange.startDate,
-              'yyyy-MM-dd');
+          filterData.planStartDateFrom = format(filterData.planDateRange.startDate, 'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid startDate:", error);
-          filterData.planStartDate = null;
+          filterData.planStartDateFrom = null;
         }
       }
 
       if (filterData.planDateRange.endDate) {
         try {
-          filterData.planEndDate = format(filterData.planDateRange.endDate,
-              'yyyy-MM-dd');
+          filterData.planStartDateTo = format(filterData.planDateRange.endDate, 'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid endDate:", error);
-          filterData.planEndDate = null;
+          filterData.planStartDateTo = null;
         }
       }
 
@@ -257,8 +255,7 @@ const ProductionPlanManagement = (props) => {
           id: plan.prodPlanId,
           // 서버에서 받은 데이터 변환
           planQty: plan.planQty ? Number(plan.planQty) : 0,
-          planStartDate: plan.planStartDate ? new Date(plan.planStartDate)
-              : null,
+          planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
           planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
           createDate: plan.createDate ? new Date(plan.createDate) : null,
           updateDate: plan.updateDate ? new Date(plan.updateDate) : null

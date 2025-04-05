@@ -53,14 +53,13 @@ const HalfProductManagement = ({tabId}) => {
   const {executeQuery, executeMutation} = useGraphQL();
 
   // 그리드 유틸리티 훅
-  const { generateId, formatDateToYYYYMMDD, formatFlagActive, formatGridData } = useGridUtils();
+  const { generateId, formatDateToYYYYMMDD, formatGridData } = useGridUtils();
 
   // 데이터 포맷팅 함수 정의
   const formatMaterialData = (data) => formatGridData(data, 'getHalfMaterials', material => {
     return {
       ...material,
-      id: material.systemMaterialId || generateId('TEMP'),
-      flagActive: formatFlagActive(material.flagActive)
+      id: material.systemMaterialId || generateId('TEMP')
     };
   });
 
@@ -217,6 +216,7 @@ const HalfProductManagement = ({tabId}) => {
         { value: 'N', label: '미사용' }
       ],
       editable: true,
+      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
     },
     { field: 'createUser', headerName: '작성자', width: 100},
     { field: 'createDate', headerName: '작성일', width: 200},

@@ -24,6 +24,8 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import {GRAPHQL_URL} from "../../config";
+import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const EquipmentManagement = (props) => {
   // 현재 테마 가져오기
@@ -177,6 +179,8 @@ const EquipmentManagement = (props) => {
           lineId
           lineName
           equipmentId
+          equipmentBuyDate
+          equipmentBuyVendor
           equipmentSn
           equipmentType
           equipmentName
@@ -190,14 +194,13 @@ const EquipmentManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        {filter: data}
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getEquipments.map((row, index) => ({
+        const rowsWithId = data.getEquipments.map((row, index) => ({
           ...row,
           id: row.equipmentId,
           createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -222,6 +225,8 @@ const EquipmentManagement = (props) => {
   const transformRowForMutation = (row) => ({
     factoryId: row.factoryId,
     lineId: row.lineId,
+    equipmentBuyDate: row.equipmentBuyDate,
+    equipmentBuyVendor: row.equipmentBuyVendor,
     equipmentSn: row.equipmentSn,
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
@@ -233,6 +238,8 @@ const EquipmentManagement = (props) => {
     factoryId: row.factoryId,
     lineId: row.lineId,
     equipmentId: row.equipmentId,
+    equipmentBuyDate: row.equipmentBuyDate,
+    equipmentBuyVendor: row.equipmentBuyVendor,
     equipmentSn: row.equipmentSn,
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
@@ -261,23 +268,40 @@ const EquipmentManagement = (props) => {
     }
   `;
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      equipmentName: '설비명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
+
     const createdEquipmentInputs = addRows.map(transformRowForMutation);
     const updatedEquipmentInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createEquipmentMutation,
-        variables: {
+    graphFetch(
+        createEquipmentMutation,
+        {
           createdRows: createdEquipmentInputs,
           updatedRows: updatedEquipmentInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -313,6 +337,19 @@ const EquipmentManagement = (props) => {
       }
     `;
 
+    const isDeleteAddRows = addRows.find(f => f.id === selectedEquipment.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedEquipment.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedEquipment.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedEquipment.id);
+      setUpdatedRows(updatedRowsLit)
+    }
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -325,17 +362,11 @@ const EquipmentManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteEquipmentMutation,
-            variables: {equipmentId: selectedEquipment.equipmentId}
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+
+        graphFetch(
+            deleteEquipmentMutation,
+            {equipmentId: selectedEquipment.equipmentId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -377,10 +408,12 @@ const EquipmentManagement = (props) => {
       lineId: '',
       lineName: '',
       equipmentId: '자동입력',
+      equipmentBuyDate: '',
+      equipmentBuyVendor: '',
       equipmentSn: '',
       equipmentType: '',
       equipmentName: '',
-      status: '',
+      equipmentStatus: '',
       flagActive: null,
       createUser: '자동입력',
       createDate: '자동입력',
@@ -404,6 +437,8 @@ const EquipmentManagement = (props) => {
           lineId
           lineName
           equipmentId
+          equipmentBuyDate
+          equipmentBuyVendor
           equipmentSn
           equipmentType
           equipmentName
@@ -417,14 +452,14 @@ const EquipmentManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+
+      graphFetch(
           query,
-          getValues()
+          {filter: getValues()}
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getEquipments.map((row, index) => ({
+          const rowsWithId = data.getEquipments.map((row, index) => ({
             ...row,
             id: row.equipmentId,
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -454,30 +489,20 @@ const EquipmentManagement = (props) => {
       }
     `;
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query
-      })
-    }).then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      return response.json();
-    }).then((data) => {
+    graphFetch(
+        query,
+    ).then((data) => {
       if (data.errors) {
         console.error(data.errors);
       } else {
         // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.data.getGridFactory.map((row) => ({
+        const options = data.getGridFactory.map((row) => ({
           value: row.factoryId,
           label: row.factoryId
         }));
         setFactoryTypeOptions(options);
 
-        const models = data.data.getGridFactory.map((row) => ({
+        const models = data.getGridFactory.map((row) => ({
           factoryId: row.factoryId,
           factoryName: row.factoryName,
           factoryCode: row.factoryCode
@@ -498,16 +523,12 @@ const EquipmentManagement = (props) => {
       }
     }
   `;
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query }),
-    })
-        .then((res) => res.json())
-        .then((data) => {
+
+    graphFetch(
+        query,
+    ).then((data) => {
           if (!data.errors) {
-            setLineOptions(data.data.getLineOptions);
+            setLineOptions(data.getLineOptions);
           }
         })
         .catch((err) => console.error(err));
@@ -534,20 +555,18 @@ const EquipmentManagement = (props) => {
     {
       field: 'factoryId',
       headerName: '공장 ID',
-      width: 100,
+      width: 140,
       editable: true,
       type: 'singleSelect',
-      valueOptions: factoryTypeOptions,
-      flex:1
+      valueOptions: factoryTypeOptions
     },
     { field: 'factoryName', headerName: '공장 명', width: 100 },
     {
       field: 'lineId',
       headerName: '라인 ID',
-      width: 100,
+      width: 140,
       editable: true,
       type: 'singleSelect',
-      flex:1,
       valueOptions: (params) => {
         // 각 행의 factoryId에 따라 라인 옵션 필터링
         const factoryId = params.row.factoryId;
@@ -557,17 +576,36 @@ const EquipmentManagement = (props) => {
       },
     },
     { field: 'lineName', headerName: '라인 명', width: 90 },
-    { field: 'equipmentId', headerName: '설비 ID', width: 100, flex: 1 },
+    { field: 'equipmentId', headerName: '설비 ID', width: 140 },
+    { field: 'equipmentBuyDate', headerName: '설비 구입일', width: 120, editable: true },
+    { field: 'equipmentBuyVendor', headerName: '설비 구입처', width: 120, editable: true },
     { field: 'equipmentSn', headerName: '설비 S/N', width: 100 , editable: true },
     {
       field: 'equipmentType',
       headerName: '설비 유형', width: 90,
       editable: true,
       type: 'singleSelect',
-      valueOptions: equipmentTypeOptions,
-      flex:1
+      valueOptions: equipmentTypeOptions
     },
-    { field: 'equipmentName', headerName: '설비 명', width: 120, editable: true },
+    {
+      field: 'equipmentName',
+      headerName: '설비 명',
+      width: 120,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     {
       field: 'equipmentStatus' ,
       headerName: '상태' , width: 90,
@@ -600,29 +638,6 @@ const EquipmentManagement = (props) => {
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
 
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
-
   function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
     const query = `
     query getGridCodes($codeClassId: String!) {
@@ -632,25 +647,15 @@ const EquipmentManagement = (props) => {
       }
     }
   `;
-    const variables = { codeClassId };
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables }),
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+    graphFetch(
+        query,
+        {codeClassId:codeClassId}
+    ).then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
-            const options = data.data.getGridCodes.map((row) => ({
+            const options = data.getGridCodes.map((row) => ({
               value: row.codeId,
               label: row.codeName,
             }));

@@ -6,6 +6,7 @@ class Message {
   static DELETE_SUCCESS = '삭제되었습니다.';
   static DELETE_CONFIRM = '선택한 항목을 삭제하시겠습니까?';
   static DELETE_SELECT_REQUIRED = '삭제할 항목을 선택해주세요.';
+  static UPDATE_SELECT_REQUIRED = '수정할 항목을 선택해주세요.';
   static SERVER_ERROR = '서버 연결 중 오류가 발생했습니다.';
   static ERROR = '오류';
   static SUCCESS = '성공';
@@ -55,14 +56,14 @@ class Message {
   }
 
   // 삭제 확인 다이얼로그 표시
-  static showDeleteConfirm(callback) {
+  static showDeleteConfirm(callback, customOptions = {}) {
     Swal.fire({
-      title: this.DELETE,
-      text: this.DELETE_CONFIRM,
+      title: customOptions.title || this.DELETE,
+      html: customOptions.html || `<div style="font-size: 1.2em;">${this.DELETE_CONFIRM}</div>`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
       confirmButtonText: this.DELETE,
       cancelButtonText: this.CANCEL
     }).then((result) => {

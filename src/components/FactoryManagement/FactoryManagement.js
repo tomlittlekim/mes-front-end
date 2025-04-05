@@ -26,6 +26,8 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
+import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const FactoryManagement = (props) => {
   // 현재 테마 가져오기
@@ -69,7 +71,7 @@ const FactoryManagement = (props) => {
           factoryCode
           address
           telNo
-          officerName
+          remark
           flagActive
           createUser
           createDate
@@ -79,14 +81,13 @@ const FactoryManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        { filter: data }
     ).then((data) => {
           if (data.errors) {
           } else {
-            const rowsWithId = data.data.factories.map((row, index) => ({
+            const rowsWithId = data.factories.map((row, index) => ({
               ...row,
               id: row.factoryId  // 또는 row.factoryId || index + 1
             }));
@@ -158,31 +159,6 @@ const FactoryManagement = (props) => {
     return { ...oldRow, ...newRow };
   }
 
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
-
-
   // 공장 선택 핸들러
   const handleFactorySelect = (params) => {
     const factory = factoryList.find(f => f.id === params.id);
@@ -195,7 +171,7 @@ const FactoryManagement = (props) => {
     factoryCode: row.factoryCode,
     address: row.address,
     telNo: row.telNo,
-    officerName: row.officerName,
+    remark: row.remark,
     flagActive: row.flagActive
   });
 
@@ -205,13 +181,50 @@ const FactoryManagement = (props) => {
     factoryCode: row.factoryCode,
     address: row.address,
     telNo: row.telNo,
-    officerName: row.officerName,
+    remark: row.remark,
     flagActive: row.flagActive
   });
 
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
+
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      factoryName: '공장명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
     const createFactoryMutation = `
       mutation SaveFactory($createdRows: [FactoryInput], $updatedRows: [FactoryUpdate]) {
         saveFactory(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -221,20 +234,14 @@ const FactoryManagement = (props) => {
     const createdFactoryInputs = addRows.map(transformRowForMutation);
     const updatedFactoryInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createFactoryMutation,
-        variables: {
+
+    graphFetch(
+        createFactoryMutation,
+        {
           createdRows: createdFactoryInputs,
           updatedRows: updatedFactoryInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -262,7 +269,7 @@ const FactoryManagement = (props) => {
       flagActive: 'Y',
       address: '',
       telNo: '',
-      officerName: '',
+      remark: '',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -291,6 +298,19 @@ const FactoryManagement = (props) => {
       }
     `;
 
+    const isDeleteAddRows = addRows.find(f => f.id === selectedFactory.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedFactory.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedFactory.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedFactory.id);
+      setUpdatedRows(updatedRowsLit)
+    }
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -303,17 +323,11 @@ const FactoryManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteFactoryMutation,
-            variables: {factoryId: selectedFactory.factoryId} // 선택된 공장의 factoryId를 사용
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+
+        graphFetch(
+            deleteFactoryMutation,
+            {factoryId: selectedFactory.factoryId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -357,7 +371,7 @@ const FactoryManagement = (props) => {
           factoryCode
           address
           telNo
-          officerName
+          remark
           flagActive
           createUser
           createDate
@@ -367,14 +381,14 @@ const FactoryManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+
+      graphFetch(
           query,
-          getValues()
+          { filter:  getValues() }
       ).then((data) => {
             if (data.errors) {
             } else {
-              const rowsWithId = data.data.factories.map((row, index) => ({
+              const rowsWithId = data.factories.map((row, index) => ({
                 ...row,
                 id: row.factoryId  // 또는 row.factoryId || index + 1
               }));
@@ -393,7 +407,25 @@ const FactoryManagement = (props) => {
   // 공장 목록 그리드 컬럼 정의
   const factoryColumns = [
     { field: 'factoryId', headerName: '공장 ID', width: 150 },
-    { field: 'factoryName', headerName: '공장 명', width: 150 ,editable: true  },
+    {
+      field: 'factoryName',
+      headerName: '공장 명',
+      width: 150 ,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     { field: 'factoryCode', headerName: '공장 코드', width: 100, editable: true  },
     {
       field: 'flagActive',
@@ -408,7 +440,7 @@ const FactoryManagement = (props) => {
     },
     { field: 'address', headerName: '주소', width: 200, flex: 1, editable: true },
     { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
-    { field: 'officerName', headerName: '담당자', width: 100, editable: true},
+    { field: 'remark', headerName: '비고', width: 100, editable: true},
     { field: 'createUser', headerName: '작성자', width: 100},
     { field: 'createDate', headerName: '작성일', width: 200},
     { field: 'updateUser', headerName: '수정자', width: 100},
