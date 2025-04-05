@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './OutboundManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -20,13 +20,16 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
+import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
+import DateRangePicker from '../Common/DateRangePicker';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
+import { GRAPHQL_URL } from '../../config';
+import Message from '../../utils/message/Message';
+import ko from "date-fns/locale/ko";
+
 
 const OutboundManagement = (props) => {
   // 현재 테마 가져오기
@@ -57,144 +60,475 @@ const OutboundManagement = (props) => {
   };
   
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, getValues, setValue } = useForm({
     defaultValues: {
-      productId: '',
-      productName: '',
-      productType: '',
-      warehouse: '',
-      fromDate: null,
-      toDate: null
+      outManagementId: '',
+      outType: '',
+      factoryName: '',
+      warehouseName: '',
+      createUser: '',
+      dateRange: {
+        startDate: null,
+        endDate: null
+      }
     }
   });
-
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [outboundList, setOutboundList] = useState([]);
-  const [selectedOutbound, setSelectedOutbound] = useState(null);
-  const [outboundDetail, setOutboundDetail] = useState(null);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
     reset({
-      productId: '',
-      productName: '',
-      productType: '',
-      warehouse: '',
-      fromDate: null,
-      toDate: null
+      outManagementId: '',
+      outType: '',
+      factoryName: '',
+      warehouseName: '',
+      createUser: '',
+      dateRange: {
+        startDate: null,
+        endDate: null
+      }
     });
+  };
+  
+
+  // 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [outboundList, setOutboundList] = useState([]);
+  const [newOutboundList, setNewOutboundList] = useState([]);
+  
+  const [selectedOutbound, setSelectedOutbound] = useState(null);
+  const [selectedDetailOutbound, setSelectedDetailOutbound] = useState(null);
+  const [outboundDetail, setOutboundDetail] = useState([]);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  
+  // 추가 코드 
+  const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링용 키
+  const [addRows, setAddRows] = useState([]);
+  const [updatedDetailRows, setUpdatedDetailRows] = useState([]); // 수정된 필드만 저장하는 객체
+
+  // 공장 타입 옵션
+  const [factoryTypeOptions, setFactoryTypeOptions] = useState([]);
+  // 창고 타입 옵션
+  const [warehouseTypeOptions, setWarehouseTypeOptions] = useState([]);
+
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = (startDate, endDate) => {
+    setValue('dateRange', { startDate, endDate });
+  };
+
+  // GraphQL 쿼리 정의
+  const INVENTORY_OUT_QUERIES = {
+    GET_INVENTORY_OUT_MANAGEMENT_LIST: `
+      query getInventoryOutManagementList($filter: InventoryOutManagementFilter) {
+        getInventoryOutManagementList(filter: $filter) {
+          outManagementId
+          outType
+          factoryName
+          warehouseName
+          materialInfo
+          totalPrice
+          userName
+          createDate
+        }
+      }
+    `,
+    GET_INVENTORY_OUT_LIST: `
+      query getInventoryOutList($filter: InventoryOutFilter) {
+        getInventoryOutList(filter: $filter) {
+          outManagementId
+          outInventoryId
+          supplierName
+          manufacturerName
+          userMaterialId
+          materialName
+          materialCategory
+          materialStandard
+          qty
+          unitPrice
+          unitVat
+          totalPrice
+          createUser
+          createDate
+          updateUser
+          updateDate
+        }
+      }
+    `
+  }
+
+  const fetchGraphQL = async (query, variables) => {
+    try {
+      console.log('GraphQL 요청 보냄:', { query, variables });
+      
+      const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query,
+          variables
+        })
+      });
+
+      console.log('GraphQL 응답 상태:', response.status, response.statusText);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // 응답 텍스트 먼저 확인
+      const responseText = await response.text();
+      console.log('GraphQL 응답 원본:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
+
+      // 텍스트가 비어있지 않은 경우에만 JSON 파싱
+      if (responseText.trim()) {
+        const data = JSON.parse(responseText);
+        console.log('GraphQL 응답 파싱됨:', data);
+        
+        // GraphQL 에러 확인
+        if (data.errors) {
+          console.error('GraphQL 에러:', data.errors);
+          throw new Error(data.errors[0].message || 'GraphQL 에러 발생');
+        }
+        
+        return data.data;
+      } else {
+        console.error('GraphQL 응답이 비어있습니다');
+        throw new Error('빈 응답이 반환되었습니다.');
+      }
+    } catch (error) {
+      console.error('GraphQL 요청 오류:', error);
+      throw error;
+    }
   };
 
   // 검색 실행 함수
-  const handleSearch = (data) => {
-    console.log('검색 조건:', data);
+  const handleSearch = useCallback(async (data) => {
+    setUpdatedDetailRows([]);
+    setAddRows([]);
+
+    console.log('검색 데이터:', data);
+
+    try {
+      // 필터 객체 생성 - 백엔드의 InventoryOutManagementFilter와 일치
+      const filter = {
+        outManagementId: data.outManagementId || null,
+        outType: data.outType || null,
+        factoryName: data.factoryName || null,
+        warehouseName: data.warehouseName || null,
+        createUser: data.createUser || null,
+        startDate: data.dateRange?.startDate ? new Date(data.dateRange.startDate).toISOString().split('T')[0] : null,
+        endDate: data.dateRange?.endDate ? new Date(data.dateRange.endDate).toISOString().split('T')[0] : null
+      };
+
+      console.log('GraphQL 필터:', filter);
+
+      // 직접 fetch API를 사용하여 요청 (fetchGraphQL 함수 대신)
+      const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: INVENTORY_OUT_QUERIES.GET_INVENTORY_OUT_MANAGEMENT_LIST,
+          variables: { filter }
+        })
+      });
+      
+      console.log('응답 상태:', response.status, response.statusText);
+      
+      const responseText = await response.text();
+      console.log('응답 내용:', responseText.substring(0, 200));
+      
+      if (responseText.trim()) {
+        const result = JSON.parse(responseText);
+        console.log('파싱된 결과:', result);
+        
+        if (result.data && result.data.getInventoryOutManagementList) {
+          // 받아온 데이터로 상태 업데이트
+          setOutboundList(result.data.getInventoryOutManagementList.map(item => ({
+            id: item.outManagementId,
+            outManagementId: item.outManagementId,
+            outType: item.outType,
+            factoryName: item.factoryName,
+            warehouseName: item.warehouseName,
+            materialInfo: item.materialInfo,
+            totalPrice: item.totalPrice,
+            userName: item.userName,
+            createDate: item.createDate
+          })));
+          
+          // 선택 상태 초기화
+          setSelectedOutbound(null);
+          setOutboundDetail([]);
+        } else {
+          console.error('응답 데이터가 예상 형식과 다릅니다:', result);
+          // 응답 데이터에 문제가 있거나 빈 배열이면 빈 배열로 설정
+          setOutboundList([]);
+          setSelectedOutbound(null);
+          setOutboundDetail([]);
+          
+          Swal.fire({
+            icon: 'info',
+            title: '알림',
+            text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.' + 
+                  (result.errors ? ` 오류: ${result.errors[0]?.message || '알 수 없는 오류'}` : '')
+          });
+        }
+      } else {
+        console.error('빈 응답을 받았습니다');
+        setOutboundList([]);
+        setSelectedOutbound(null);
+        setOutboundDetail([]);
+        
+        Swal.fire({
+          icon: 'error',
+          title: '오류 발생',
+          text: '서버로부터 빈 응답을 받았습니다.'
+        });
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+      setOutboundList([]); // 오류 발생 시 빈 배열로 설정
+      setSelectedOutbound(null);
+      setOutboundDetail([]);
+      
+      Swal.fire({
+        icon: 'error',
+        title: '데이터 조회 실패',
+        text: `오류: ${error.message || '알 수 없는 오류가 발생했습니다.'}`
+      });
+    }
+  }, []);
+
+  // 출고 선택 핸들러 Row 클릭
+  const handleOutboundSelect = async (params) => {
+    console.log('선택된 행:', params);
     
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'O0001', outboundDate: '2024-04-15', destination: '생산1팀', product: '잉크믹스_보라', type: '원자재', spec: '정품 잉크 믹스', unit: 'L', price: 5000, quantity: 20, totalAmount: 100000, warehouse: '자재창고A', note: '정기출고' },
-      { id: 'O0002', outboundDate: '2024-04-16', destination: '생산2팀', product: '모조지 70g', type: '원자재', spec: '91.4cm(폭) 용지', unit: 'M', price: 1000, quantity: 100, totalAmount: 100000, warehouse: '자재창고B', note: '긴급출고' },
-      { id: 'O0003', outboundDate: '2024-04-17', destination: '3공장', product: '포장비닐', type: '부자재', spec: '100cm(폭) 롤형태', unit: 'EA', price: 300, quantity: 50, totalAmount: 15000, warehouse: '자재창고A', note: '' },
-      { id: 'O0004', outboundDate: '2024-04-18', destination: '포장팀', product: '완제품박스', type: '부자재', spec: '30x40x15cm', unit: 'EA', price: 500, quantity: 200, totalAmount: 100000, warehouse: '자재창고C', note: '출하준비' }
-    ];
+    // 수정: columns가 아닌 row를 저장
+    setSelectedOutbound(params.row);
     
-    setOutboundList(dummyData);
-    setSelectedOutbound(null);
-    setOutboundDetail(null);
+    try {
+      // 필터 객체 생성
+      const filter = {
+        outManagementId: params.row?.outManagementId || null,
+      };
+
+      // GraphQL 요청 보내기
+      const result = await fetchGraphQL(
+        INVENTORY_OUT_QUERIES.GET_INVENTORY_OUT_LIST,
+        { filter }
+      );
+
+      if (result && result.getInventoryOutList) {
+        // 받아온 데이터로 상태 업데이트
+        const detailData = result.getInventoryOutList.map((item, index) => ({
+          id: item.outInventoryId || `detail_${item.outManagementId}_${index}`,
+          outManagementId: item.outManagementId,
+          outInventoryId: item.outInventoryId,
+          supplierName: item.supplierName,
+          manufactureName: item.manufacturerName,
+          userMaterialId: item.userMaterialId,
+          materialName: item.materialName,
+          materialCategory: item.materialCategory,
+          materialStandard: item.materialStandard,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          unitVat: item.unitVat,
+          totalPrice: item.totalPrice,
+          createUser: item.createUser,
+          createDate: new Date(item.createDate),
+          updateUser: item.updateUser,
+          updateDate: new Date(item.updateDate)
+        }));
+        
+        console.log('상세 데이터 설정:', detailData);
+        setOutboundDetail(detailData);
+      } else {
+        // 데이터가 없으면 빈 배열로 설정
+        setOutboundDetail([]);
+        console.error('응답 데이터가 예상 형식과 다릅니다:', result);
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+      // 오류 발생시 빈 배열로 설정
+      setOutboundDetail([]);
+    }
   };
 
-  // 출고 선택 핸들러
-  const handleOutboundSelect = (params) => {
-    const outbound = outboundList.find(r => r.id === params.id);
-    setSelectedOutbound(outbound);
-    
-    if (!outbound) return;
-    
-    // 출고 상세 정보 (실제로는 API 호출)
-    const detailData = {
-      ...outbound,
-      destinationCode: 'DST' + outbound.id.substring(1),
-      destinationContact: '010-9876-5432',
-      requestId: 'REQ' + outbound.id.substring(1),
-      processId: 'PR' + outbound.id.substring(1),
-      approvalStatus: '승인완료',
-      approvalUser: '김승인',
-      approvalDate: outbound.outboundDate,
-      registDate: outbound.outboundDate,
-      updateDate: outbound.outboundDate,
-      registUser: '시스템',
-      updateUser: '시스템'
-    };
-    
-    setOutboundDetail([detailData]);
+  const handleDetailOutboundSelect = (params) => {
+    setSelectedDetailOutbound(params.row);
+    console.log('상세 데이터 선택:', params.row);
   };
 
-  // 등록 버튼 클릭 핸들러
-  const handleAdd = () => {
-    const newOutbound = {
-      id: `NEW_${Date.now()}`,
-      outboundDate: new Date().toISOString().split('T')[0],
-      destination: '',
-      product: '',
-      type: '',
-      spec: '',
-      unit: '',
-      price: 0,
-      quantity: 0,
-      totalAmount: 0,
-      warehouse: '',
-      note: '',
-      destinationCode: '',
-      destinationContact: '',
-      requestId: '',
-      processId: '',
-      approvalStatus: '대기',
-      approvalUser: '',
-      approvalDate: '',
-      registDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0],
-      registUser: '시스템',
-      updateUser: '시스템'
-    };
-    
-    setOutboundList([...outboundList, newOutbound]);
-    setSelectedOutbound(newOutbound);
-    setOutboundDetail([newOutbound]);
-  };
-
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
+  const handleDetailAdd = () => {
     if (!selectedOutbound) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
-        text: '저장할 출고정보를 선택해주세요.',
+        text: '출고 목록을 먼저 선택해주세요.',
         confirmButtonText: '확인'
       });
       return;
     }
     
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
+    const newDetailedInventory = {
+      id: `NEW_${Date.now()}`,
+      outManagementId: selectedOutbound.outManagementId,
+      outInventoryId: crypto.randomUUID(),
+      supplierName: '',
+      manufactureName: '',
+      userMaterialId: '',
+      materialName: '',
+      materialCategory: '',
+      materialStandard: '',
+      qty: 0,
+      unitPrice: 0,
+      unitVat: 0,
+      totalPrice: 0,
+      createUser: '시스템',
+      createDate: new Date(),
+      updateUser: '시스템',
+      updateDate: new Date()
+    };
+
+    setOutboundDetail([...outboundDetail, newDetailedInventory]);
+    
+    // addRows에도 추가
+    setAddRows([...addRows, newDetailedInventory]);
+  }
+
+  // 등록 버튼 클릭 핸들러
+  const handleAdd = () => {
+    const newInventory = {
+      id: `NEW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      outManagementId: '자동',
+      outType: '필수', // 자동아님 
+      factoryId: '필수', // 자동아님, 드롭다운 하나만 선택할듯
+      warehouseId: '필수', // 자동아님, 드롭다운 하나만 선택할듯
+      materialInfo: '자동', // 자동, 재료 데이터 요약
+      totalPrice: 0, // 자동, 물건값 자동계산
+      createDate: new Date(),
+    };
+
+    setOutboundList([...outboundList, newInventory]);
+    setNewOutboundList([...newOutboundList, newInventory]);
+  }
+
+  const validateRequiredFields = (rows, fieldNames) => {
+    for (const row of rows) {
+      for (const field of fieldNames) {
+        if (row[field] === undefined || row[field] === null || row[field]
+            === '') {
+          Message.showError({message: `${field} 필드는 필수 입력값입니다.`});
+          return false;
+        }
+      }
+    }
+    return true;
   };
 
-  // 삭제 버튼 클릭 핸들러
+  const handleSave = () => {
+    // 그리드에 있는 새 행 데이터 필터링 (NEW_로 시작하는 ID)
+    const newRows = outboundList.filter(row => row.id.toString().startsWith('NEW_'));
+    
+    console.log('저장할 새 출고 목록:', newRows);
+
+    if (newRows.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: '알림',
+        text: '저장할 새 데이터가 없습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 백엔드에 맞게 데이터 변환
+    const createdRows = newRows.map(row => ({
+      outType: row.outType,
+      factoryId: row.factoryId,
+      warehouseId: row.warehouseId || row.warehouseName, // 둘 중 하나가 있을 수 있음
+      totalPrice: String(row.totalPrice || '0')
+    }));
+
+    console.log('백엔드로 전송할 데이터:', createdRows);
+
+    // 기존 API 호출 코드
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: `
+          mutation saveInventoryOutManagement($createdRows: [InventoryOutManagementSaveInput]) {
+            saveInventoryOutManagement(createdRows: $createdRows)
+          }
+        `,
+        variables: {
+          createdRows: createdRows
+        }
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.errors) {
+        console.error("GraphQL errors:", data.errors);
+        Swal.fire({
+          icon: 'error',
+          title: '저장 실패',
+          text: data.errors[0]?.message || '저장 중 오류가 발생했습니다.',
+          confirmButtonText: '확인'
+        });
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: '성공',
+          text: '저장되었습니다.',
+          confirmButtonText: '확인'
+        });
+        // 상태 초기화 및 데이터 새로고침
+        setNewOutboundList([]);
+        handleSearch({});
+      }
+    })
+    .catch(error => {
+      console.error("Error saving inventory:", error);
+      Swal.fire({
+        icon: 'error',
+        title: '오류',
+        text: '저장 중 예외가 발생했습니다: ' + error.message,
+        confirmButtonText: '확인'
+      });
+    });
+  }
+
   const handleDelete = () => {
     if (!selectedOutbound) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
-        text: '삭제할 출고정보를 선택해주세요.',
+        text: '삭제할 출고목록을 선택해주세요.',
         confirmButtonText: '확인'
       });
       return;
     }
-    
+
+    const deleteInventoryMutation = `
+      mutation DeleteInventoryOutManagement($outManagementId: InventoryOutManagementDeleteInput!) {
+        deleteInventoryOutManagement(outManagementId: $outManagementId)
+      }
+    `;
+
+    const variables = {
+      outManagementId: {
+        outManagementId: selectedOutbound.outManagementId,
+      }
+    };
+
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -206,19 +540,374 @@ const OutboundManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        const updatedList = outboundList.filter(r => r.id !== selectedOutbound.id);
-        setOutboundList(updatedList);
-        setSelectedOutbound(null);
-        setOutboundDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: deleteInventoryMutation,
+            variables: variables
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            })
+            .finally(() => {
+              handleSearch({});
+            });
       }
     });
   };
+
+  const handleDetailSave = () => {
+    // 새로 추가된 행 필터링 (addRows 대신 outboundDetail에서 직접 가져옴)
+    const newRows = outboundDetail.filter(row => row.id.toString().startsWith('NEW_'));
+    
+    // 수정된 기존 행 필터링 (id가 NEW_로 시작하지 않고, 원래 데이터와 다른 행)
+    const updatedRows = outboundDetail.filter(row => 
+      !row.id.toString().startsWith('NEW_') && 
+      updatedDetailRows.some(updatedRow => updatedRow.outInventoryId === row.outInventoryId)
+    );
+    
+    console.log('저장할 새 상세 데이터:', newRows);
+    console.log('업데이트할 상세 데이터:', updatedRows);
+
+    if (newRows.length === 0 && updatedRows.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: '알림',
+        text: '저장할 새 데이터나 수정된 데이터가 없습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 필수 필드 확인
+    // const requiredFields = ['materialName', 'qty'];
+    const requiredFields = [];
+    
+    // 새 행 필수 필드 검증
+    for (const row of newRows) {
+      for (const field of requiredFields) {
+        if (!row[field] || row[field] === '' || row[field] === 0) {
+          Swal.fire({
+            icon: 'error',
+            title: '입력 오류',
+            text: `${field} 필드는 필수 입력 항목입니다.`,
+            confirmButtonText: '확인'
+          });
+          return;
+        }
+      }
+    }
+    
+    // 수정된 행 필수 필드 검증
+    for (const row of updatedRows) {
+      for (const field of requiredFields) {
+        if (!row[field] || row[field] === '' || row[field] === 0) {
+          Swal.fire({
+            icon: 'error',
+            title: '입력 오류',
+            text: `${field} 필드는 필수 입력 항목입니다.`,
+            confirmButtonText: '확인'
+          });
+          return;
+        }
+      }
+    }
+
+    // 백엔드에 맞게 데이터 변환
+    const createdInventoryInputs = newRows.map(row => ({
+      outManagementId: row.outManagementId,
+      supplierName: row.supplierName || '',
+      manufactureName: row.manufactureName || '',
+      userMaterialId: row.userMaterialId || '',
+      materialName: row.materialName || '',
+      materialCategory: row.materialCategory || '',
+      materialStandard: row.materialStandard || '',
+      qty: String(row.qty || 0),
+      unitPrice: String(row.unitPrice || 0),
+      unitVat: String(row.unitVat || 0),
+      totalPrice: String(row.totalPrice || 0),
+      createUser: row.createUser || 'system',
+      createDate: row.createDate ? new Date(row.createDate).toISOString() : new Date().toISOString(),
+      updateUser: row.updateUser || 'system',
+      updateDate: row.updateDate ? new Date(row.updateDate).toISOString() : new Date().toISOString()
+    }));
+
+    const updatedInventoryInputs = updatedRows.map(row => ({
+      outManagementId: row.outManagementId,
+      outInventoryId: row.outInventoryId,
+      supplierName: row.supplierName || '',
+      manufactureName: row.manufactureName || '',
+      userMaterialId: row.userMaterialId || '',
+      materialName: row.materialName || '',
+      materialCategory: row.materialCategory || '',
+      materialStandard: row.materialStandard || '',
+      qty: String(row.qty || 0),
+      unitPrice: String(row.unitPrice || 0),
+      unitVat: String(row.unitVat || 0),
+      totalPrice: String(row.totalPrice || 0),
+      createUser: row.createUser || 'system',
+      createDate: row.createDate ? new Date(row.createDate).toISOString() : new Date().toISOString(),
+      updateUser: row.updateUser || 'system',
+      updateDate: row.updateDate ? new Date(row.updateDate).toISOString() : new Date().toISOString()
+    }));
+
+    console.log('백엔드로 전송할 새 데이터:', createdInventoryInputs);
+    console.log('백엔드로 전송할 수정 데이터:', updatedInventoryInputs);
+
+    // API 호출
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: `
+          mutation saveInventoryOut($createdRows: [InventoryOutSaveInput], $updatedRows: [InventoryOutUpdateInput]) {
+            saveInventoryOut(createdRows: $createdRows, updatedRows: $updatedRows)
+          }
+        `,
+        variables: {
+          createdRows: createdInventoryInputs,
+          updatedRows: updatedInventoryInputs
+        }
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.errors) {
+        console.error("GraphQL errors:", data.errors);
+        Swal.fire({
+          icon: 'error',
+          title: '저장 실패',
+          text: data.errors[0]?.message || '저장 중 오류가 발생했습니다.',
+          confirmButtonText: '확인'
+        });
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: '성공',
+          text: '저장되었습니다.',
+          confirmButtonText: '확인'
+        });
+        // 상태 초기화
+        setAddRows([]);
+        setUpdatedDetailRows([]);
+        // 상세 데이터 새로고침 - 선택된 로우가 있는 경우만
+        if (selectedOutbound) {
+          const filter = {
+            outManagementId: selectedOutbound.outManagementId || null
+          };
+          
+          fetchGraphQL(
+            INVENTORY_OUT_QUERIES.GET_INVENTORY_OUT_LIST,
+            { filter }
+          ).then(result => {
+            if (result && result.getInventoryOutList) {
+              const detailData = result.getInventoryOutList.map((item, index) => ({
+                id: item.outInventoryId || `detail_${item.outManagementId}_${index}`,
+                outManagementId: item.outManagementId,
+                outInventoryId: item.outInventoryId,
+                supplierName: item.supplierName,
+                manufactureName: item.manufacturerName,
+                userMaterialId: item.userMaterialId,
+                materialName: item.materialName,
+                materialCategory: item.materialCategory,
+                materialStandard: item.materialStandard,
+                qty: item.qty,
+                unitPrice: item.unitPrice,
+                unitVat: item.unitVat,
+                totalPrice: item.totalPrice,
+                createUser: item.createUser,
+                createDate: new Date(item.createDate),
+                updateUser: item.updateUser,
+                updateDate: new Date(item.updateDate)
+              }));
+              
+              setOutboundDetail(detailData);
+            }
+          }).catch(error => {
+            console.error('상세 데이터 새로고침 오류:', error);
+          });
+        }
+      }
+    })
+    .catch(error => {
+      console.error("Error saving inventory detail:", error);
+      Swal.fire({
+        icon: 'error',
+        title: '오류',
+        text: '저장 중 예외가 발생했습니다: ' + error.message,
+        confirmButtonText: '확인'
+      });
+    });
+  };
+
+  // 삭제 버튼 클릭 핸들러
+  const handleDetailDelete = () => {
+    if (!selectedDetailOutbound) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '삭제할 출고목록을 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const deleteDetailInventoryMutation = `
+      mutation DeleteInventoryOut($outInventoryId: InventoryOutDeleteInput!) {
+        deleteInventoryOut(outInventoryId: $outInventoryId)
+      }
+    `;
+
+    const variables = {
+      outInventoryId: {
+        outInventoryId: selectedDetailOutbound.outInventoryId
+      }
+    };
+
+    Swal.fire({
+      title: '삭제 확인',
+      text: '정말 삭제하시겠습니까?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: deleteDetailInventoryMutation,
+            variables: variables
+          })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            })
+            .finally(() => {
+              handleSearch({});
+            });
+      }
+    });
+  };
+
+  function handleProcessRowUpdate(newRow, oldRow) {
+    // 메인 그리드(outboundList)인지 상세 그리드(outboundDetail)인지 구분
+    const isDetailGrid = oldRow.hasOwnProperty('outInventoryId'); 
+    
+    if (!isDetailGrid) {
+      // 메인 그리드 행 업데이트 로직
+      setOutboundList(prev => {
+        return prev.map(row => row.id === oldRow.id ? { ...row, ...newRow } : row);
+      });
+      
+      // 새로 추가된 행이라면 newOutboundList도 업데이트
+      if (oldRow.id.toString().startsWith('NEW_')) {
+        setNewOutboundList(prev => {
+          const index = prev.findIndex(row => row.id === oldRow.id);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], ...newRow };
+            return updated;
+          }
+          return prev;
+        });
+      }
+    } else {
+      // 상세 그리드 로직 (기존 코드 유지)
+      setOutboundDetail((prev) => {
+        return prev.map((row) => row.id === oldRow.id ? { ...row, ...newRow } : row);
+      });
+      
+      const isNewRow = oldRow.id.startsWith('NEW_');
+      if (isNewRow) {
+        // 기존 코드
+        setAddRows((prevAddRows) => {
+          const existingIndex = prevAddRows.findIndex(row => row.id === newRow.id);
+          if (existingIndex !== -1) {
+            const updated = [...prevAddRows];
+            updated[existingIndex] = newRow;
+            return updated;
+          } else {
+            return [...prevAddRows, newRow];
+          }
+        });
+      } else {
+        // 기존 코드
+        setUpdatedDetailRows(prevUpdatedRows => {
+          const existingIndex = prevUpdatedRows.findIndex(row => row.outInventoryId === newRow.outInventoryId);
+          if (existingIndex !== -1) {
+            const updated = [...prevUpdatedRows];
+            updated[existingIndex] = newRow;
+            return updated;
+          } else {
+            return [...prevUpdatedRows, newRow];
+          }
+        });
+      }
+    }
+    
+    return { ...oldRow, ...newRow };
+  }
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -227,63 +916,222 @@ const OutboundManagement = (props) => {
       handleSearch({});
       setIsLoading(false);
     }, 100);
-    
+
+    const query = `
+    query getGridFactory {
+      getGridFactory {
+        factoryId
+        factoryName
+        factoryCode
+      }
+    }
+  `;
+
+  fetch(GRAPHQL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // 쿠키 자동 전송 설정
+    body: JSON.stringify({
+      query
+    })
+  }).then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      }).then((data) => {
+        if (data.errors) {
+          console.error(data.errors);
+        } else {
+          // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+          const options = data.data.getGridFactory.map((row) => ({
+            value: row.factoryId,
+            label: row.factoryName
+          }));
+          setFactoryTypeOptions(options);
+        }
+      }).catch((err) => console.error(err));
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [handleSearch]);
 
   // 출고 목록 그리드 컬럼 정의
   const outboundColumns = [
-    { field: 'id', headerName: '출고ID', width: 100 },
-    { field: 'outboundDate', headerName: '출고일자', width: 110 },
-    { field: 'destination', headerName: '출고처', width: 150 },
-    { field: 'product', headerName: '품목명', width: 180, flex: 1 },
-    { field: 'type', headerName: '품목유형', width: 100 },
-    { field: 'spec', headerName: '규격', width: 120 },
-    { field: 'unit', headerName: '단위', width: 70 },
-    { field: 'price', headerName: '단가', width: 80, type: 'number' },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number' },
-    { field: 'totalAmount', headerName: '총금액', width: 100, type: 'number' },
-    { field: 'warehouse', headerName: '출고창고', width: 120 },
-    { field: 'note', headerName: '비고', width: 150 }
+    { field: 'outManagementId', 
+      headerName: '출고관리ID', 
+      width: 70,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+     }, 
+    { field: 'outType', 
+      headerName: '출고형태', 
+      width: 70,
+      headerAlign: 'center',
+      align: 'center',
+      editable: true,
+      },
+    { field: 'warehouseName', 
+      headerName: '창고', 
+      width: 180,
+      headerAlign: 'center',
+      align: 'center',
+      editable: true,
+      flex: 1 },
+    { field: 'factoryName', 
+      headerName: '공장', 
+      width: 70,
+      headerAlign: 'center',
+      align: 'center',
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: factoryTypeOptions
+     },
+    { field: 'materialInfo', 
+      headerName: '자재정보', 
+      width: 70,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+
+     },
+    { field: 'totalPrice', 
+      headerName: '총 금액',
+      width: 70,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+     },
+    { field: 'userName', 
+      headerName: '생성자', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+
+     },
+    { field: 'createDate', 
+      headerName: '생성일', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+
+     }
   ];
   
   // 출고 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'id', headerName: '출고ID', width: 100, editable: true },
-    { field: 'outboundDate', headerName: '출고일자', width: 110, editable: true },
-    { field: 'destination', headerName: '출고처', width: 150, editable: true },
-    { field: 'destinationCode', headerName: '출고처코드', width: 100, editable: true },
-    { field: 'destinationContact', headerName: '연락처', width: 120, editable: true },
-    { field: 'requestId', headerName: '요청번호', width: 120, editable: true },
-    { field: 'processId', headerName: '공정번호', width: 120, editable: true },
-    { field: 'product', headerName: '품목명', width: 180, editable: true },
-    { field: 'type', headerName: '품목유형', width: 100, editable: true, type: 'singleSelect', valueOptions: ['원자재', '부자재', '반제품', '완제품'] },
-    { field: 'spec', headerName: '규격', width: 120, editable: true },
-    { field: 'unit', headerName: '단위', width: 70, editable: true },
-    { field: 'price', headerName: '단가', width: 80, type: 'number', editable: true },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number', editable: true },
-    { field: 'totalAmount', headerName: '총금액', width: 100, type: 'number', editable: true },
-    { field: 'warehouse', headerName: '출고창고', width: 120, editable: true, type: 'singleSelect', valueOptions: ['자재창고A', '자재창고B', '자재창고C', '완제품창고'] },
-    { field: 'approvalStatus', headerName: '승인상태', width: 100, editable: true, type: 'singleSelect', valueOptions: ['대기', '승인완료', '반려', '취소'] },
-    { field: 'approvalUser', headerName: '승인자', width: 100, editable: true },
-    { field: 'approvalDate', headerName: '승인일자', width: 100, editable: true },
-    { field: 'note', headerName: '비고', width: 150, editable: true },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
+  const detailedOutboundColumns = [
+    { field: 'outManagementId', 
+    headerName: '출고관리ID', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'outInventoryId', 
+    headerName: '출고ID', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false, hide: true },
+    { field: 'supplierName', 
+    headerName: '공급업체', 
+    width: 100, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'manufactureName', 
+    headerName: '제조사명', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'userMaterialId', 
+    headerName: '자재ID', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'materialName', 
+    headerName: '자재명', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: true },
+    { field: 'materialCategory', 
+    headerName: '자재유형', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'materialStandard', 
+    headerName: '규격', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'qty', 
+    headerName: '수량', 
+    width: 30, 
+    headerAlign: 'center',
+    align: 'center',
+    type: 'number', editable: true },
+    { field: 'unitPrice', 
+    headerName: '단위금액', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    type: 'number', editable: true },
+    { field: 'unitVat', 
+    headerName: '부가세', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    type: 'number', editable: true },
+    { field: 'totalPrice', 
+    headerName: '총금액', 
+    width: 70, 
+    headerAlign: 'center',
+    align: 'center',
+    type: 'number', editable: true },
+    { field: 'createUser', 
+    headerName: '등록자', 
+    width: 120, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'createDate', 
+    headerName: '등록일', 
+    width: 120, 
+    headerAlign: 'center',
+    align: 'center',
+    type: 'date', editable: false },
+    { field: 'updateUser', 
+    headerName: '수정자', 
+    width: 120, 
+    headerAlign: 'center',
+    align: 'center',
+    editable: false },
+    { field: 'updateDate', 
+    headerName: '수정일', 
+    width: 120, 
+    headerAlign: 'center',
+    align: 'center',
+    type: 'date', editable: false },
   ];
 
   // 출고 목록 그리드 버튼
   const outboundGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> }
+    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
+    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
+    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> },
   ];
 
   // 출고 상세 그리드 버튼
-  const detailGridButtons = [
-    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
+  const detailedOutboundGridButtons = [
+    { label: '등록', onClick: handleDetailAdd, icon: <AddIcon /> },
+    { label: '저장', onClick: handleDetailSave, icon: <SaveIcon /> },
+    { label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon /> },
   ];
 
   return (
@@ -328,53 +1176,35 @@ const OutboundManagement = (props) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="productId"
+            name="outManagementId"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label="품목코드"
+                label="출고관리ID"
                 variant="outlined"
                 size="small"
                 fullWidth
-                placeholder="품목코드를 입력하세요"
+                placeholder="출고관리ID를 입력하세요"
               />
             )}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="productName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="품목명"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="품목명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productType"
+            name="outType"
             control={control}
             render={({ field }) => (
               <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="productType-label">품목유형</InputLabel>
+                <InputLabel id="productType-label">출고유형</InputLabel>
                 <Select
                   {...field}
                   labelId="productType-label"
-                  label="품목유형"
+                  label="출고유형"
                 >
                   <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="원자재">원자재</MenuItem>
-                  <MenuItem value="부자재">부자재</MenuItem>
-                  <MenuItem value="반제품">반제품</MenuItem>
-                  <MenuItem value="완제품">완제품</MenuItem>
+                  <MenuItem value="원자재">자재출고</MenuItem>
+                  <MenuItem value="부자재">기타출고</MenuItem>
                 </Select>
               </FormControl>
             )}
@@ -382,64 +1212,71 @@ const OutboundManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="warehouse"
+            name="factoryName"
             control={control}
             render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="warehouse-label">출고창고</InputLabel>
-                <Select
-                  {...field}
-                  labelId="warehouse-label"
-                  label="출고창고"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="자재창고A">자재창고A</MenuItem>
-                  <MenuItem value="자재창고B">자재창고B</MenuItem>
-                  <MenuItem value="자재창고C">자재창고C</MenuItem>
-                  <MenuItem value="완제품창고">완제품창고</MenuItem>
-                </Select>
-              </FormControl>
+              <TextField
+                {...field}
+                label="공장이름"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="공장이름을 입력하세요"
+              />
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Controller
-                name="fromDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="시작일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="warehouseName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="창고이름"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="창고이름을 입력하세요"
               />
-              <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-              <Controller
-                name="toDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="종료일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="createUser"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="출고자"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="출고자를 입력하세요"
               />
-            </Stack>
-          </LocalizationProvider>
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={6}>
+        <LocalizationProvider dateAdapter={AdapterDateFns}
+                                  adapterLocale={ko}>
+              <Controller
+                  name="dateRange"
+                  control={control}
+                  render={({field}) => (
+                      <DateRangePicker
+                          startDate={field.value.startDate}
+                          endDate={field.value.endDate}
+                          onRangeChange={handleDateRangeChange}
+                          startLabel="시작일"
+                          endLabel="종료일"
+                          label="출고일"
+                          size="small"
+                      />
+                  )}
+              />
+            </LocalizationProvider>
         </Grid>
       </SearchCondition>
       
@@ -447,33 +1284,46 @@ const OutboundManagement = (props) => {
       {!isLoading && (
         <Grid container spacing={2}>
           {/* 출고 기본 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title="출고목록"
+          <Grid item xs={12} md={5}>
+          <EnhancedDataGridWrapper
+              title="출고 목록"
+              key={refreshKey}  // refreshKey가 변경되면 전체 그리드가 재마운트됩니다.
               rows={outboundList}
               columns={outboundColumns}
               buttons={outboundGridButtons}
               height={450}
               onRowClick={handleOutboundSelect}
-            />
+              tabId={props.tabId + "-factories"}
+              gridProps={{
+                editMode: 'cell',
+                onProcessUpdate: handleProcessRowUpdate,
+                columnVisibilityModel: {
+                  outInventoryId: false, // 특정 컬럼 숨기기
+                },
+              }}
+              />
           </Grid>
           
           {/* 출고 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`출고상세정보 ${selectedOutbound ? '- ' + selectedOutbound.id : ''}`}
-              rows={outboundDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
+          <Grid item xs={12} md={7}>
+          <EnhancedDataGridWrapper
+              title="상세 정보"
+              key={refreshKey + 1}  // 강제 리렌더링 위해 key 변경
+              rows={outboundDetail}
+              columns={detailedOutboundColumns.filter(col => col.field !== 'outInventoryId')}
+              buttons={detailedOutboundGridButtons}
               height={450}
+              onRowClick={handleDetailOutboundSelect}
+              tabId={props.tabId + "-factories"}
               gridProps={{
-                editMode: 'row'
+                editMode: 'cell',
+                onProcessUpdate: handleProcessRowUpdate
               }}
-            />
+              />
           </Grid>
         </Grid>
       )}
-      
+
       {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
@@ -481,13 +1331,13 @@ const OutboundManagement = (props) => {
         title="출고관리 도움말"
       >
         <Typography variant="body2" color={getTextColor()}>
-          • 출고관리 화면에서는 원자재, 부자재 등의 출고 정보를 효율적으로 관리할 수 있습니다.
+          • 출고관리에서는 자재나 제품의 출고 정보를 등록하고 관리할 수 있습니다.
         </Typography>
         <Typography variant="body2" color={getTextColor()}>
-          • 출고목록에서 특정 출고건을 선택하면 해당 출고의 상세 정보를 확인하고 편집할 수 있습니다.
+          • 출고번호, 거래처 정보, 제품 정보, 출고수량 등을 관리하여 출고를 체계적으로 관리할 수 있습니다.
         </Typography>
         <Typography variant="body2" color={getTextColor()}>
-          • 승인 상태 관리 및 출고 창고 지정을 통해 자재의 흐름을 체계적으로 관리할 수 있습니다.
+          • 출고 정보는 재고 관리, 생산 계획 등에서 활용됩니다.
         </Typography>
       </HelpModal>
     </Box>
