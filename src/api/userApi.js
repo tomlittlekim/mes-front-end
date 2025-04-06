@@ -7,6 +7,7 @@ export interface UserOutPut {
     email: string;
     roleId: number;
     roleNm: string;
+    priorityLevel: number;
     status: string;
     message: string;
 }
