@@ -28,8 +28,9 @@ import Swal from 'sweetalert2';
 import {DOMAINS, useDomain} from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
-import {getRoleGroup, getUserGroup} from "../../api/userApi";
-import {getCodes} from "../../api/utilApi";
+import {deleteUser, getRoleGroup, getUserGroup, isExistsUserId, upsertUser} from "../../api/userApi";
+import {getCodes, getCompanySelect, getInitialCodes} from "../../api/utilApi";
+import useLocalStorageVO from "../Common/UseLocalStorageVO";
 
 const UserManagement = (props) => {
   // 현재 테마 가져오기
@@ -68,11 +69,15 @@ const UserManagement = (props) => {
   const [authorityOptions, setAuthorityOptions] = useState([]);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [positionOptions, setPositionOptions] = useState([]);
+  const [companyOptions, setCompanyOptions] = useState([]);
+  const [siteOptions, setSiteOptions] = useState([]);
   const [isExists, setIsExists] = useState(false);
-
+  const { loginUser } = useLocalStorageVO();
 
   // 상세 정보 상태 관리
   const [detailInfo, setDetailInfo] = useState({
+    site: null,
+    compCd: null,
     id: null,
     loginId: null,
     userName: null,
@@ -86,7 +91,7 @@ const UserManagement = (props) => {
   });
 
   // React Hook Form 설정 - 검색
-  const { control: searchControl, handleSubmit: handleSearchSubmit, reset: resetSearch } = useForm({
+  const { control: searchControl, handleSubmit: handleSearchSubmit, reset: resetSearch, getValues } = useForm({
     defaultValues: {
       userName: null,
       departmentId: null,
@@ -115,6 +120,8 @@ const UserManagement = (props) => {
         handleUserSelect({ id: selectedUser.id });
       } else {
         setDetailInfo({
+          site: null,
+          compCd: null,
           id: null,
           loginId: null,
           userName: null,
@@ -144,9 +151,9 @@ const UserManagement = (props) => {
   const userColumns = [
     { field: 'loginId', headerName: '사용자 ID', flex: 1 },
     { field: 'userName', headerName: '이름', flex: 1 },
-    { 
-      field: 'departmentId', 
-      headerName: '부서', 
+    {
+      field: 'departmentId',
+      headerName: '부서',
       flex: 1,
       renderCell: (params) => {
         if (!params.row.departmentId) return '-';
@@ -154,9 +161,9 @@ const UserManagement = (props) => {
         return dept?.codeName || '-';
       }
     },
-    { 
-      field: 'positionId', 
-      headerName: '직책', 
+    {
+      field: 'positionId',
+      headerName: '직책',
       flex: 1,
       renderCell: (params) => {
         if (!params.row.positionId) return '-';
@@ -164,9 +171,9 @@ const UserManagement = (props) => {
         return pos?.codeName || '-';
       }
     },
-    { 
-      field: 'roleId', 
-      headerName: '권한', 
+    {
+      field: 'roleId',
+      headerName: '권한',
       flex: 1,
       renderCell: (params) => {
         if (!params.row.roleId) return '-';
@@ -227,6 +234,19 @@ const UserManagement = (props) => {
     });
   };
 
+  useEffect(() => {
+    if (loginUser.priorityLevel === 5) {
+      const devInitialData = async () => {
+        const companyData = await getCompanySelect();
+        setCompanyOptions(companyData.getCompanySelect ?? []);
+
+        const siteData = await getInitialCodes('ADDRESS');
+        setSiteOptions(siteData.getInitialCodes ?? []);
+      }
+      devInitialData();
+    }
+  }, [loginUser]);
+
   // 초기 데이터 로드
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -234,11 +254,11 @@ const UserManagement = (props) => {
         const roleData = await getRoleGroup();
         setAuthorityOptions(roleData.getRoles ?? []);
 
-        const deptData = await getCodes('DEPARTMENT');
-        setDepartmentOptions(deptData.getGridCodes ?? []);
+        const deptData = await getInitialCodes('DEPARTMENT');
+        setDepartmentOptions(deptData.getInitialCodes ?? []);
 
-        const posData = await getCodes('POSITION');
-        setPositionOptions(posData.getGridCodes ?? []);
+        const posData = await getInitialCodes('POSITION');
+        setPositionOptions(posData.getInitialCodes ?? []);
       } catch (error) {
         console.error('초기 데이터 로드 중 오류:', error);
       }
@@ -257,6 +277,8 @@ const UserManagement = (props) => {
     }
   }, [authorityOptions, departmentOptions, positionOptions]);
 
+  useEffect(() => {if (isExists) setIsExists(false)}, [detailInfo.loginId])
+
   // 사용자 선택 핸들러
   const handleUserSelect = (params) => {
     const user = userList.find(u => u.id === params.id);
@@ -265,6 +287,8 @@ const UserManagement = (props) => {
 
     if (user) {
       setDetailInfo({
+        site: user.site || null,
+        compCd: user.compCd || null,
         id: user.id || null,
         loginId: user.loginId || null,
         userName: user.userName || null,
@@ -281,6 +305,8 @@ const UserManagement = (props) => {
   // 사용자 추가 핸들러
   const handleAddUser = () => {
     setDetailInfo({
+      site: null,
+      compCd: null,
       id: null,
       loginId: null,
       userName: null,
@@ -319,17 +345,16 @@ const UserManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        // 사용자 삭제 (실제로는 API 호출)
-        const updatedList = userList.filter(user => user.id !== selectedUser.id);
-        setUserList(updatedList);
-        setSelectedUser(null);
-
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
+        deleteUser(selectedUser.id).then(() => {
+          Swal.fire({
+            icon: 'success',
+            title: '성공',
+            text: '삭제되었습니다.',
+            confirmButtonText: '확인'
+          });
+          setSelectedUser(null);
+          handleSearch(getValues());
+        })
       }
     });
   };
@@ -365,28 +390,55 @@ const UserManagement = (props) => {
   };
 
   // 저장 핸들러
-  const handleSave = () => {
+  const handleSave = async () => {
+    const roleBySelectUser = authorityOptions.find(r => r.roleId === detailInfo.roleId)
+    if (roleBySelectUser.roleId > loginUser.priorityLevel) {
+      Swal.fire({
+        icon: 'error',
+        title: '권한 레벨이 낮습니다. ',
+        text: '자신보다 높은 권한을 부여하가나 수정할 수 없습니다.',
+        confirmButtonText: '확인'
+      })
+    }
+
     if (!selectedUser) {
-      const newUser = {
-        id: userList.length + 1,
-        ...detailInfo,
-        lastLoginDate: '-'
-      };
+      if (!isExists) {
+        Swal.fire({
+          icon: 'error',
+          title: '아이디 중복체크 필요',
+          text: '생성하실 아이디의 중복체크를 진행해주세요.',
+          confirmButtonText: '확인'
+        });
+        return;
+      }
 
-      setUserList([...userList, newUser]);
-      setSelectedUser(newUser);
+      const result = await upsertUser(detailInfo)
+      result === null ?
+          Swal.fire({
+            icon: 'error',
+            title: '생성 실패',
+            text:  detailInfo.loginId + ' 계정 생성에 실패했습니다. ',
+            confirmButtonText: '확인'
+          }).then((result) => handleAddUser()) :
+          Swal.fire({
+            icon: 'success',
+            title: '성공',
+            text:  result,
+            confirmButtonText: '확인'
+          }).then((result) => handleSearch(getValues()));
     } else {
-      const updatedUser = {
-        ...selectedUser,
-        ...detailInfo
-      };
+      if (detailInfo.loginId !== selectedUser.loginId && !isExists) {
+        Swal.fire({
+          icon: 'error',
+          title: '아이디 중복체크 필요',
+          text: '생성하실 아이디의 중복체크를 진행해주세요. ',
+          confirmButtonText: '확인'
+        })
+      }
 
-      const updatedList = userList.map(user =>
-        user.id === selectedUser.id ? updatedUser : user
-      );
-
-      setUserList(updatedList);
-      setSelectedUser(updatedUser);
+      await upsertUser(detailInfo);
+      await handleSearch(getValues())
+      setSelectedUser(null);
     }
 
     setIsEditMode(false);
@@ -400,490 +452,550 @@ const UserManagement = (props) => {
   };
 
   return (
-      <Box sx={{ p: 0, minHeight: '100vh' }}>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          mb: 2,
-          borderBottom: `1px solid ${getBorderColor()}`,
-          pb: 1
-        }}>
-          <Typography
-              variant="h5"
-              component="h2"
-              sx={{
-                fontWeight: 600,
-                color: getTextColor()
-              }}
-          >
-            사용자관리
-          </Typography>
-          <IconButton
-              onClick={() => setIsHelpModalOpen(true)}
-              sx={{
-                ml: 1,
-                color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: isDarkMode
-                      ? alpha(theme.palette.primary.light, 0.1)
-                      : alpha(theme.palette.primary.main, 0.05)
-                }
-              }}
-          >
-            <HelpOutlineIcon />
-          </IconButton>
-        </Box>
-
-        {/* 검색 영역 */}
-        <SearchCondition
-            onSearch={handleSearchSubmit(onSearch)}
-            onReset={onReset}
+    <Box sx={{ p: 0, minHeight: '100vh' }}>
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        mb: 2,
+        borderBottom: `1px solid ${getBorderColor()}`,
+        pb: 1
+      }}>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{
+            fontWeight: 600,
+            color: getTextColor()
+          }}
         >
-          <Grid item xs={12} sm={6} md={3}>
-            <Controller
-                name="userName"
-                control={searchControl}
-                render={({ field }) => (
-                    <TextField
+          사용자관리
+        </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
+      </Box>
+
+      {/* 검색 영역 */}
+      <SearchCondition
+        onSearch={handleSearchSubmit(onSearch)}
+        onReset={onReset}
+      >
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="userName"
+              control={searchControl}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="이름"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      value={field.value ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === '' ? null : value);
+                      }}
+                      InputLabelProps={{
+                        shrink: field.value ? true : undefined
+                      }}
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="departmentId"
+              control={searchControl}
+              render={({ field }) => (
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="department-label">부서</InputLabel>
+                    <Select
                         {...field}
-                        label="이름"
-                        variant="outlined"
-                        size="small"
-                        fullWidth
                         value={field.value ?? ''}
+                        labelId="department-label"
+                        label="부서"
                         onChange={(e) => {
                           const value = e.target.value;
                           field.onChange(value === '' ? null : value);
                         }}
-                        InputLabelProps={{
-                          shrink: field.value ? true : undefined
+                    >
+                      <MenuItem value="">
+                        <em>선택</em>
+                      </MenuItem>
+                      {Array.isArray(departmentOptions) && departmentOptions.map((item) => (
+                          <MenuItem key={item.codeId} value={item.codeId}>
+                            {item.codeName}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="positionId"
+              control={searchControl}
+              render={({ field }) => (
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="position-label">직책</InputLabel>
+                    <Select
+                        {...field}
+                        value={field.value ?? ''}
+                        labelId="position-label"
+                        label="직책"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? null : value);
                         }}
-                    />
-                )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Controller
-                name="departmentId"
-                control={searchControl}
-                render={({ field }) => (
-                    <FormControl variant="outlined" size="small" fullWidth>
-                      <InputLabel id="department-label">부서</InputLabel>
-                      <Select
-                          {...field}
-                          value={field.value ?? ''}
-                          labelId="department-label"
-                          label="부서"
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === '' ? null : value);
-                          }}
-                      >
-                        <MenuItem value="">
-                          <em>선택</em>
-                        </MenuItem>
-                        {Array.isArray(departmentOptions) && departmentOptions.map((item) => (
-                            <MenuItem key={item.codeId} value={item.codeId}>
-                              {item.codeName}
-                            </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Controller
-                name="positionId"
-                control={searchControl}
-                render={({ field }) => (
-                    <FormControl variant="outlined" size="small" fullWidth>
-                      <InputLabel id="position-label">직책</InputLabel>
-                      <Select
-                          {...field}
-                          value={field.value ?? ''}
-                          labelId="position-label"
-                          label="직책"
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === '' ? null : value);
-                          }}
-                      >
-                        <MenuItem value="">
-                          <em>선택</em>
-                        </MenuItem>
-                        {Array.isArray(positionOptions) && positionOptions.map((item) => (
-                            <MenuItem key={item.codeId} value={item.codeId}>
-                              {item.codeName}
-                            </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Controller
-                name="roleId"
-                control={searchControl}
-                render={({ field }) => (
-                    <FormControl variant="outlined" size="small" fullWidth>
-                      <InputLabel id="authority-label">권한</InputLabel>
-                      <Select
-                          {...field}
-                          labelId="authority-label"
-                          label="권한"
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === '' ? null : parseInt(value, 10));
-                          }}
-                          value={field.value ?? ''}
-                      >
-                        <MenuItem value="">
-                          <em>선택</em>
-                        </MenuItem>
-                        {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
-                            <MenuItem key={item.roleId} value={item.roleId}>
-                              {item.roleName}
-                            </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                )}
-            />
-          </Grid>
-        </SearchCondition>
+                    >
+                      <MenuItem value="">
+                        <em>선택</em>
+                      </MenuItem>
+                      {Array.isArray(positionOptions) && positionOptions.map((item) => (
+                          <MenuItem key={item.codeId} value={item.codeId}>
+                            {item.codeName}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="roleId"
+              control={searchControl}
+              render={({ field }) => (
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="authority-label">권한</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="authority-label"
+                        label="권한"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? null : parseInt(value, 10));
+                        }}
+                        value={field.value ?? ''}
+                    >
+                      <MenuItem value="">
+                        <em>선택</em>
+                      </MenuItem>
+                      {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
+                          <MenuItem key={item.roleId} value={item.roleId}>
+                            {item.roleName}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+              )}
+          />
+        </Grid>
+      </SearchCondition>
 
-        {/* 그리드 영역 */}
-        {!isLoading && (
-            <Grid container spacing={2}>
-              {/* 사용자 목록 그리드 */}
-              <Grid item xs={12} md={6}>
-                <MuiDataGridWrapper
-                    title="사용자 목록"
-                    rows={userList}
-                    columns={userColumns}
-                    buttons={userGridButtons}
-                    height={450}
-                    onRowClick={handleUserSelect}
-                />
-              </Grid>
+      {/* 그리드 영역 */}
+      {!isLoading && (
+        <Grid container spacing={2}>
+          {/* 사용자 목록 그리드 */}
+          <Grid item xs={12} md={6}>
+            <MuiDataGridWrapper
+              title="사용자 목록"
+              rows={userList}
+              columns={userColumns}
+              buttons={userGridButtons}
+              height={450}
+              onRowClick={handleUserSelect}
+            />
+          </Grid>
 
-              {/* 사용자 상세 정보 영역 */}
-              <Grid item xs={12} md={6}>
-                <Paper sx={{
-                  height: '100%',
-                  p: 2,
-                  boxShadow: theme.shadows[2],
-                  borderRadius: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden'
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">
-                      사용자 상세 정보
-                    </Typography>
-                    {selectedUser && !isEditMode && (
-                        <Box>
-                          <IconButton
-                              color="primary"
-                              onClick={handleEdit}
-                              size="small"
-                              sx={{ mr: 1 }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                              color="warning"
-                              onClick={handleResetuserPwd}
-                              size="small"
-                          >
-                            <KeyIcon />
-                          </IconButton>
-                        </Box>
-                    )}
+          {/* 사용자 상세 정보 영역 */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{
+              height: '100%',
+              p: 2,
+              boxShadow: theme.shadows[2],
+              borderRadius: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  사용자 상세 정보
+                </Typography>
+                {selectedUser && !isEditMode && (
+                  <Box>
+                    <IconButton
+                      color="primary"
+                      onClick={handleEdit}
+                      size="small"
+                      sx={{ mr: 1 }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      color="warning"
+                      onClick={handleResetuserPwd}
+                      size="small"
+                    >
+                      <KeyIcon />
+                    </IconButton>
                   </Box>
+                )}
+              </Box>
 
-                  <Box sx={{ flex: 1, overflow: 'auto' }}>
-                    {(selectedUser || isEditMode) ? (
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} display="flex" justifyContent="center" mt={2} mb={2}>
-                              <Avatar
-                                  sx={{
-                                    width: 80,
-                                    height: 80,
-                                    bgcolor: theme.palette.primary.main,
-                                    fontSize: '2rem'
-                                  }}
-                              >
-                                {selectedUser?.userName?.charAt(0) || '?'}
-                              </Avatar>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <Box sx={{ display: 'flex', gap: 1 }}>
-                                <TextField
-                                  label="사용자 ID"
-                                  variant="outlined"
-                                  size="small"
-                                  fullWidth
-                                  disabled={selectedUser && !isEditMode}
-                                  required
-                                  value={detailInfo.loginId || ''}
-                                  onChange={(e) => handleDetailChange('loginId', e.target.value)}
-                                />
-                                {(!selectedUser || isEditMode) && (
-                                  <Button
-                                    variant="contained"
-                                    color="primary"
-                                    size="small"
-                                    onClick={() => {
-                                      if (!detailInfo.loginId) {
-                                        Swal.fire({
-                                          icon: 'warning',
-                                          title: '알림',
-                                          text: '사용자 ID를 입력해주세요.',
-                                          confirmButtonText: '확인'
-                                        });
-                                        return;
-                                      }
-                                      
-                                      // 여기에 실제 중복 체크 API 호출 로직 추가
-                                      const isDuplicate = userList.some(user => 
-                                        user.loginId === detailInfo.loginId && user.id !== detailInfo.id
-                                      );
-
-                                      if (isDuplicate) {
-                                        Swal.fire({
-                                          icon: 'error',
-                                          title: '중복 확인',
-                                          text: '이미 사용 중인 ID입니다.',
-                                          confirmButtonText: '확인'
-                                        });
-                                      } else {
-                                        Swal.fire({
-                                          icon: 'success',
-                                          title: '중복 확인',
-                                          text: '사용 가능한 ID입니다.',
-                                          confirmButtonText: '확인'
-                                        });
-                                      }
-                                    }}
-                                    sx={{minWidth: '75px', height: '40px'}}
-                                  >
-                                    중복체크
-                                  </Button>
-                                )}
-                              </Box>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <TextField
-                                label="이름"
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                disabled={!isEditMode}
-                                required
-                                value={detailInfo.userName || ''}
-                                onChange={(e) => handleDetailChange('userName', e.target.value)}
-                              />
-                            </Grid>
-
-                            {!selectedUser && (
-                                <Grid item xs={12}>
-                                  <TextField
-                                    label="비밀번호"
-                                    type="password"
-                                    variant="outlined"
-                                    size="small"
-                                    fullWidth
-                                    required
-                                    value={detailInfo.userPwd || ''}
-                                    onChange={(e) => handleDetailChange('userPwd', e.target.value)}
-                                  />
-                                </Grid>
-                            )}
-
-                            <Grid item xs={12} sm={6}>
-                              <TextField
-                                label="이메일"
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                disabled={!isEditMode}
-                                value={detailInfo.userEmail || ''}
-                                onChange={(e) => handleDetailChange('userEmail', e.target.value)}
-                              />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <TextField
-                                label="전화번호"
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                disabled={!isEditMode}
-                                value={detailInfo.phoneNum || ''}
-                                onChange={(e) => handleDetailChange('phoneNum', e.target.value)}
-                              />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                <InputLabel id="department-label">부서</InputLabel>
-                                <Select
-                                  labelId="department-label"
-                                  label="부서"
-                                  value={detailInfo.departmentId === null ? '' : detailInfo.departmentId}
-                                  onChange={(e) => handleDetailChange('departmentId', e.target.value)}
-                                >
-                                  <MenuItem value="">
-                                    <em>선택</em>
-                                  </MenuItem>
-                                  {Array.isArray(departmentOptions) && departmentOptions.map((item) => (
-                                    <MenuItem key={item.codeId} value={item.codeId}>
-                                      {item.codeName}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                <InputLabel id="position-label">직책</InputLabel>
-                                <Select
-                                  labelId="position-label"
-                                  label="직책"
-                                  value={detailInfo.positionId === null ? '' : detailInfo.positionId}
-                                  onChange={(e) => handleDetailChange('positionId', e.target.value)}
-                                >
-                                  <MenuItem value="">
-                                    <em>선택</em>
-                                  </MenuItem>
-                                  {Array.isArray(positionOptions) && positionOptions.map((item) => (
-                                    <MenuItem key={item.codeId} value={item.codeId}>
-                                      {item.codeName}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                <InputLabel id="user-authority-label">권한</InputLabel>
-                                <Select
-                                  labelId="user-authority-label"
-                                  label="권한"
-                                  value={detailInfo.roleId === null ? '' : detailInfo.roleId}
-                                  onChange={(e) => handleDetailChange('roleId', e.target.value)}
-                                >
-                                  <MenuItem value="">
-                                    <em>선택</em>
-                                  </MenuItem>
-                                  {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
-                                    <MenuItem key={item.roleId} value={item.roleId}>
-                                      {item.roleName}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                <InputLabel id="user-status-label">상태</InputLabel>
-                                <Select
-                                  labelId="user-status-label"
-                                  label="상태"
-                                  value={detailInfo.flagActive}
-                                  onChange={(e) => handleDetailChange('flagActive', e.target.value)}
-                                >
-                                  <MenuItem value="Y">활성</MenuItem>
-                                  <MenuItem value="N">비활성</MenuItem>
-                                </Select>
-                              </FormControl>
-                            </Grid>
-
-                            {isEditMode && (
-                                <Grid item xs={12} display="flex" justifyContent="flex-end" mt={2}>
-                                  <Button
-                                      variant="outlined"
-                                      color="secondary"
-                                      onClick={onReset}
-                                      sx={{ mr: 1 }}
-                                  >
-                                    취소
-                                  </Button>
-                                  <Button
-                                      variant="contained"
-                                      color="primary"
-                                      type="submit"
-                                      startIcon={<SaveIcon />}
-                                  >
-                                    저장
-                                  </Button>
-                                </Grid>
-                            )}
-                          </Grid>
-                    ) : (
-                        <Box
-                            display="flex"
-                            flexDirection="column"
-                            alignItems="center"
-                            justifyContent="center"
-                            height="100%"
+              <Box sx={{ flex: 1, overflow: 'auto' }}>
+                {(selectedUser || isEditMode) ? (
+                  <>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} display="flex" justifyContent="center" mt={2} mb={2}>
+                        <Avatar
+                          sx={{
+                            width: 80,
+                            height: 80,
+                            bgcolor: theme.palette.primary.main,
+                            fontSize: '2rem'
+                          }}
                         >
-                          <Typography variant="body1" color="text.secondary">
-                            사용자를 선택하면 상세 정보가 표시됩니다.
-                          </Typography>
+                          {selectedUser?.userName?.charAt(0) || '?'}
+                        </Avatar>
+                      </Grid>
+
+                      {loginUser.priorityLevel === 5 && (
+                        <>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode} required>
+                              <InputLabel id="site-label">지역</InputLabel>
+                              <Select
+                                labelId="site-label"
+                                label="지역"
+                                value={detailInfo.site === null ? '' : detailInfo.site}
+                                onChange={(e) => handleDetailChange('site', e.target.value)}
+                                required
+                              >
+                                <MenuItem value="">
+                                  <em>선택</em>
+                                </MenuItem>
+                                {Array.isArray(siteOptions) && siteOptions.map((item) => (
+                                  <MenuItem key={item.codeId} value={item.codeId}>
+                                    {item.codeName}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode} required>
+                              <InputLabel id="company-label">회사</InputLabel>
+                              <Select
+                                labelId="company-label"
+                                label="회사"
+                                value={detailInfo.compCd === null ? '' : detailInfo.compCd}
+                                onChange={(e) => handleDetailChange('compCd', e.target.value)}
+                                required
+                              >
+                                <MenuItem value="">
+                                  <em>선택</em>
+                                </MenuItem>
+                                {Array.isArray(companyOptions) && companyOptions.map((item) => (
+                                  <MenuItem key={item.compCd} value={item.compCd}>
+                                    {item.companyName}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        </>
+                      )}
+
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <TextField
+                            label="사용자 ID"
+                            variant="outlined"
+                            size="small"
+                            fullWidth
+                            disabled={selectedUser && !isEditMode}
+                            required
+                            value={detailInfo.loginId || ''}
+                            onChange={(e) => handleDetailChange('loginId', e.target.value)}
+                          />
+                          {(!selectedUser || isEditMode) && (
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                              onClick={async () => {
+                                if (!detailInfo.loginId) {
+                                  Swal.fire({
+                                    icon: 'warning',
+                                    title: '알림',
+                                    text: '사용자 ID를 입력해주세요.',
+                                    confirmButtonText: '확인'
+                                  });
+                                  return;
+                                }
+
+                                try {
+                                  const isDuplicate = await isExistsUserId(detailInfo.loginId).then((res) => res.existLoginId)
+                                  debugger
+                                  console.log(isDuplicate)
+
+                                  if (isDuplicate) {
+                                    Swal.fire({
+                                      icon: 'error',
+                                      title: '중복 확인',
+                                      text: '이미 사용 중인 ID입니다.',
+                                      confirmButtonText: '확인'
+                                    });
+                                  } else {
+                                    Swal.fire({
+                                      icon: 'success',
+                                      title: '중복 확인',
+                                      text: '사용 가능한 ID입니다.',
+                                      confirmButtonText: '확인'
+                                    }).then(() => setIsExists(true));
+                                  }
+                                } catch (error) {
+                                  console.error('ID 중복 체크 중 오류 발생:', error);
+                                  Swal.fire({
+                                    icon: 'error',
+                                    title: '오류',
+                                    text: '서버 통신 중 오류가 발생했습니다.',
+                                    confirmButtonText: '확인'
+                                  });
+                                }
+                              }}
+                              sx={{minWidth: '75px', height: '40px'}}
+                            >
+                              중복체크
+                            </Button>
+                          )}
                         </Box>
-                    )}
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="이름"
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          disabled={!isEditMode}
+                          required
+                          value={detailInfo.userName || ''}
+                          onChange={(e) => handleDetailChange('userName', e.target.value)}
+                        />
+                      </Grid>
+
+                      {!selectedUser && (
+                          <Grid item xs={12}>
+                            <TextField
+                              label="비밀번호"
+                              type="password"
+                              variant="outlined"
+                              size="small"
+                              fullWidth
+                              required
+                              value={detailInfo.userPwd || ''}
+                              onChange={(e) => handleDetailChange('userPwd', e.target.value)}
+                            />
+                          </Grid>
+                      )}
+
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="이메일"
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          disabled={!isEditMode}
+                          value={detailInfo.userEmail || ''}
+                          onChange={(e) => handleDetailChange('userEmail', e.target.value)}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="전화번호"
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          disabled={!isEditMode}
+                          value={detailInfo.phoneNum || ''}
+                          onChange={(e) => handleDetailChange('phoneNum', e.target.value)}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                          <InputLabel id="department-label">부서</InputLabel>
+                          <Select
+                            labelId="department-label"
+                            label="부서"
+                            value={detailInfo.departmentId === null ? '' : detailInfo.departmentId}
+                            onChange={(e) => handleDetailChange('departmentId', e.target.value)}
+                          >
+                            <MenuItem value="">
+                              <em>선택</em>
+                            </MenuItem>
+                            {Array.isArray(departmentOptions) && departmentOptions.map((item) => (
+                              <MenuItem key={item.codeId} value={item.codeId}>
+                                {item.codeName}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                          <InputLabel id="position-label">직책</InputLabel>
+                          <Select
+                            labelId="position-label"
+                            label="직책"
+                            value={detailInfo.positionId === null ? '' : detailInfo.positionId}
+                            onChange={(e) => handleDetailChange('positionId', e.target.value)}
+                          >
+                            <MenuItem value="">
+                              <em>선택</em>
+                            </MenuItem>
+                            {Array.isArray(positionOptions) && positionOptions.map((item) => (
+                              <MenuItem key={item.codeId} value={item.codeId}>
+                                {item.codeName}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode} required>
+                          <InputLabel id="user-authority-label">권한</InputLabel>
+                          <Select
+                            labelId="user-authority-label"
+                            label="권한"
+                            value={detailInfo.roleId === null ? '' : detailInfo.roleId}
+                            onChange={(e) => handleDetailChange('roleId', e.target.value)}
+                            required
+                          >
+                            <MenuItem value="">
+                              <em>선택</em>
+                            </MenuItem>
+                            {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
+                              <MenuItem key={item.roleId} value={item.roleId}>
+                                {item.roleName}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                          <InputLabel id="user-status-label">상태</InputLabel>
+                          <Select
+                            labelId="user-status-label"
+                            label="상태"
+                            value={detailInfo.flagActive}
+                            onChange={(e) => handleDetailChange('flagActive', e.target.value)}
+                          >
+                            <MenuItem value="Y">활성</MenuItem>
+                            <MenuItem value="N">비활성</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      {isEditMode && (
+                          <Grid item xs={12} display="flex" justifyContent="flex-end" mt={2}>
+                            <Button
+                                variant="outlined"
+                                color="secondary"
+                                onClick={onReset}
+                                sx={{ mr: 1 }}
+                            >
+                              취소
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                type="submit"
+                                startIcon={<SaveIcon />}
+                                onClick={handleSave}
+                            >
+                              저장
+                            </Button>
+                          </Grid>
+                      )}
+                    </Grid>
+                  </>
+                ) : (
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    height="100%"
+                  >
+                    <Typography variant="body1" color="text.secondary">
+                      사용자를 선택하면 상세 정보가 표시됩니다.
+                    </Typography>
                   </Box>
-                </Paper>
-              </Grid>
-            </Grid>
-        )}
+                )}
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
 
-        {/* 하단 정보 영역 */}
-        <Box mt={2} p={2} sx={{
-          bgcolor: getBgColor(),
-          borderRadius: 1,
-          border: `1px solid ${getBorderColor()}`
-        }}>
-          <Stack spacing={1}>
-            <Typography variant="body2" color={getTextColor()}>
-              • 사용자관리에서는 시스템 사용자 정보를 등록하고 관리할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 사용자별로 권한 그룹을 설정할 수 있으며, 권한은 '권한관리' 메뉴에서 상세 설정이 가능합니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 비밀번호 초기화 시 기본 비밀번호로 변경되며, 사용자는 첫 로그인 시 비밀번호를 변경해야 합니다.
-            </Typography>
-          </Stack>
-        </Box>
-
-        {/* 도움말 모달 */}
-        <HelpModal
-            open={isHelpModalOpen}
-            onClose={() => setIsHelpModalOpen(false)}
-            title="사용자관리 도움말"
-        >
+      {/* 하단 정보 영역 */}
+      <Box mt={2} p={2} sx={{
+        bgcolor: getBgColor(),
+        borderRadius: 1,
+        border: `1px solid ${getBorderColor()}`
+      }}>
+        <Stack spacing={1}>
           <Typography variant="body2" color={getTextColor()}>
-            • 사용자관리에서는 시스템 사용자의 계정을 등록, 수정, 삭제할 수 있습니다.
+            • 사용자관리에서는 시스템 사용자 정보를 등록하고 관리할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()}>
-            • 사용자별로 권한을 부여하여 시스템 접근 범위를 제한할 수 있습니다.
+            • 사용자별로 권한 그룹을 설정할 수 있으며, 권한은 '권한관리' 메뉴에서 상세 설정이 가능합니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()}>
-            • 비밀번호는 주기적으로 변경하여 보안을 강화해야 합니다.
+            • 비밀번호 초기화 시 기본 비밀번호로 변경되며, 사용자는 첫 로그인 시 비밀번호를 변경해야 합니다.
           </Typography>
-        </HelpModal>
+        </Stack>
       </Box>
+
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="사용자관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 사용자관리에서는 시스템 사용자의 계정을 등록, 수정, 삭제할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 사용자별로 권한을 부여하여 시스템 접근 범위를 제한할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 비밀번호는 주기적으로 변경하여 보안을 강화해야 합니다.
+        </Typography>
+      </HelpModal>
+    </Box>
   );
 };
 
