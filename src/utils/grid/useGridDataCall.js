@@ -13,21 +13,18 @@ export const useGridDataCall = ({
     formatData,
     defaultFilter,
     onSuccess,
-    onDeleteSuccess,
     clearAddRows,
     clearUpdatedRows
 }) => {
     const [loading, setLoading] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
+    /** 데이터 새로고침*/
     const refresh = useCallback(async () => {
         try {
             setLoading(true);
             const result = await executeQuery(query, { filter: defaultFilter });
-            if (result.data) {
-                return formatData(result.data);
-            }
-            return [];
+            return result.data ? formatData(result.data) : [];
         } catch (error) {
             Message.showError(Message.SERVER_ERROR);
             return [];
@@ -37,23 +34,13 @@ export const useGridDataCall = ({
     }, [executeQuery, query, defaultFilter, formatData]);
 
     /**
-     * 그리드의 초기 데이터를 로드
-     */
-    const loadInitialData = useCallback(async () => {
-        return refresh();
-    }, [refresh]);
-
-    /**
      * 그리드 데이터 검색
      */
     const handleGridSearch = useCallback(async (searchParams) => {
         try {
             setLoading(true);
             const result = await executeQuery(query, { filter: searchParams });
-            if (result.data) {
-                return formatData(result.data);
-            }
-            return [];
+            return result.data ? formatData(result.data) : [];
         } catch (error) {
             Message.showError(Message.SERVER_ERROR);
             return [];
@@ -71,17 +58,10 @@ export const useGridDataCall = ({
             const result = await executeMutation(mutation, mutationData);
             if (result.data) {
                 Message.showSuccess(Message.SAVE_SUCCESS);
+                await onSuccess?.();
+                clearAddRows?.();
+                clearUpdatedRows?.();
                 setRefreshKey(prev => prev + 1);
-                if (onSuccess) {
-                    await onSuccess();
-                }
-                // 저장 성공 후 addRows와 updatedRows 초기화
-                if (clearAddRows) {
-                    clearAddRows();
-                }
-                if (clearUpdatedRows && typeof clearUpdatedRows === 'function') {
-                    clearUpdatedRows();
-                }
             }
             return result;
         } catch (error) {
@@ -95,37 +75,42 @@ export const useGridDataCall = ({
     /**
      * 그리드 데이터 삭제
      */
-    const handleGridDelete = useCallback(async ({ data, setDataList, clearAddRows, mutationData, searchParams, deleteMessage }) => {
+    const handleGridDelete = useCallback(async (mutationData, setDataList, newRows = []) => {
         Message.showDeleteConfirm(async () => {
             try {
                 setLoading(true);
-                await executeMutation(deleteMutation, mutationData);
-                Message.showSuccess(Message.DELETE_SUCCESS);
-                if (onDeleteSuccess) {
-                    onDeleteSuccess();
+
+                // 신규 행 삭제 (클라이언트에서만 처리)
+                if (newRows.length > 0) {
+                    setDataList(prev => prev.filter(row => !newRows.some(newRow => newRow.id === row.id)));
+                    clearAddRows?.();
                 }
-                if (setDataList) {
-                    const result = await executeQuery(query, { filter: searchParams });
-                    if (result.data) {
-                        setDataList(formatData(result.data));
+
+                // 기존 행 삭제 (서버로 요청)
+                if (mutationData) {
+                    await executeMutation(deleteMutation, mutationData);
+                    Message.showSuccess(Message.DELETE_SUCCESS);
+
+                    // 삭제 후 데이터 갱신
+                    const result = await refresh();
+                    if (result && setDataList) {
+                        setDataList(result);
                     }
                 }
-                if (clearAddRows) {
-                    clearAddRows();
-                }
+
+                setRefreshKey(prev => prev + 1);
             } catch (error) {
                 Message.showError(Message.ERROR_DURING_DELETE);
             } finally {
                 setLoading(false);
             }
-        }, deleteMessage);
-    }, [executeQuery, executeMutation, query, deleteMutation, formatData, onDeleteSuccess]);
+        });
+    }, [executeMutation, deleteMutation, refresh, clearAddRows]);
 
     return {
         loading,
-        refreshKey,
         refresh,
-        loadInitialData,
+        refreshKey,
         handleGridSearch,
         handleGridSave,
         handleGridDelete

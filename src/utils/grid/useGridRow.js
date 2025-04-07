@@ -16,8 +16,8 @@ export const useGridRow = ({
     /**
      * 행 선택 핸들러
      */
-    const handleRowSelect = useCallback((params, dataList) => {
-        const selectionArray = Array.isArray(params) ? params : [params];
+    const handleRowSelect = useCallback((newSelection, dataList) => {
+        const selectionArray = Array.isArray(newSelection) ? newSelection : [newSelection];
         const selectedItems = dataList.filter(row => selectionArray.includes(row.id));
         setSelectedRows(selectedItems);
     }, []);
@@ -26,43 +26,30 @@ export const useGridRow = ({
      * 행 업데이트 핸들러
      */
     const handleRowUpdate = useCallback((newRow, oldRow, setDataList) => {
+        setDataList(prev => prev.map(row => row.id === oldRow.id ? newRow : row));
+        
         const isNewRow = oldRow.id.startsWith('NEW_');
-
-        // 데이터 리스트 업데이트
-        setDataList(prev => 
-            prev.map(row => 
-                row.id === oldRow.id ? newRow : row
-            )
-        );
-
         if (isNewRow) {
-            // 신규 행인 경우 addRows 상태에 추가
-            setAddRows(prevAddRows => {
-                const existingIndex = prevAddRows.findIndex(
-                    row => row.id === newRow.id
-                );
-                if (existingIndex !== -1) {
-                    const updated = [...prevAddRows];
+            setAddRows(prev => {
+                const existingIndex = prev.findIndex(row => row.id === oldRow.id);
+                if (existingIndex >= 0) {
+                    const updated = [...prev];
                     updated[existingIndex] = newRow;
                     return updated;
                 }
-                return [...prevAddRows, newRow];
+                return [...prev, newRow];
             });
         } else {
-            // 기존 행 수정인 경우
-            setUpdatedRows(prevUpdatedRows => {
-                const existingIndex = prevUpdatedRows.findIndex(
-                    row => row.id === newRow.id
-                );
-                if (existingIndex !== -1) {
-                    const updated = [...prevUpdatedRows];
+            setUpdatedRows(prev => {
+                const existingIndex = prev.findIndex(row => row.id === oldRow.id);
+                if (existingIndex >= 0) {
+                    const updated = [...prev];
                     updated[existingIndex] = newRow;
                     return updated;
                 }
-                return [...prevUpdatedRows, newRow];
+                return [...prev, newRow];
             });
         }
-
         return newRow;
     }, []);
 
@@ -78,43 +65,20 @@ export const useGridRow = ({
     /**
      * 저장 데이터 포맷터
      */
-    const formatSaveData = useCallback((addRows = [], updatedRows = []) => {
-        const newRows = addRows.map(formatNewRow);
-        const existingRows = updatedRows.map(formatUpdatedRow);
-
-        return {
-            createdRows: newRows,
-            updatedRows: existingRows
-        };
-    }, [formatNewRow, formatUpdatedRow]);
+    const formatSaveData = useCallback((addRows, updatedRows) => ({
+        createdRows: addRows.map(row => formatNewRow(row)),
+        updatedRows: updatedRows.map(row => formatUpdatedRow(row))
+    }), [formatNewRow, formatUpdatedRow]);
 
     /**
      * 삭제 데이터 포맷터
      */
-    const formatDeleteData = useCallback((data, formatExistingRow) => {
-        if (!Array.isArray(data)) {
-            return { newRows: [], existingRows: [] };
-        }
-
-        const newRows = data.filter(row => row?.id?.startsWith?.('NEW_'));
-        const existingRows = data
-            .filter(row => !row?.id?.startsWith?.('NEW_'))
-            .map(formatExistingRow)
-            .filter(row => row);
-
-        return {
-            newRows,
-            existingRows
-        };
-    }, []);
-
-    /**
-     * 행 상태 초기화
-     */
-    const resetRows = useCallback(() => {
-        setAddRows([]);
-        setUpdatedRows([]);
-    }, []);
+    const formatDeleteData = useCallback((selectedRows) => ({
+        newRows: selectedRows.filter(row => row.id.startsWith('NEW_')),
+        existingRows: selectedRows
+            .filter(row => !row.id.startsWith('NEW_'))
+            .map(row => formatExistingRow(row))
+    }), [formatExistingRow]);
 
     return {
         selectedRows,
@@ -122,12 +86,10 @@ export const useGridRow = ({
         updatedRows,
         setAddRows,
         setUpdatedRows,
-        setSelectedRows,
         handleRowSelect,
         handleRowUpdate,
         handleRowAdd,
         formatSaveData,
-        formatDeleteData,
-        resetRows
+        formatDeleteData
     };
 }; 
