@@ -1,13 +1,9 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import './ProductionPlanManagement.css';
 import {useForm, Controller} from 'react-hook-form';
 import useLocalStorageVO from '../Common/UseLocalStorageVO';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
@@ -15,35 +11,41 @@ import {
   Stack,
   IconButton,
   alpha,
-  Checkbox
 } from '@mui/material';
 import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
 import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
 import {useDomain, DOMAINS} from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import DateRangePicker from '../Common/DateRangePicker';
-import {GRAPHQL_URL} from '../../config';
 import {format} from 'date-fns';
-import Message from '../../utils/message/Message'; // Message 유틸리티 클래스 임포트
+import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
+import {useGridRow} from '../../utils/grid/useGridRow';
+import {useGridUtils} from '../../utils/grid/useGridUtils';
+import {useGridDataCall} from '../../utils/grid/useGridDataCall';
+import {useGraphQL} from "../../apollo/useGraphQL";
+import {gql} from '@apollo/client';
 
+/**
+ * 생산계획관리 컴포넌트
+ *
+ * @param {Object} props - 컴포넌트 속성
+ * @returns {JSX.Element}
+ */
 const ProductionPlanManagement = (props) => {
-  // 현재 테마 가져오기
+  // 테마, 도메인 및 시스템 설정
   const theme = useTheme();
   const {domain} = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
-
-  // useLocalStorageVO 훅 추가
   const {loginUser} = useLocalStorageVO();
 
   // React Hook Form 설정
-  const { control, handleSubmit, reset, getValues, setValue } = useForm({
+  const {control, handleSubmit, reset, getValues, setValue} = useForm({
     defaultValues: {
       prodPlanId: '',
       orderId: '',
@@ -59,58 +61,39 @@ const ProductionPlanManagement = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [planList, setPlanList] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [updatedRows, setUpdatedRows] = useState([]);
-  const [addRows, setAddRows] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
-  const CustomDateEditor = (props) => {
-    const {id, field, value, api} = props;
+  // 그리드 유틸리티 훅 사용
+  const {formatDateToYYYYMMDD, generateId} = useGridUtils();
 
-    const handleChange = (newValue) => {
-      // DataGrid API를 사용하여 셀 값을 업데이트
-      api.setEditCellValue({id, field, value: newValue});
+  // GraphQL 훅 사용
+  const {executeQuery, executeMutation} = useGraphQL();
 
-      // 변경 후 자동으로 편집 모드 종료 (선택적)
-      setTimeout(() => {
-        api.commitCellChange({id, field});
-        api.setCellMode(id, field, 'view');
-      }, 200);
-    };
+  // 도메인별 색상 설정 함수
+  const getTextColor = useCallback(() => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  }, [domain, isDarkMode]);
 
-    return (
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-              value={value ? new Date(value) : null}
-              onChange={handleChange}
-              format="yyyy-MM-dd"
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  variant: 'outlined',
-                  size: 'small',
-                  sx: {m: 0, p: 0},
-                  // 키보드 상호작용 처리
-                  onKeyDown: (e) => {
-                    if (e.key === 'Escape') {
-                      api.setCellMode(id, field, 'view');
-                    }
-                  }
-                },
-                // 포퍼(팝업) 스타일 조정
-                popper: {
-                  sx: {
-                    zIndex: 9999 // 다른 요소 위에 표시되도록
-                  }
-                }
-              }}
-          />
-        </LocalizationProvider>
-    );
-  };
+  const getBgColor = useCallback(() => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  }, [domain, isDarkMode]);
+
+  const getBorderColor = useCallback(() => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  }, [domain, isDarkMode]);
 
   // API 통신 시 Date 객체를 문자열로 변환하는 함수 개선
-  function formatDateToString(dateObj) {
+  const formatDateToString = useCallback((dateObj) => {
     if (!dateObj) {
       return null;
     }
@@ -136,49 +119,119 @@ const ProductionPlanManagement = (props) => {
       console.error("Error formatting date:", dateObj);
       return null;
     }
-  }
+  }, []);
 
-  // 도메인별 색상 설정
-  const getTextColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
-    }
-    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
+  // 새 행 생성 함수
+  const createNewRow = useCallback(() => {
+    const currentDate = new Date();
+    const currentUser = loginUser.loginId;
+    const newId = generateId();
 
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
+    return {
+      id: newId,
+      prodPlanId: '자동입력',
+      orderId: '',
+      productId: '',
+      planQty: 0,
+      planStartDate: currentDate,
+      planEndDate: currentDate,
+      flagActive: true,
+      createUser: currentUser,
+      createDate: currentDate,
+      updateUser: currentUser,
+      updateDate: currentDate
+    };
+  }, [loginUser, generateId]);
 
-  const getBorderColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#f5e8d7';
-    }
-    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
-  };
-
-  // GraphQL fetch 함수
-  function fetchGraphQL(url, query, filter) {
-    const variables = {filter};
-    return fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({query, variables})
+  // 그리드 행 관련 커스텀 훅 사용
+  const {
+    addRows,
+    updatedRows,
+    setAddRows,
+    setUpdatedRows,
+    handleRowAdd,
+    resetRows
+  } = useGridRow({
+    createNewRow,
+    formatNewRow: (row) => ({
+      orderId: row.orderId || '',
+      productId: row.productId || '',
+      planQty: parseFloat(row.planQty) || 0,
+      planStartDate: formatDateToString(row.planStartDate),
+      planEndDate: formatDateToString(row.planEndDate),
+      flagActive: row.flagActive === undefined ? true : Boolean(row.flagActive)
+    }),
+    formatUpdatedRow: (row) => ({
+      prodPlanId: row.prodPlanId,
+      orderId: row.orderId || '',
+      productId: row.productId || '',
+      planQty: parseFloat(row.planQty) || 0,
+      planStartDate: formatDateToString(row.planStartDate),
+      planEndDate: formatDateToString(row.planEndDate),
+      flagActive: row.flagActive === undefined ? true : Boolean(row.flagActive)
     })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+  });
+
+  // 그리드 데이터 포맷 함수
+  const formatGridData = useCallback((data) => {
+    if (!data?.productionPlans) {
+      return [];
+    }
+
+    return data.productionPlans.map((plan) => ({
+      ...plan,
+      id: plan.prodPlanId,
+      planQty: plan.planQty ? Number(plan.planQty) : 0,
+      planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
+      planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
+      createDate: plan.createDate ? new Date(plan.createDate) : null,
+      updateDate: plan.updateDate ? new Date(plan.updateDate) : null
+    }));
+  }, []);
+
+  // GraphQL 쿼리 정의
+  const PRODUCTION_PLANS_QUERY = gql`
+      query getProductionPlans($filter: ProductionPlanFilter) {
+          productionPlans(filter: $filter) {
+              site
+              compCd
+              prodPlanId
+              orderId
+              productId
+              planQty
+              planStartDate
+              planEndDate
+              flagActive
+              createUser
+              createDate
+              updateUser
+              updateDate
+          }
       }
-      return response.json();
-    });
-  }
+  `;
+
+  const SAVE_PRODUCTION_PLAN_MUTATION = `
+    mutation SaveProductionPlan($createdRows: [ProductionPlanInput], $updatedRows: [ProductionPlanUpdate]) {
+      saveProductionPlan(createdRows: $createdRows, updatedRows: $updatedRows)
+    }
+  `;
+
+  const DELETE_PRODUCTION_PLAN_MUTATION = `
+    mutation DeleteProductionPlan($prodPlanId: String!) {
+      deleteProductionPlan(prodPlanId: $prodPlanId)
+    }
+  `;
+
+  // 그리드 데이터 호출 훅 사용
+  const {handleGridSearch} = useGridDataCall({
+    executeQuery,
+    executeMutation,
+    query: PRODUCTION_PLANS_QUERY,
+    formatData: formatGridData,
+  });
 
   // 초기화 함수
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     reset({
       prodPlanId: '',
       orderId: '',
@@ -188,34 +241,13 @@ const ProductionPlanManagement = (props) => {
         endDate: null
       }
     });
-  };
+  }, [reset]);
 
   // 검색 실행 함수
-  const handleSearch = (data) => {
+  const handleSearch = useCallback((data) => {
     setIsLoading(true);
     setUpdatedRows([]);
     setAddRows([]);
-
-    // GraphQL 쿼리 작성
-    const query = `
-    query getProductionPlans($filter: ProductionPlanFilter) {
-      productionPlans(filter: $filter) {
-        site
-        compCd
-        prodPlanId
-        orderId
-        productId
-        planQty
-        planStartDate
-        planEndDate
-        flagActive
-        createUser
-        createDate
-        updateUser
-        updateDate
-      }
-    }
-  `;
 
     // 날짜 형식 변환 - null 값도 허용
     const filterData = {...data};
@@ -224,7 +256,8 @@ const ProductionPlanManagement = (props) => {
     if (filterData.planDateRange) {
       if (filterData.planDateRange.startDate) {
         try {
-          filterData.planStartDateFrom = format(filterData.planDateRange.startDate, 'yyyy-MM-dd');
+          filterData.planStartDateFrom = format(
+              filterData.planDateRange.startDate, 'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid startDate:", error);
           filterData.planStartDateFrom = null;
@@ -233,7 +266,8 @@ const ProductionPlanManagement = (props) => {
 
       if (filterData.planDateRange.endDate) {
         try {
-          filterData.planStartDateTo = format(filterData.planDateRange.endDate, 'yyyy-MM-dd');
+          filterData.planStartDateTo = format(filterData.planDateRange.endDate,
+              'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid endDate:", error);
           filterData.planStartDateTo = null;
@@ -244,46 +278,39 @@ const ProductionPlanManagement = (props) => {
       delete filterData.planDateRange;
     }
 
-    fetchGraphQL(GRAPHQL_URL, query, filterData)
-    .then((response) => {
-      if (response.errors) {
-        console.error("GraphQL errors:", response.errors);
-        Message.showError({message: '데이터를 불러오는데 실패했습니다.'}, setIsLoading);
-      } else {
-        const rowsWithId = response.data.productionPlans.map((plan) => ({
-          ...plan,
-          id: plan.prodPlanId,
-          // 서버에서 받은 데이터 변환
-          planQty: plan.planQty ? Number(plan.planQty) : 0,
-          planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
-          planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
-          createDate: plan.createDate ? new Date(plan.createDate) : null,
-          updateDate: plan.updateDate ? new Date(plan.updateDate) : null
-        }));
-        setPlanList(rowsWithId);
+    executeQuery(
+        {query: PRODUCTION_PLANS_QUERY, variables: {filter: filterData}})
+    .then(response => {
+      if (response.data) {
+        const formattedData = formatGridData(response.data);
+        setPlanList(formattedData);
         setRefreshKey(prev => prev + 1);
-        setIsLoading(false);
       }
+      setIsLoading(false);
     })
-    .catch((error) => {
+    .catch(error => {
       console.error("Error fetching production plans:", error);
-      Message.showError({message: '데이터를 불러오는데 실패했습니다.'}, setIsLoading);
+      Message.showError({message: '데이터를 불러오는데 실패했습니다.'});
+      setIsLoading(false);
+      // 에러 발생 시 빈 배열 설정으로 UI 렌더링은 정상적으로 진행
+      setPlanList([]);
     });
-  };
+  }, [executeQuery, PRODUCTION_PLANS_QUERY, formatGridData, setUpdatedRows,
+    setAddRows]);
 
   // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = (startDate, endDate) => {
-    setValue('planDateRange', { startDate, endDate });
-  };
+  const handleDateRangeChange = useCallback((startDate, endDate) => {
+    setValue('planDateRange', {startDate, endDate});
+  }, [setValue]);
 
   // 계획 선택 핸들러
-  const handlePlanSelect = (params) => {
+  const handlePlanSelect = useCallback((params) => {
     const plan = planList.find(p => p.id === params.id);
     setSelectedPlan(plan);
-  };
+  }, [planList]);
 
   // 행 업데이트 처리 핸들러 개선
-  function handleProcessRowUpdate(newRow, oldRow) {
+  const handleProcessRowUpdate = useCallback((newRow, oldRow) => {
     const isNewRow = oldRow.id.startsWith('NEW_');
 
     // 깊은 복제로 원본 데이터 보존
@@ -334,51 +361,24 @@ const ProductionPlanManagement = (props) => {
     }
 
     return processedRow;
-  }
+  }, [setAddRows, setUpdatedRows]);
 
   // 등록 버튼 클릭 핸들러
-  const handleAdd = () => {
-    const currentDate = new Date();
-    const currentUser = loginUser.loginId;
-    const newId = `NEW_${Date.now()}`;
-    const newPlan = {
-      id: newId,
-      prodPlanId: '자동입력',
-      orderId: '',
-      productId: '',
-      planQty: 0,
-      planStartDate: currentDate,
-      planEndDate: currentDate,
-      flagActive: true,
-      createUser: currentUser,
-      createDate: currentDate,
-      updateUser: currentUser,
-      updateDate: currentDate
-    };
-
-    // 그리드에 새 행 추가
-    setPlanList(prev => [newPlan, ...prev]);
-
-    // addRows에도 추가
-    setAddRows(prev => [newPlan, ...prev]);
-  };
+  const handleAdd = useCallback(() => {
+    const newRow = createNewRow();
+    setPlanList(prev => [newRow, ...prev]);
+    setAddRows(prev => [newRow, ...prev]);
+  }, [createNewRow, setAddRows]);
 
   // 저장 버튼 클릭 핸들러 개선
-  const handleSave = () => {
-    // 중요: 항상 현재 그리드 상태에서 데이터를 가져옴
+  const handleSave = useCallback(() => {
+    // 신규 추가 행 필터링
     const newRows = planList.filter(row => row.id.startsWith('NEW_'));
 
     if (newRows.length === 0 && updatedRows.length === 0) {
       Message.showWarning('저장할 데이터가 없습니다.');
       return;
     }
-
-    // GraphQL 뮤테이션 작성
-    const saveProductionPlanMutation = `
-      mutation SaveProductionPlan($createdRows: [ProductionPlanInput], $updatedRows: [ProductionPlanUpdate]) {
-        saveProductionPlan(createdRows: $createdRows, updatedRows: $updatedRows)
-      }
-    `;
 
     // 필수 필드 검증 함수
     const validateRequiredFields = (rows, fieldNames) => {
@@ -435,50 +435,36 @@ const ProductionPlanManagement = (props) => {
     });
 
     // API 호출
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include', // 쿠키 자동 전송 설정 추가
-      body: JSON.stringify({
-        query: saveProductionPlanMutation,
-        variables: {
-          createdRows: createdPlanInputs,
-          updatedRows: updatedPlanInputs,
-        }
-      })
-    })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
+    executeMutation({
+      mutation: SAVE_PRODUCTION_PLAN_MUTATION,
+      variables: {
+        createdRows: createdPlanInputs,
+        updatedRows: updatedPlanInputs,
       }
-      return res.json();
     })
     .then((data) => {
-      if (data.errors) {
-        console.error("GraphQL errors:", data.errors);
-        let errorMessage = '저장 중 오류가 발생했습니다.';
-        if (data.errors[0] && data.errors[0].message) {
-          errorMessage = data.errors[0].message;
-        }
-        Message.showError({message: errorMessage});
-      } else {
-        // 저장 성공 후 상태 초기화
-        setAddRows([]);
-        setUpdatedRows([]);
-        // 저장 성공 메시지와 함께 데이터 새로고침
-        Message.showSuccess(Message.SAVE_SUCCESS, () => {
-          handleSearch(getValues());
-        });
-      }
+      // 저장 성공 후 상태 초기화
+      setAddRows([]);
+      setUpdatedRows([]);
+      // 저장 성공 메시지와 함께 데이터 새로고침
+      Message.showSuccess(Message.SAVE_SUCCESS, () => {
+        handleSearch(getValues());
+      });
     })
     .catch((error) => {
       console.error("Error saving production plan:", error);
-      Message.showError({message: '저장 중 예외가 발생했습니다: ' + error.message});
+      let errorMessage = '저장 중 오류가 발생했습니다.';
+      if (error?.graphQLErrors?.[0]?.message) {
+        errorMessage = error.graphQLErrors[0].message;
+      }
+      Message.showError({message: errorMessage});
     });
-  };
+  }, [planList, updatedRows, setAddRows, setUpdatedRows, executeMutation,
+    SAVE_PRODUCTION_PLAN_MUTATION, formatDateToString, handleSearch,
+    getValues]);
 
   // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (!selectedPlan) {
       Message.showWarning(Message.DELETE_SELECT_REQUIRED);
       return;
@@ -488,57 +474,102 @@ const ProductionPlanManagement = (props) => {
     if (selectedPlan.id.startsWith('NEW_')) {
       const updatedList = planList.filter(p => p.id !== selectedPlan.id);
       setPlanList(updatedList);
+      // 추가된 행 목록에서도 제거
+      setAddRows(prev => prev.filter(p => p.id !== selectedPlan.id));
       setSelectedPlan(null);
       return;
     }
 
-    const deleteProductionPlanMutation = `
-      mutation DeleteProductionPlan($prodPlanId: String!) {
-        deleteProductionPlan(prodPlanId: $prodPlanId)
-      }
-    `;
-
     // Message 클래스의 삭제 확인 다이얼로그 사용
     Message.showDeleteConfirm(() => {
-      fetch(GRAPHQL_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        credentials: 'include', // 쿠키 자동 전송 설정 추가
-        body: JSON.stringify({
-          query: deleteProductionPlanMutation,
-          variables: {prodPlanId: selectedPlan.prodPlanId}
-        })
+      executeMutation({
+        mutation: DELETE_PRODUCTION_PLAN_MUTATION,
+        variables: {prodPlanId: selectedPlan.prodPlanId}
       })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.errors) {
-          console.error("GraphQL errors:", data.errors);
-          Message.showError({message: '삭제 중 오류가 발생했습니다.'});
-        } else {
-          const updatedList = planList.filter(p => p.id !== selectedPlan.id);
-          setPlanList(updatedList);
-          setSelectedPlan(null);
-          Message.showSuccess(Message.DELETE_SUCCESS);
-        }
+      .then(() => {
+        const updatedList = planList.filter(p => p.id !== selectedPlan.id);
+        setPlanList(updatedList);
+        setSelectedPlan(null);
+        Message.showSuccess(Message.DELETE_SUCCESS);
       })
       .catch((error) => {
         console.error("Error deleting production plan:", error);
-        Message.showError({message: '삭제 중 예외가 발생했습니다.'});
+        Message.showError({message: '삭제 중 오류가 발생했습니다.'});
       });
     });
-  };
+  }, [selectedPlan, planList, setAddRows, executeMutation,
+    DELETE_PRODUCTION_PLAN_MUTATION]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
+    // 컴포넌트 마운트 시에만 초기 데이터 로드
+    let isMounted = true;
     const timer = setTimeout(() => {
-      handleSearch({});
+      if (isMounted) {
+        try {
+          handleSearch({});
+        } catch (err) {
+          console.error("Initial load error:", err);
+          setIsLoading(false);
+        }
+      }
     }, 100);
 
-    return () => clearTimeout(timer);
+    // 클린업 함수
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []); // 의존성 배열 비우기;
+
+  // DatePicker 커스텀 에디터 컴포넌트
+  const CustomDateEditor = useCallback((props) => {
+    const {id, field, value, api} = props;
+
+    const handleChange = (newValue) => {
+      // DataGrid API를 사용하여 셀 값을 업데이트
+      api.setEditCellValue({id, field, value: newValue});
+
+      // 변경 후 자동으로 편집 모드 종료 (선택적)
+      setTimeout(() => {
+        api.commitCellChange({id, field});
+        api.setCellMode(id, field, 'view');
+      }, 200);
+    };
+
+    return (
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+              value={value ? new Date(value) : null}
+              onChange={handleChange}
+              format="yyyy-MM-dd"
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  variant: 'outlined',
+                  size: 'small',
+                  sx: {m: 0, p: 0},
+                  // 키보드 상호작용 처리
+                  onKeyDown: (e) => {
+                    if (e.key === 'Escape') {
+                      api.setCellMode(id, field, 'view');
+                    }
+                  }
+                },
+                // 포퍼(팝업) 스타일 조정
+                popper: {
+                  sx: {
+                    zIndex: 9999 // 다른 요소 위에 표시되도록
+                  }
+                }
+              }}
+          />
+        </LocalizationProvider>
+    );
   }, []);
 
   // 생산계획 목록 그리드 컬럼 정의
-  const planColumns = [
+  const planColumns = useMemo(() => ([
     {
       field: 'prodPlanId',
       headerName: '생산계획ID',
@@ -710,15 +741,17 @@ const ProductionPlanManagement = (props) => {
         }
       }
     }
-  ];
+  ]), []);
+
   // 생산계획 목록 그리드 버튼
-  const planGridButtons = [
+  const planGridButtons = useMemo(() => ([
     {label: '등록', onClick: handleAdd, icon: <AddIcon/>},
     {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
     {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
-  ];
+  ]), [handleAdd, handleSave, handleDelete]);
 
-  const gridProps = {
+  // 그리드 속성
+  const gridProps = useMemo(() => ({
     editMode: 'cell',
     processRowUpdate: handleProcessRowUpdate,
     onProcessRowUpdateError: (error) => {
@@ -734,7 +767,7 @@ const ProductionPlanManagement = (props) => {
         return null; // 다른 필드는 기본 에디터 사용
       }
     }
-  };
+  }), [handleProcessRowUpdate, CustomDateEditor]);
 
   return (
       <Box sx={{p: 0, minHeight: '100vh'}}>
@@ -826,7 +859,8 @@ const ProductionPlanManagement = (props) => {
             />
           </Grid>
           <Grid item xs={12} sm={12} md={3}>
-            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}
+                                  adapterLocale={ko}>
               <Controller
                   name="planDateRange"
                   control={control}
@@ -850,7 +884,6 @@ const ProductionPlanManagement = (props) => {
         {!isLoading && (
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                {/* 기존 EnhancedDataGridWrapper 코드를 아래 코드로 대체 */}
                 <EnhancedDataGridWrapper
                     title="생산계획목록"
                     key={refreshKey}

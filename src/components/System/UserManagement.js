@@ -68,6 +68,22 @@ const UserManagement = (props) => {
   const [authorityOptions, setAuthorityOptions] = useState([]);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [positionOptions, setPositionOptions] = useState([]);
+  const [isExists, setIsExists] = useState(false);
+
+
+  // 상세 정보 상태 관리
+  const [detailInfo, setDetailInfo] = useState({
+    id: null,
+    loginId: null,
+    userName: null,
+    userPwd: null,
+    userEmail: null,
+    phoneNum: null,
+    departmentId: null,
+    positionId: null,
+    roleId: null,
+    flagActive: 'Y'
+  });
 
   // React Hook Form 설정 - 검색
   const { control: searchControl, handleSubmit: handleSearchSubmit, reset: resetSearch } = useForm({
@@ -79,20 +95,13 @@ const UserManagement = (props) => {
     }
   });
 
-  // React Hook Form 설정 - 상세 정보
-  const { control: detailControl, handleSubmit: handleDetailSubmit, reset: resetDetail, setValue } = useForm({
-    defaultValues: {
-      loginId: null,
-      userName: null,
-      password: null,
-      userEmail: null,
-      phoneNum: null,
-      departmentId: null,
-      positionId: null,
-      roleId: null,
-      flagActive: 'Y'
-    }
-  });
+  // 상세 정보 변경 핸들러
+  const handleDetailChange = (field, value) => {
+    setDetailInfo(prev => ({
+      ...prev,
+      [field]: value || null  // 빈 문자열은 null로 변환
+    }));
+  };
 
   // 검색 핸들러
   const onSearch = (data) => {
@@ -102,11 +111,21 @@ const UserManagement = (props) => {
   // 초기화 핸들러
   const onReset = () => {
     if (isEditMode) {
-      // 편집 모드에서의 초기화
       if (selectedUser) {
         handleUserSelect({ id: selectedUser.id });
       } else {
-        resetDetail();
+        setDetailInfo({
+          id: null,
+          loginId: null,
+          userName: null,
+          userPwd: null,
+          userEmail: null,
+          phoneNum: null,
+          departmentId: null,
+          positionId: null,
+          roleId: null,
+          flagActive: 'Y'
+        });
       }
       setIsEditMode(false);
     } else {
@@ -114,7 +133,8 @@ const UserManagement = (props) => {
       resetSearch({
         userName: null,
         departmentId: null,
-        roleId: null
+        roleId: null,
+        positionId: null
       });
       handleSearch({});
     }
@@ -241,26 +261,38 @@ const UserManagement = (props) => {
   const handleUserSelect = (params) => {
     const user = userList.find(u => u.id === params.id);
     setSelectedUser(user);
+    setIsEditMode(false);
 
     if (user) {
-      resetDetail();
-      // 상세 정보 폼에 데이터 설정
-      setValue('loginId', user.loginId || null);
-      setValue('userName', user.userName || null);
-      setValue('userEmail', user.userEmail || null);
-      setValue('phoneNum', user.phoneNum || null);
-      setValue('departmentId', user.departmentId || null);
-      setValue('positionId', user.positionId || null);
-      setValue('roleId', user.roleId || null);
-      setValue('flagActive', user.flagActive || 'Y');
-      setIsEditMode(false);
+      setDetailInfo({
+        id: user.id || null,
+        loginId: user.loginId || null,
+        userName: user.userName || null,
+        userEmail: user.userEmail || null,
+        phoneNum: user.phoneNum || null,
+        departmentId: user.departmentId || null,
+        positionId: user.positionId || null,
+        roleId: user.roleId || null,
+        flagActive: user.flagActive || 'Y'
+      });
     }
   };
 
   // 사용자 추가 핸들러
   const handleAddUser = () => {
+    setDetailInfo({
+      id: null,
+      loginId: null,
+      userName: null,
+      userPwd: null,
+      userEmail: null,
+      phoneNum: null,
+      departmentId: null,
+      positionId: null,
+      roleId: null,
+      flagActive: 'Y'
+    });
     setSelectedUser(null);
-    resetDetail();
     setIsEditMode(true);
   };
 
@@ -291,7 +323,6 @@ const UserManagement = (props) => {
         const updatedList = userList.filter(user => user.id !== selectedUser.id);
         setUserList(updatedList);
         setSelectedUser(null);
-        resetDetail();
 
         Swal.fire({
           icon: 'success',
@@ -309,7 +340,7 @@ const UserManagement = (props) => {
   };
 
   // 비밀번호 초기화
-  const handleResetPassword = () => {
+  const handleResetuserPwd = () => {
     if (!selectedUser) return;
 
     Swal.fire({
@@ -334,25 +365,20 @@ const UserManagement = (props) => {
   };
 
   // 저장 핸들러
-  const handleSave = (data) => {
-    console.log('저장 데이터:', data);
-
-    // 신규 사용자 추가
+  const handleSave = () => {
     if (!selectedUser) {
       const newUser = {
         id: userList.length + 1,
-        ...data,
+        ...detailInfo,
         lastLoginDate: '-'
       };
 
       setUserList([...userList, newUser]);
       setSelectedUser(newUser);
-    }
-    // 기존 사용자 수정
-    else {
+    } else {
       const updatedUser = {
         ...selectedUser,
-        ...data
+        ...detailInfo
       };
 
       const updatedList = userList.map(user =>
@@ -429,7 +455,9 @@ const UserManagement = (props) => {
                           const value = e.target.value;
                           field.onChange(value === '' ? null : value);
                         }}
-                        placeholder="이름을 입력하세요"
+                        InputLabelProps={{
+                          shrink: field.value ? true : undefined
+                        }}
                     />
                 )}
             />
@@ -568,7 +596,7 @@ const UserManagement = (props) => {
                           </IconButton>
                           <IconButton
                               color="warning"
-                              onClick={handleResetPassword}
+                              onClick={handleResetuserPwd}
                               size="small"
                           >
                             <KeyIcon />
@@ -579,7 +607,6 @@ const UserManagement = (props) => {
 
                   <Box sx={{ flex: 1, overflow: 'auto' }}>
                     {(selectedUser || isEditMode) ? (
-                        <form onSubmit={handleDetailSubmit(handleSave)}>
                           <Grid container spacing={2}>
                             <Grid item xs={12} display="flex" justifyContent="center" mt={2} mb={2}>
                               <Avatar
@@ -595,194 +622,190 @@ const UserManagement = (props) => {
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="loginId"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <TextField
-                                          {...field}
-                                          label="사용자 ID"
-                                          variant="outlined"
-                                          size="small"
-                                          fullWidth
-                                          disabled={selectedUser && !isEditMode}
-                                          required
-                                      />
-                                  )}
-                              />
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                  label="사용자 ID"
+                                  variant="outlined"
+                                  size="small"
+                                  fullWidth
+                                  disabled={selectedUser && !isEditMode}
+                                  required
+                                  value={detailInfo.loginId || ''}
+                                  onChange={(e) => handleDetailChange('loginId', e.target.value)}
+                                />
+                                {(!selectedUser || isEditMode) && (
+                                  <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    onClick={() => {
+                                      if (!detailInfo.loginId) {
+                                        Swal.fire({
+                                          icon: 'warning',
+                                          title: '알림',
+                                          text: '사용자 ID를 입력해주세요.',
+                                          confirmButtonText: '확인'
+                                        });
+                                        return;
+                                      }
+                                      
+                                      // 여기에 실제 중복 체크 API 호출 로직 추가
+                                      const isDuplicate = userList.some(user => 
+                                        user.loginId === detailInfo.loginId && user.id !== detailInfo.id
+                                      );
+
+                                      if (isDuplicate) {
+                                        Swal.fire({
+                                          icon: 'error',
+                                          title: '중복 확인',
+                                          text: '이미 사용 중인 ID입니다.',
+                                          confirmButtonText: '확인'
+                                        });
+                                      } else {
+                                        Swal.fire({
+                                          icon: 'success',
+                                          title: '중복 확인',
+                                          text: '사용 가능한 ID입니다.',
+                                          confirmButtonText: '확인'
+                                        });
+                                      }
+                                    }}
+                                    sx={{minWidth: '75px', height: '40px'}}
+                                  >
+                                    중복체크
+                                  </Button>
+                                )}
+                              </Box>
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="userName"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <TextField
-                                          {...field}
-                                          label="이름"
-                                          variant="outlined"
-                                          size="small"
-                                          fullWidth
-                                          disabled={!isEditMode}
-                                          required
-                                      />
-                                  )}
+                              <TextField
+                                label="이름"
+                                variant="outlined"
+                                size="small"
+                                fullWidth
+                                disabled={!isEditMode}
+                                required
+                                value={detailInfo.userName || ''}
+                                onChange={(e) => handleDetailChange('userName', e.target.value)}
                               />
                             </Grid>
 
                             {!selectedUser && (
                                 <Grid item xs={12}>
-                                  <Controller
-                                      name="password"
-                                      control={detailControl}
-                                      render={({ field }) => (
-                                          <TextField
-                                              {...field}
-                                              label="비밀번호"
-                                              type="password"
-                                              variant="outlined"
-                                              size="small"
-                                              fullWidth
-                                              required
-                                          />
-                                      )}
+                                  <TextField
+                                    label="비밀번호"
+                                    type="password"
+                                    variant="outlined"
+                                    size="small"
+                                    fullWidth
+                                    required
+                                    value={detailInfo.userPwd || ''}
+                                    onChange={(e) => handleDetailChange('userPwd', e.target.value)}
                                   />
                                 </Grid>
                             )}
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="userEmail"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <TextField
-                                          {...field}
-                                          label="이메일"
-                                          variant="outlined"
-                                          size="small"
-                                          fullWidth
-                                          disabled={!isEditMode}
-                                      />
-                                  )}
+                              <TextField
+                                label="이메일"
+                                variant="outlined"
+                                size="small"
+                                fullWidth
+                                disabled={!isEditMode}
+                                value={detailInfo.userEmail || ''}
+                                onChange={(e) => handleDetailChange('userEmail', e.target.value)}
                               />
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="phoneNum"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <TextField
-                                          {...field}
-                                          label="전화번호"
-                                          variant="outlined"
-                                          size="small"
-                                          fullWidth
-                                          disabled={!isEditMode}
-                                      />
-                                  )}
+                              <TextField
+                                label="전화번호"
+                                variant="outlined"
+                                size="small"
+                                fullWidth
+                                disabled={!isEditMode}
+                                value={detailInfo.phoneNum || ''}
+                                onChange={(e) => handleDetailChange('phoneNum', e.target.value)}
                               />
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="departmentId"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                        <InputLabel id="department-label">부서</InputLabel>
-                                        <Select
-                                            {...field}
-                                            value={field.value === null ? '' : field.value}
-                                            labelId="department-label"
-                                            label="부서"
-                                        >
-                                          <MenuItem value="">
-                                            <em>선택</em>
-                                          </MenuItem>
-                                          {Array.isArray(departmentOptions) && departmentOptions.map((item) => (
-                                              <MenuItem key={item.codeId} value={item.codeId}>
-                                                {item.codeName}
-                                              </MenuItem>
-                                          ))}
-                                        </Select>
-                                      </FormControl>
-                                  )}
-                              />
+                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                                <InputLabel id="department-label">부서</InputLabel>
+                                <Select
+                                  labelId="department-label"
+                                  label="부서"
+                                  value={detailInfo.departmentId === null ? '' : detailInfo.departmentId}
+                                  onChange={(e) => handleDetailChange('departmentId', e.target.value)}
+                                >
+                                  <MenuItem value="">
+                                    <em>선택</em>
+                                  </MenuItem>
+                                  {Array.isArray(departmentOptions) && departmentOptions.map((item) => (
+                                    <MenuItem key={item.codeId} value={item.codeId}>
+                                      {item.codeName}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="positionId"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                        <InputLabel id="position-label">직책</InputLabel>
-                                        <Select
-                                            {...field}
-                                            value={field.value === null ? '' : field.value}
-                                            labelId="position-label"
-                                            label="직책"
-                                        >
-                                          <MenuItem value="">
-                                            <em>선택</em>
-                                          </MenuItem>
-                                          {Array.isArray(positionOptions) && positionOptions.map((item) => (
-                                              <MenuItem key={item.codeId} value={item.codeId}>
-                                                {item.codeName}
-                                              </MenuItem>
-                                          ))}
-                                        </Select>
-                                      </FormControl>
-                                  )}
-                              />
+                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                                <InputLabel id="position-label">직책</InputLabel>
+                                <Select
+                                  labelId="position-label"
+                                  label="직책"
+                                  value={detailInfo.positionId === null ? '' : detailInfo.positionId}
+                                  onChange={(e) => handleDetailChange('positionId', e.target.value)}
+                                >
+                                  <MenuItem value="">
+                                    <em>선택</em>
+                                  </MenuItem>
+                                  {Array.isArray(positionOptions) && positionOptions.map((item) => (
+                                    <MenuItem key={item.codeId} value={item.codeId}>
+                                      {item.codeName}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="roleId"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                        <InputLabel id="user-authority-label">권한</InputLabel>
-                                        <Select
-                                            {...field}
-                                            value={field.value === null ? '' : field.value}
-                                            labelId="user-authority-label"
-                                            label="권한"
-                                        >
-                                          <MenuItem value="">
-                                            <em>선택</em>
-                                          </MenuItem>
-                                          {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
-                                              <MenuItem key={item.roleId} value={item.roleId}>
-                                                {item.roleName}
-                                              </MenuItem>
-                                          ))}
-                                        </Select>
-                                      </FormControl>
-                                  )}
-                              />
+                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                                <InputLabel id="user-authority-label">권한</InputLabel>
+                                <Select
+                                  labelId="user-authority-label"
+                                  label="권한"
+                                  value={detailInfo.roleId === null ? '' : detailInfo.roleId}
+                                  onChange={(e) => handleDetailChange('roleId', e.target.value)}
+                                >
+                                  <MenuItem value="">
+                                    <em>선택</em>
+                                  </MenuItem>
+                                  {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
+                                    <MenuItem key={item.roleId} value={item.roleId}>
+                                      {item.roleName}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             </Grid>
 
                             <Grid item xs={12} sm={6}>
-                              <Controller
-                                  name="flagActive"
-                                  control={detailControl}
-                                  render={({ field }) => (
-                                      <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                                        <InputLabel id="user-status-label">상태</InputLabel>
-                                        <Select
-                                            {...field}
-                                            labelId="user-status-label"
-                                            label="상태"
-                                        >
-                                          <MenuItem value='Y'>활성</MenuItem>
-                                          <MenuItem value='N'>비활성</MenuItem>
-                                        </Select>
-                                      </FormControl>
-                                  )}
-                              />
+                              <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
+                                <InputLabel id="user-status-label">상태</InputLabel>
+                                <Select
+                                  labelId="user-status-label"
+                                  label="상태"
+                                  value={detailInfo.flagActive}
+                                  onChange={(e) => handleDetailChange('flagActive', e.target.value)}
+                                >
+                                  <MenuItem value="Y">활성</MenuItem>
+                                  <MenuItem value="N">비활성</MenuItem>
+                                </Select>
+                              </FormControl>
                             </Grid>
 
                             {isEditMode && (
@@ -806,7 +829,6 @@ const UserManagement = (props) => {
                                 </Grid>
                             )}
                           </Grid>
-                        </form>
                     ) : (
                         <Box
                             display="flex"
