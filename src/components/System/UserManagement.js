@@ -18,7 +18,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import {MuiDataGridWrapper, SearchCondition} from '../Common';
+import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -73,6 +73,8 @@ const UserManagement = (props) => {
   const [siteOptions, setSiteOptions] = useState([]);
   const [isExists, setIsExists] = useState(false);
   const { loginUser } = useLocalStorageVO();
+  const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
+  const [addRows,setAddRows] = useState([]);
 
   // 상세 정보 상태 관리
   const [detailInfo, setDetailInfo] = useState({
@@ -451,6 +453,53 @@ const UserManagement = (props) => {
     });
   };
 
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setUserList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        // 같은 factoryId를 가진 기존 행이 있는지 확인
+        const existingIndex = prevUpdatedRows.findIndex(row => row.id === newRow.id);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
+
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
       <Box sx={{
@@ -611,13 +660,18 @@ const UserManagement = (props) => {
         <Grid container spacing={2}>
           {/* 사용자 목록 그리드 */}
           <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title="사용자 목록"
-              rows={userList}
-              columns={userColumns}
-              buttons={userGridButtons}
-              height={450}
-              onRowClick={handleUserSelect}
+            <EnhancedDataGridWrapper
+                title="사용자 목록"
+                rows={userList}
+                columns={userColumns}
+                buttons={userGridButtons}
+                height={450}
+                onRowClick={handleUserSelect}
+                tabId={props.id + "-users"}
+                gridProps={{
+                  editMode: 'cell',
+                  onProcessUpdate: handleProcessRowUpdate
+                }}
             />
           </Grid>
 
@@ -751,8 +805,6 @@ const UserManagement = (props) => {
 
                                 try {
                                   const isDuplicate = await isExistsUserId(detailInfo.loginId).then((res) => res.existLoginId)
-                                  debugger
-                                  console.log(isDuplicate)
 
                                   if (isDuplicate) {
                                     Swal.fire({
