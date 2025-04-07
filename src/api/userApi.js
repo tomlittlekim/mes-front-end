@@ -85,3 +85,10 @@ const deleteUserQuery = `
     }
 `
 export const deleteUser = (id) => graphFetch(deleteUserQuery, {id:id})
+
+const resetPwdQuery = `
+    mutation resetPwd($id: Int!) {
+        resetPwd(id: $id)
+    }
+`
+export const resetPwd = (id) => graphFetch(resetPwdQuery, {id:id})

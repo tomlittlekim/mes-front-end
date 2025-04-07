@@ -28,7 +28,7 @@ import Swal from 'sweetalert2';
 import {DOMAINS, useDomain} from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
-import {deleteUser, getRoleGroup, getUserGroup, isExistsUserId, upsertUser} from "../../api/userApi";
+import {deleteUser, getRoleGroup, getUserGroup, isExistsUserId, resetPwd, upsertUser} from "../../api/userApi";
 import {getCodes, getCompanySelect, getInitialCodes} from "../../api/utilApi";
 import useLocalStorageVO from "../Common/UseLocalStorageVO";
 
@@ -381,12 +381,14 @@ const UserManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '비밀번호가 초기화되었습니다.',
-          confirmButtonText: '확인'
-        });
+        resetPwd(selectedUser.id).then((res) => {
+          Swal.fire({
+            icon: 'success',
+            title: '성공',
+            text: res.resetPwd,
+            confirmButtonText: '확인'
+          });
+        })
       }
     });
   };
