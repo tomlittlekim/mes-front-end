@@ -110,9 +110,8 @@ export const useGridDataCall = ({
     return {
         loading,
         refresh,
-        refreshKey,
         handleGridSearch,
         handleGridSave,
-        handleGridDelete
+        handleGridDelete,
     };
 }; 
