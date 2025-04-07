@@ -16,11 +16,7 @@ export const ThemeProvider = ({ children }) => {
       return savedTheme;
     }
     
-    // 시스템 테마 감지
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    
+    // 기본값을 라이트모드로 설정
     return 'light';
   });
 

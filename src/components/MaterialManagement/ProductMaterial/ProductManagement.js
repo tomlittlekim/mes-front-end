@@ -46,306 +46,248 @@ const MATERIAL_GET = gql`${COMPLETE_MATERIAL_QUERY}`;
 const MATERIAL_SAVE = gql`${MATERIAL_MUTATION}`;
 const MATERIAL_DELETE = gql`${DELETE_MUTATION}`;
 
+/** 검색 조건 값 초기화 */
+const SEARCH_CONDITIONS = {
+  materialType: '',
+  userMaterialId: '',
+  materialName: '',
+  flagActive: null,
+  fromDate: null,
+  toDate: null
+};
+
+/** 그리드 컬럼을 정의 */
+const COLUMNS = [
+  {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
+  {field: 'materialCategory', headerName: '자재유형', width: 100, type: 'singleSelect',
+    valueOptions: [
+      { value: '잉크', label: '잉크' },
+      { value: '포장재', label: '포장재' },
+      // { value: 'HALF_PRODUCT', label: '반제품' },
+      // { value: 'COMPLETE_PRODUCT', label: '완제품' }
+    ], editable: true},
+  {field: 'userMaterialId', headerName: '제품ID', width: 120, editable: true },
+  {field: 'materialName', headerName: '자재명', width: 180, flex: 1, editable: true },
+  {field: 'materialStandard', headerName: '규격', width: 120, editable: true },
+  {field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
+    valueOptions: [
+      { value: 'EA', label: '개' },
+      { value: 'roll', label: '롤' },
+      { value: 'bottle', label: '병' },
+      { value: 'pack', label: '팩' },
+      { value: 'can', label: '캔' },
+      { value: 'sheet', label: '장' },
+      { value: 'set', label: '세트' },
+      { value: 'ream', label: '연' },
+      { value: 'pair', label: '쌍' },
+    ], editable: true },
+  {field: 'baseQuantity', headerName: '기본수량', width: 80, type: 'number', editable: true },
+  {field: 'materialStorage', headerName: '보관창고', width: 120},
+  {
+    field: 'flagActive',
+    headerName: '사용여부',
+    width: 100,
+    type: 'singleSelect',
+    valueOptions: [
+      { value: 'Y', label: '사용' },
+      { value: 'N', label: '미사용' }
+    ],
+    editable: true,
+    valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
+  },
+  { field: 'createUser', headerName: '작성자', width: 100},
+  { field: 'createDate', headerName: '작성일', width: 200},
+  { field: 'updateUser', headerName: '수정자', width: 100},
+  { field: 'updateDate', headerName: '수정일', width: 200},
+];
+
+/** 신규 행추가 시 생성되는 구조 */
+const NEW_ROW_STRUCTURE = {
+  seq: null,
+  materialType: 'COMPLETE_PRODUCT',
+  materialCategory: '',
+  systemMaterialId: '',
+  userMaterialId: '',
+  materialName: '',
+  materialStandard: '',
+  unit: '',
+  baseQuantity: 0,
+  materialStorage: '',
+  flagActive: 'Y',
+  createUser: '자동입력',
+  createDate: '자동입력',
+  updateUser: '자동입력',
+  updateDate: '자동입력'
+};
+
 const ProductManagement = ({tabId}) => {
-  // 현재 테마 가져오기
+  // Theme 및 Context 관련
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
   const {executeQuery, executeMutation} = useGraphQL();
 
-  // 그리드 유틸리티 훅
+  // 스타일 관련 함수
+  const getTextColor = () => domain === DOMAINS.PEMS ?
+      (isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)') :
+      (isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)');
+
+  const getBgColor = () => domain === DOMAINS.PEMS ?
+      (isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)') :
+      (isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)');
+
+  const getBorderColor = () => domain === DOMAINS.PEMS ?
+      (isDarkMode ? '#3d2814' : '#f5e8d7') :
+      (isDarkMode ? '#1e3a5f' : '#e0e0e0');
+
+  // Form 관련
+  const { control, handleSubmit, reset
+    , getValues } = useForm({defaultValues: SEARCH_CONDITIONS});
+
+  // Grid 관련 훅
   const { generateId, formatDateToYYYYMMDD, formatGridData } = useGridUtils();
 
   // 데이터 포맷팅 함수 정의
-  const formatMaterialData = (data) => formatGridData(data, 'getCompleteMaterials', material => {
-    return {
-      ...material,
-      id: material.systemMaterialId || generateId('TEMP')
-    };
-  });
-
-  // 기본 필터 정의
-  const defaultMaterialFilter = {
-    systemMaterialId: '',
-    materialType: '',
-    userMaterialId: '',
-    materialName: '',
-    flagActive: null,
-    fromDate: null,
-    toDate: null
-  };
+  const formatMaterialData = (data) => formatGridData(data, 'getCompleteMaterials', material => ({
+    ...material,
+    id: material.systemMaterialId || generateId('TEMP')
+  }));
 
   // 새로운 행 생성 함수 정의
   const createNewMaterial = () => ({
-    ...STRUCTURE,
     id: generateId('NEW'),
+    ...NEW_ROW_STRUCTURE,
     createDate: formatDateToYYYYMMDD(new Date()),
     updateDate: formatDateToYYYYMMDD(new Date())
   });
 
-  // 그리드 데이터 호출 훅
+  /** Input 타입으로 변환 */
+  const transformRowForMutation = (row) => ({
+    materialType: row.materialType || '',
+    materialCategory: row.materialCategory || '',
+    userMaterialId: row.userMaterialId || '',
+    materialName: row.materialName || '',
+    materialStandard: row.materialStandard || '',
+    unit: row.unit || '',
+    baseQuantity: row.baseQuantity || 0,
+    materialStorage: row.materialStorage || '',
+    flagActive: row.flagActive || 'Y'
+  });
+
+  /** Update 타입으로 변환 - 여기서는 Input + systemMaterialId */
+  const transformRowForUpdate = (row) => ({
+    systemMaterialId: row.systemMaterialId,
+    ...transformRowForMutation(row)
+  });
+
+  /** Delete 타입으로 변환 - 여기서는 systemMaterialId를 가지고 삭제 */
+  const transformRowForDelete = (row) => ({
+    systemMaterialId: row.systemMaterialId
+  });
+
+  /**  그리드 데이터 호출 훅 (useGridDataCall) - API 호출과 데이터 관리 담당 */
   const {
-    loading: isLoading,
-    refreshKey,
-    loadInitialData,
-    handleGridSearch,
-    handleGridSave,
-    handleGridDelete,
-    refresh
+    loading: isLoading,        // 로딩 상태
+    refresh,                            // 데이터 새로고침 함수
+    handleGridSearch,                   // 검색 API 호출
+    handleGridSave,                     // 저장 API 호출
+    handleGridDelete                    // 삭제 API 호출
   } = useGridDataCall({
-    executeQuery,
-    executeMutation,
-    query: MATERIAL_GET,
-    mutation: MATERIAL_SAVE,
-    deleteMutation: MATERIAL_DELETE,
-    formatData: formatMaterialData,
-    defaultFilter: defaultMaterialFilter,
-    onSuccess: async () => {
+    executeQuery,                       // GraphQL 쿼리 실행 함수
+    executeMutation,                    // GraphQL 뮤테이션 실행 함수
+    query: MATERIAL_GET,                // 조회 쿼리
+    mutation: MATERIAL_SAVE,            // 저장 뮤테이션
+    deleteMutation: MATERIAL_DELETE,    // 삭제 뮤테이션
+    formatData: formatMaterialData,     // 데이터 포맷팅 함수
+    defaultFilter: SEARCH_CONDITIONS,   // 기본 검색 조건
+    onSuccess: async () => { // 성공 콜백
       const result = await refresh();
       setMaterialList(result);
     },
-    onDeleteSuccess: async () => {
-      const result = await refresh();
-      setMaterialList(result);
-    },
-    clearAddRows: () => setAddRows([]),
-    clearUpdatedRows: () => setUpdatedRows([])
+    clearAddRows: () => setAddRows([]),         // 신규 행 초기화
+    clearUpdatedRows: () => setUpdatedRows([]) // 수정 행 초기화
   });
 
-  // 그리드 행 관련 훅
+  /** 그리드 행 관리 훅 (useGridRow) - 그리드의 행 추가/수정/삭제/선택 관리 */
   const {
-    selectedRows,
-    addRows,
-    updatedRows,
-    setAddRows,
-    setUpdatedRows,
-    setSelectedRows,
-    handleRowSelect,
-    handleRowUpdate,
-    handleRowAdd,
-    formatSaveData,
-    formatDeleteData
+    selectedRows,      // 선택된 행들
+    addRows,           // 추가된 행들
+    updatedRows,       // 수정된 행들
+    setAddRows,            // 추가 행 상태 업데이트
+    setUpdatedRows,        // 수정 행 상태 업데이트
+    handleRowSelect,       // 행 선택 핸들러
+    handleRowUpdate,       // 행 수정 핸들러
+    handleRowAdd,          // 행 추가 핸들러
+    formatSaveData,        // 저장 데이터 포맷팅
+    formatDeleteData       // 삭제 데이터 포맷팅
   } = useGridRow({
-    createNewRow: createNewMaterial,
-    formatNewRow: row => ({
-      materialType: row.materialType || '',
-      materialCategory: row.materialCategory || '',
-      userMaterialId: row.userMaterialId || '',
-      materialName: row.materialName || '',
-      materialStandard: row.materialStandard || '',
-      unit: row.unit || '',
-      baseQuantity: row.baseQuantity || 0,
-      materialStorage: row.materialStorage || '',
-      flagActive: row.flagActive || 'Y'
-    }),
-    formatUpdatedRow: row => ({
-      materialType: row.materialType || '',
-      systemMaterialId: row.systemMaterialId,
-      materialCategory: row.materialCategory || '',
-      userMaterialId: row.userMaterialId || '',
-      materialName: row.materialName || '',
-      materialStandard: row.materialStandard || '',
-      unit: row.unit || '',
-      baseQuantity: row.baseQuantity || 0,
-      materialStorage: row.materialStorage || '',
-      flagActive: row.flagActive || 'Y'
-    }),
-    formatExistingRow: row => ({
-      systemMaterialId: row.systemMaterialId
-    })
-  });
-
-  /** 제품 관리 관련 상수 선언부 */
-  const DEFAULT_VALUES = {
-    materialType: '',
-    materialId: '',
-    materialName: '',
-    flagActive: '',
-    fromDate: null,
-    toDate: null
-  };
-
-  const STRUCTURE = {
-    seq: null,
-    materialType: 'COMPLETE_PRODUCT',
-    materialCategory: '',
-    systemMaterialId: '',
-    userMaterialId: '',
-    materialName: '',
-    materialStandard: '',
-    unit: '',
-    baseQuantity: 0,
-    materialStorage: '',
-    flagActive: 'Y',
-    createUser: '자동입력',
-    createDate: '자동입력',
-    updateUser: '자동입력',
-    updateDate: '자동입력'
-  };
-
-  const COLUMNS = [
-    {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
-    {field: 'materialCategory', headerName: '자재유형', width: 100, type: 'singleSelect',
-      valueOptions: [
-        { value: '잉크', label: '잉크' },
-        { value: '포장재', label: '포장재' },
-        // { value: 'HALF_PRODUCT', label: '반제품' },
-        // { value: 'COMPLETE_PRODUCT', label: '완제품' }
-      ], editable: true},
-    {field: 'userMaterialId', headerName: '제품ID', width: 120, editable: true },
-    {field: 'materialName', headerName: '자재명', width: 180, flex: 1, editable: true },
-    {field: 'materialStandard', headerName: '규격', width: 120, editable: true },
-    {field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
-      valueOptions: [
-        { value: 'EA', label: '개' },
-        { value: 'roll', label: '롤' },
-        { value: 'bottle', label: '병' },
-        { value: 'pack', label: '팩' },
-        { value: 'can', label: '캔' },
-        { value: 'sheet', label: '장' },
-        { value: 'set', label: '세트' },
-        { value: 'ream', label: '연' },
-        { value: 'pair', label: '쌍' },
-      ], editable: true },
-    {field: 'baseQuantity', headerName: '기본수량', width: 80, type: 'number', editable: true },
-    {field: 'materialStorage', headerName: '보관창고', width: 120},
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 100,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ],
-      editable: true,
-      valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
-    },
-    { field: 'createUser', headerName: '작성자', width: 100},
-    { field: 'createDate', headerName: '작성일', width: 200},
-    { field: 'updateUser', headerName: '수정자', width: 100},
-    { field: 'updateDate', headerName: '수정일', width: 200},
-  ];
-
-  const { control, handleSubmit, reset, getValues } = useForm({
-    defaultValues: DEFAULT_VALUES
+    createNewRow: createNewMaterial,         // 새 행 생성 함수
+    formatNewRow: transformRowForMutation,   // 신규 행 포맷팅
+    formatUpdatedRow: transformRowForUpdate, // 수정 행 포맷팅
+    formatExistingRow: transformRowForDelete // 삭제 행 포맷팅
   });
 
   // 상태 관리
-  const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [materialList, setMaterialList] = useState([]);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
-  // 초기 데이터 로드
-  useEffect(() => {
-    const loadData = async () => {
-      const result = await loadInitialData();
-      setMaterialList(result);
-    };
-    loadData();
-  }, []);
-
-  // 체크박스 선택 핸들러
+  // 행 선택 시 이벤트 핸들러
   const handleSelectionModelChange = (newSelection) => {
-    const selectionArray = Array.isArray(newSelection) ? newSelection : [newSelection];
-    const selectedItems = materialList.filter(row => selectionArray.includes(row.id));
-    setSelectedMaterial(selectedItems[0] || null);
-    setSelectedRows(selectedItems);
+    handleRowSelect(newSelection, materialList);
   };
 
-  // 행 수정 완료 핸들러
+  // 행 업데이트 시 이벤트 핸들러
   const handleProcessRowUpdate = (newRow, oldRow) => {
     return handleRowUpdate(newRow, oldRow, setMaterialList);
   };
 
-  const getTextColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
-    }
-    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
+  // 검색조건 초기화
+  const handleReset = () => reset(SEARCH_CONDITIONS);
 
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-
-  const getBorderColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#f5e8d7';
-    }
-    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
-  };
-
-  const handleReset = () => {
-    reset(DEFAULT_VALUES);
-  };
-
-  // 검색 파라미터 포맷팅 함수 정의
+  // 검색조건 포메팅
   const formatMaterialSearchParams = (data) => ({
-    systemMaterialId: data.systemMaterialId || '',
-    materialType: data.materialType || '',
-    userMaterialId: data.materialId || '',
-    materialName: data.materialName || '',
-    flagActive: data.flagActive || null,
+    ...data,
     fromDate: data.fromDate ? format(data.fromDate, 'yyyy-MM-dd') : null,
     toDate: data.toDate ? format(data.toDate, 'yyyy-MM-dd') : null
   });
 
-  // 검색 핸들러
+  /** CRUD 핸들러들 */
   const handleSearch = async (data) => {
     const searchParams = formatMaterialSearchParams(data);
     const result = await handleGridSearch(searchParams);
     setMaterialList(result);
   };
 
-  // 저장 핸들러
   const handleSave = async () => {
     const saveData = formatSaveData(addRows, updatedRows);
-    // 저장할 데이터가 없는 경우
-    if (!saveData.createdRows.length && !saveData.updatedRows.length) {
-      Message.showWarning(Message.NO_DATA_TO_SAVE);
-      return;
-    }
-
-    try {
-      await handleGridSave(saveData);
-    } catch (error) {
-      console.error('Save Error:', error);
-    }
+    await handleGridSave(saveData);
   };
 
-  // 삭제 핸들러
   const handleDelete = async () => {
-    if (!selectedRows.length) {
+    const deleteData = formatDeleteData(selectedRows);
+
+    if (!deleteData.newRows.length && !deleteData.existingRows.length) {
       Message.showWarning(Message.DELETE_SELECT_REQUIRED);
       return;
     }
 
-    const deleteData = formatDeleteData(selectedRows, row => ({
-      systemMaterialId: row.systemMaterialId
-    }));
-
-    // systemMaterialIds 배열로 변환
-    const systemMaterialIds = deleteData.existingRows.map(row => row.systemMaterialId);
-
     await handleGridDelete({
-      data: selectedRows,
+      mutationData: deleteData.existingRows.length > 0 ? {
+        systemMaterialIds: deleteData.existingRows.map(row => row.systemMaterialId)
+      } : null,
       setDataList: setMaterialList,
-      clearAddRows: () => setAddRows([]),
-      mutationData: { systemMaterialIds },
-      searchParams: formatMaterialSearchParams(getValues())
+      newRows: deleteData.newRows
     });
   };
 
-  const GRID_BUTTONS = [
-    {label: '조회', onClick: handleSubmit(handleSearch), icon: null},
-    {label: '행추가', onClick: () => handleRowAdd(setMaterialList), icon: <AddIcon/>},
-    {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
-    {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
-  ];
+  /** 초기 데이터 로드 */
+  useEffect(() => {
+    const loadData = async () => {
+      const result = await refresh();
+      setMaterialList(result);
+    };
+    loadData();
+  }, []);
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -389,7 +331,7 @@ const ProductManagement = ({tabId}) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="materialId"
+            name="userMaterialId"
             control={control}
             render={({ field }) => (
               <TextField
@@ -487,10 +429,13 @@ const ProductManagement = ({tabId}) => {
         <Grid item xs={12}>
           <EnhancedDataGridWrapper
               title="제품 정보"
-              key={refreshKey}
               rows={materialList}
               columns={COLUMNS}
-              buttons={GRID_BUTTONS}
+              buttons={[
+                {label: '행추가', onClick: () => handleRowAdd(setMaterialList), icon: <AddIcon/>},
+                {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
+                {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
+              ]}
               height={450}
               tabId={tabId + "-materials"}
               onRowClick={handleSelectionModelChange}

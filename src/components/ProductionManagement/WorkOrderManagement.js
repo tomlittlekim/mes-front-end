@@ -21,7 +21,6 @@ import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -215,16 +214,6 @@ const WorkOrderManagement = (props) => {
   const DELETE_WORK_ORDER_MUTATION = gql`
       mutation DeleteWorkOrder($workOrderId: String!) {
           deleteWorkOrder(workOrderId: $workOrderId)
-      }
-  `;
-
-  const CREATE_FROM_PLAN_MUTATION = gql`
-      mutation CreateWorkOrderFromPlan($prodPlanId: String!, $shiftType: String, $initialState: String) {
-          createWorkOrderFromProductionPlan(
-              prodPlanId: $prodPlanId,
-              shiftType: $shiftType,
-              initialState: $initialState
-          )
       }
   `;
 
@@ -607,43 +596,6 @@ const WorkOrderManagement = (props) => {
       });
     });
   }, [selectedWorkOrder, workOrderList, setAddRows, executeMutation, DELETE_WORK_ORDER_MUTATION]);
-
-  // 계획 기반 생성 버튼 클릭 핸들러
-  const handleCreateFromPlan = useCallback(() => {
-    if (!selectedPlan) {
-      Message.showWarning('생산계획을 먼저 선택해주세요.');
-      return;
-    }
-
-    // 이미 작업지시가 있는지 확인
-    if (workOrderList.length > 0) {
-      Message.showWarning('이미 작업지시가 존재합니다. 기존 작업지시를 확인해주세요.');
-      return;
-    }
-
-    executeMutation(CREATE_FROM_PLAN_MUTATION, {
-      prodPlanId: selectedPlan.prodPlanId,
-      shiftType: "DAY",
-      initialState: "PLANNED"
-    })
-    .then(() => {
-      // 성공 메시지와 함께 데이터 새로고침
-      Message.showSuccess('작업지시가 생성되었습니다.', () => {
-        // 현재 선택된 생산계획의 작업지시 다시 불러오기
-        executeQuery(WORK_ORDERS_BY_PLAN_QUERY, { prodPlanId: selectedPlan.prodPlanId })
-        .then(response => {
-          if (response.data) {
-            const formattedData = formatWorkOrderGridData(response.data);
-            setWorkOrderList(formattedData);
-          }
-        });
-      });
-    })
-    .catch((error) => {
-      console.error("Error creating work order from plan:", error);
-      Message.showError({message: '작업지시 생성 중 오류가 발생했습니다.'});
-    });
-  }, [selectedPlan, workOrderList, executeMutation, CREATE_FROM_PLAN_MUTATION, executeQuery, WORK_ORDERS_BY_PLAN_QUERY, formatWorkOrderGridData]);
 
   // 작업 시작 핸들러
   const handleStartWork = useCallback(() => {
@@ -1138,12 +1090,11 @@ const WorkOrderManagement = (props) => {
   // 작업지시 목록 그리드 버튼
   const workOrderGridButtons = useMemo(() => ([
     {label: '등록', onClick: handleAddWorkOrder, icon: <AddIcon/>},
-    {label: '계획기반생성', onClick: handleCreateFromPlan, icon: <PlaylistAddIcon/>},
     {label: '저장', onClick: handleSaveWorkOrder, icon: <SaveIcon/>},
     {label: '삭제', onClick: handleDeleteWorkOrder, icon: <DeleteIcon/>},
     {label: '작업시작', onClick: handleStartWork, icon: <PlayCircleOutlineIcon/>},
     {label: '작업완료', onClick: handleCompleteWork, icon: <CheckCircleOutlineIcon/>}
-  ]), [handleAddWorkOrder, handleCreateFromPlan, handleSaveWorkOrder, handleDeleteWorkOrder, handleStartWork, handleCompleteWork]);
+  ]), [handleAddWorkOrder, handleSaveWorkOrder, handleDeleteWorkOrder, handleStartWork, handleCompleteWork]);
 
   // 그리드 속성
   const gridProps = useMemo(() => ({
@@ -1335,7 +1286,7 @@ const WorkOrderManagement = (props) => {
               • 좌측 생산계획 목록에서 계획을 선택하면 우측에 해당 계획에 대한 작업지시 목록이 표시됩니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 작업지시는 개별 등록 또는 생산계획 기반 일괄 생성이 가능합니다.
+              • 작업지시는 개별 등록이 가능합니다.
             </Typography>
           </Stack>
         </Box>
@@ -1356,7 +1307,7 @@ const WorkOrderManagement = (props) => {
             • 작업지시 정보는 생산 실적 관리, 품질 관리 등에서 활용됩니다.
           </Typography>
           <Typography component="div" color={getTextColor()} paragraph>
-            • 작업지시는 수동으로 등록하거나 생산계획을 기반으로 일괄 생성할 수 있습니다.
+            • 작업지시는 수동으로 등록할 수 있습니다.
           </Typography>
           <Typography component="div" color={getTextColor()} paragraph>
             • 작업지시의 상태(계획, 작업중, 완료 등)를 관리하여 생산 진행 상황을 실시간으로 파악할 수 있습니다.
