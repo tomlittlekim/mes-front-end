@@ -282,13 +282,13 @@ const MaterialManagement = ({tabId}) => {
             return;
         }
 
-        await handleGridDelete(
-            deleteData.existingRows.length > 0 ? {
+        await handleGridDelete({
+            mutationData: deleteData.existingRows.length > 0 ? {
                 systemMaterialIds: deleteData.existingRows.map(row => row.systemMaterialId)
             } : null,
-            setMaterialList,
-            deleteData.newRows
-        );
+            setDataList: setMaterialList,
+            newRows: deleteData.newRows
+        });
     };
 
     /** 초기 데이터 로드 */

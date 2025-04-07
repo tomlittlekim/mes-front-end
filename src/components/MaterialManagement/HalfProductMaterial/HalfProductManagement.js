@@ -268,13 +268,13 @@ const HalfProductManagement = ({tabId}) => {
       return;
     }
 
-    await handleGridDelete(
-        deleteData.existingRows.length > 0 ? {
-          systemMaterialIds: deleteData.existingRows.map(row => row.systemMaterialId)
-        } : null,
-        setMaterialList,
-        deleteData.newRows
-    );
+    await handleGridDelete({
+      mutationData: deleteData.existingRows.length > 0 ? {
+        systemMaterialIds: deleteData.existingRows.map(row => row.systemMaterialId)
+      } : null,
+      setDataList: setMaterialList,
+      newRows: deleteData.newRows
+    });
   };
 
   /** 초기 데이터 로드 */

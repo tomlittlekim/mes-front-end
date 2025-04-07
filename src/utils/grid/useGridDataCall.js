@@ -74,8 +74,9 @@ export const useGridDataCall = ({
 
     /**
      * 그리드 데이터 삭제
+     * 기본 메세지는 DELETE_CONFIRM 이지만, 원하는 다른 형태의 메세지가 있다면 customMessage 속성을 사용하면 됩니다.
      */
-    const handleGridDelete = useCallback(async (mutationData, setDataList, newRows = []) => {
+    const handleGridDelete = useCallback(async ({mutationData, setDataList, newRows = [], customMessage = {}}) => {
         Message.showDeleteConfirm(async () => {
             try {
                 setLoading(true);
@@ -104,7 +105,7 @@ export const useGridDataCall = ({
             } finally {
                 setLoading(false);
             }
-        });
+        }, customMessage);
     }, [executeMutation, deleteMutation, refresh, clearAddRows]);
 
     return {
