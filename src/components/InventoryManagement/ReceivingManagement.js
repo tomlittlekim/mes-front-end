@@ -142,7 +142,7 @@ const ReceivingManagement = (props) => {
           inInventoryId
           supplierName
           manufacturerName
-          userMaterialId
+          systemMaterialId
           materialName
           materialCategory
           materialStandard
@@ -340,7 +340,7 @@ const ReceivingManagement = (props) => {
           inInventoryId: item.inInventoryId,
           supplierName: item.supplierName,
           manufactureName: item.manufacturerName,
-          userMaterialId: item.userMaterialId,
+          systemMaterialId: item.systemMaterialId,
           materialName: item.materialName,
           materialCategory: item.materialCategory,
           materialStandard: item.materialStandard,
@@ -380,7 +380,7 @@ const ReceivingManagement = (props) => {
       inInventoryId: crypto.randomUUID(),
       supplierName: '',
       manufactureName: '',
-      userMaterialId: '',
+      systemMaterialId: '',
       materialName: '',
       materialCategory: '',
       materialStandard: '',
@@ -673,7 +673,7 @@ const ReceivingManagement = (props) => {
       inManagementId: row.inManagementId,
       supplierName: row.supplierName || '',
       manufactureName: row.manufactureName || '',
-      userMaterialId: row.userMaterialId || '',
+      systemMaterialId: row.systemMaterialId || '',
       materialName: row.materialName || '',
       materialCategory: row.materialCategory || '',
       materialStandard: row.materialStandard || '',
@@ -692,7 +692,7 @@ const ReceivingManagement = (props) => {
       inInventoryId: row.inInventoryId,
       supplierName: row.supplierName || '',
       manufactureName: row.manufactureName || '',
-      userMaterialId: row.userMaterialId || '',
+      systemMaterialId: row.systemMaterialId || '',
       materialName: row.materialName || '',
       materialCategory: row.materialCategory || '',
       materialStandard: row.materialStandard || '',
@@ -765,7 +765,7 @@ const ReceivingManagement = (props) => {
                 inInventoryId: item.inInventoryId,
                 supplierName: item.supplierName,
                 manufactureName: item.manufacturerName,
-                userMaterialId: item.userMaterialId,
+                systemMaterialId: item.systemMaterialId,
                 materialName: item.materialName,
                 materialCategory: item.materialCategory,
                 materialStandard: item.materialStandard,
@@ -1083,12 +1083,12 @@ const ReceivingManagement = (props) => {
       headerAlign: 'center',
       align: 'center',
       editable: false },
-    { field: 'userMaterialId', 
+    { field: 'systemMaterialId', 
       headerName: '자재ID', 
       width: 70, 
       headerAlign: 'center',
       align: 'center',
-      editable: false },
+      editable: true },
     { field: 'materialName', 
       headerName: '자재명', 
       width: 70, 
