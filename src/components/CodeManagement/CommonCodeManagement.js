@@ -319,7 +319,6 @@ const CommonCodeManagement = (props) => {
           codeName
           codeDesc
           sortOrder
-          flagActive
           createUser
           createDate
           updateUser
@@ -377,7 +376,7 @@ const CommonCodeManagement = (props) => {
       codeName: '',
       codeDesc: '',
       sortOrder: '',
-      flagActive: 'Y',
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -610,17 +609,17 @@ const CommonCodeManagement = (props) => {
       }
     },
     { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 85,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 85,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
     { field: 'createUser', headerName: '작성자', width: 90},
     { field: 'createDate', headerName: '작성일', width: 135},
@@ -674,7 +673,7 @@ const CommonCodeManagement = (props) => {
     codeName: row.codeName,
     codeDesc: row.codeDesc,
     sortOrder: row.sortOrder,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -689,7 +688,7 @@ const CommonCodeManagement = (props) => {
     codeName: row.codeName,
     codeDesc: row.codeDesc,
     sortOrder: row.sortOrder,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   return (
