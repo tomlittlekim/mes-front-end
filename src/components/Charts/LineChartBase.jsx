@@ -1,0 +1,76 @@
+// components/LineChartBase.jsx
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer
+} from 'recharts';
+import {DOMAINS, useDomain} from "../../contexts/DomainContext";
+import {useTheme} from "@mui/material";
+
+const LineChartBase = ({ data, lines }) => {
+    const theme = useTheme();
+    const {domain} = useDomain();
+    const isDarkMode = theme.palette.mode === 'dark';
+
+// 도메인별 색상 설정
+    const getTextColor = () => {
+        if (domain === DOMAINS.PEMS) {
+            return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+        }
+        return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+    };
+
+    const getTooltipBgColor = () => {
+        if (domain === DOMAINS.PEMS) {
+            return isDarkMode ? '#3d2814' : '#ffffff';
+        }
+        return isDarkMode ? '#1e3a5f' : '#ffffff';
+    };
+
+    const getTooltipBorderColor = () => {
+        if (domain === DOMAINS.PEMS) {
+            return isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+        }
+        return isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+    };
+
+    return (
+        <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={data} margin={{top: 5, right: 30, left: 0, bottom: 5}}>
+                <CartesianGrid strokeDasharray="3 3"/>
+                <XAxis
+                    dataKey="x"
+                    tick={{ fill: getTextColor() }}
+                />
+                <YAxis
+                    tick={{ fill: getTextColor() }}
+                />
+                <Tooltip
+                    contentStyle={{
+                        backgroundColor: getTooltipBgColor(),
+                        borderColor: getTooltipBorderColor(),
+                        color: getTextColor()
+                    }}
+                />
+                <Legend/>
+                {lines.map(({key, color}, index) => (
+                    <Line
+                        key={index}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={color}
+                        strokeWidth={2}
+                        activeDot={{r: 6}}
+                    />
+                ))}
+            </LineChart>
+        </ResponsiveContainer>
+    );
+};
+
+export default LineChartBase;
