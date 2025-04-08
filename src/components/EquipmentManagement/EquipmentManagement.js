@@ -44,7 +44,7 @@ const EquipmentManagement = (props) => {
       equipmentName: '',
       equipmentSn: '',
       equipmentType: '',
-      flagActive: null
+      // flagActive: null
     }
   });
 
@@ -96,7 +96,7 @@ const EquipmentManagement = (props) => {
       equipmentName: '',
       equipmentSn: '',
       equipmentType: '',
-      flagActive: null
+      // flagActive: null
     });
   };
 
@@ -185,7 +185,6 @@ const EquipmentManagement = (props) => {
           equipmentType
           equipmentName
           equipmentStatus
-          flagActive
           createUser
           createDate
           updateUser
@@ -231,7 +230,7 @@ const EquipmentManagement = (props) => {
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
     equipmentStatus: row.equipmentStatus,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -244,7 +243,7 @@ const EquipmentManagement = (props) => {
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
     equipmentStatus: row.equipmentStatus,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   // 저장 버튼 클릭 핸들러
@@ -414,7 +413,7 @@ const EquipmentManagement = (props) => {
       equipmentType: '',
       equipmentName: '',
       equipmentStatus: '',
-      flagActive: null,
+      // flagActive: null,
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -443,7 +442,6 @@ const EquipmentManagement = (props) => {
           equipmentType
           equipmentName
           equipmentStatus
-          flagActive
           createUser
           createDate
           updateUser
@@ -614,17 +612,17 @@ const EquipmentManagement = (props) => {
       valueOptions: equipmentStatusOptions,
       flex:1
     },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 90,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 90,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'createUser', headerName: '등록자', width: 90 },
     { field: 'createDate', headerName: '등록일', width: 130 },
     { field: 'updateUser', headerName: '수정자', width: 90 },
@@ -841,28 +839,28 @@ const EquipmentManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="flagActive"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
-                <Select
-                  {...field}
-                  labelId="flagActive-label"
-                  label="사용여부"
-                  displayEmpty
-                  notched
-                >
-                  <MenuItem value={null}>전체</MenuItem>
-                  <MenuItem value="Y">사용</MenuItem>
-                  <MenuItem value="N">미사용</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="flagActive"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
+        {/*        <Select*/}
+        {/*          {...field}*/}
+        {/*          labelId="flagActive-label"*/}
+        {/*          label="사용여부"*/}
+        {/*          displayEmpty*/}
+        {/*          notched*/}
+        {/*        >*/}
+        {/*          <MenuItem value={null}>전체</MenuItem>*/}
+        {/*          <MenuItem value="Y">사용</MenuItem>*/}
+        {/*          <MenuItem value="N">미사용</MenuItem>*/}
+        {/*        </Select>*/}
+        {/*      </FormControl>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}

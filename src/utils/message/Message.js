@@ -55,7 +55,7 @@ class Message {
     });
   }
 
-  // 삭제 확인 다이얼로그 표시
+  // 삭제 확인 다이얼로그 표시 - 필요 시 customOptions 문구 사용 가능
   static showDeleteConfirm(callback, customOptions = {}) {
     Swal.fire({
       title: customOptions.title || this.DELETE,

@@ -39,6 +39,7 @@ import Message from "../../../utils/message/Message";
 import {useGridDataCall} from "../../../utils/grid/useGridDataCall";
 import {useGridRow} from "../../../utils/grid/useGridRow";
 import ko from "date-fns/locale/ko";
+import DateRangePicker from "../../Common/DateRangePicker";
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${HALF_MATERIAL_QUERY}`;
@@ -138,7 +139,7 @@ const HalfProductManagement = ({tabId}) => {
       (isDarkMode ? '#1e3a5f' : '#e0e0e0');
 
   // Form 관련
-  const { control, handleSubmit, reset
+  const { control, handleSubmit, reset, setValue
     , getValues } = useForm({defaultValues: SEARCH_CONDITIONS});
 
   // Grid 관련 훅
@@ -227,6 +228,10 @@ const HalfProductManagement = ({tabId}) => {
   // 상태 관리
   const [materialList, setMaterialList] = useState([]);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    startDate: null,
+    endDate: null
+  });
 
   // 행 선택 시 이벤트 핸들러
   const handleSelectionModelChange = (newSelection) => {
@@ -247,6 +252,13 @@ const HalfProductManagement = ({tabId}) => {
     fromDate: data.fromDate ? format(data.fromDate, 'yyyy-MM-dd') : null,
     toDate: data.toDate ? format(data.toDate, 'yyyy-MM-dd') : null
   });
+
+  // 날짜 범위 변경 핸들러 추가
+  const handleDateRangeChange = (startDate, endDate) => {
+    setDateRange({ startDate, endDate });
+    setValue('fromDate', startDate);
+    setValue('toDate', endDate);
+  };
 
   /** CRUD 핸들러들 */
   const handleSearch = async (data) => {
@@ -382,41 +394,21 @@ const HalfProductManagement = ({tabId}) => {
           </Grid>
           <Grid item xs={12} sm={12} md={6}>
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Controller
-                    name="fromDate"
-                    control={control}
-                    render={({field}) => (
-                        <DatePicker
-                            {...field}
-                            label="시작일"
-                            slotProps={{
-                              textField: {
-                                size: "small",
-                                fullWidth: true
-                              }
-                            }}
-                        />
-                    )}
-                />
-                <Typography variant="body2" sx={{mx: 1}}>~</Typography>
-                <Controller
-                    name="toDate"
-                    control={control}
-                    render={({field}) => (
-                        <DatePicker
-                            {...field}
-                            label="종료일"
-                            slotProps={{
-                              textField: {
-                                size: "small",
-                                fullWidth: true
-                              }
-                            }}
-                        />
-                    )}
-                />
-              </Stack>
+              <Controller
+                  name="dateRange"
+                  control={control}
+                  render={({ field }) => (
+                      <DateRangePicker
+                          startDate={dateRange.startDate}
+                          endDate={dateRange.endDate}
+                          onRangeChange={handleDateRangeChange}
+                          startLabel="시작일"
+                          endLabel="종료일"
+                          label="날짜"
+                          size="small"
+                      />
+                  )}
+              />
             </LocalizationProvider>
           </Grid>
         </SearchCondition>

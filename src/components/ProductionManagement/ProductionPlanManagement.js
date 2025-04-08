@@ -11,6 +11,11 @@ import {
   Stack,
   IconButton,
   alpha,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Chip
 } from '@mui/material';
 import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
 import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
@@ -18,6 +23,8 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import NightsStayIcon from '@mui/icons-material/NightsStay';
 import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
 import {useDomain, DOMAINS} from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
@@ -50,6 +57,7 @@ const ProductionPlanManagement = (props) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
+      shiftType: '', // 주/야간 유형 필드 추가
       planDateRange: {
         startDate: null,
         endDate: null
@@ -132,6 +140,7 @@ const ProductionPlanManagement = (props) => {
       prodPlanId: '자동입력',
       orderId: '',
       productId: '',
+      shiftType: 'DAY', // 기본값으로 주간(DAY) 설정
       planQty: 0,
       planStartDate: currentDate,
       planEndDate: currentDate,
@@ -156,6 +165,7 @@ const ProductionPlanManagement = (props) => {
     formatNewRow: (row) => ({
       orderId: row.orderId || '',
       productId: row.productId || '',
+      shiftType: row.shiftType || 'DAY',
       planQty: parseFloat(row.planQty) || 0,
       planStartDate: formatDateToString(row.planStartDate),
       planEndDate: formatDateToString(row.planEndDate),
@@ -165,6 +175,7 @@ const ProductionPlanManagement = (props) => {
       prodPlanId: row.prodPlanId,
       orderId: row.orderId || '',
       productId: row.productId || '',
+      shiftType: row.shiftType || 'DAY',
       planQty: parseFloat(row.planQty) || 0,
       planStartDate: formatDateToString(row.planStartDate),
       planEndDate: formatDateToString(row.planEndDate),
@@ -198,6 +209,7 @@ const ProductionPlanManagement = (props) => {
               prodPlanId
               orderId
               productId
+              shiftType
               planQty
               planStartDate
               planEndDate
@@ -236,6 +248,7 @@ const ProductionPlanManagement = (props) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
+      shiftType: '',
       planDateRange: {
         startDate: null,
         endDate: null
@@ -405,6 +418,7 @@ const ProductionPlanManagement = (props) => {
     const createdPlanInputs = newRows.map(row => ({
       orderId: row.orderId || '',
       productId: row.productId || '',
+      shiftType: row.shiftType || 'DAY',
       planQty: parseFloat(row.planQty) || 0,
       planStartDate: formatDateToString(row.planStartDate),
       planEndDate: formatDateToString(row.planEndDate),
@@ -421,6 +435,7 @@ const ProductionPlanManagement = (props) => {
         prodPlanId: currentRow.prodPlanId,
         orderId: currentRow.orderId || '',
         productId: currentRow.productId || '',
+        shiftType: currentRow.shiftType || 'DAY',
         planQty: parseFloat(currentRow.planQty) || 0,
         planStartDate: formatDateToString(currentRow.planStartDate),
         planEndDate: formatDateToString(currentRow.planEndDate),
@@ -520,7 +535,7 @@ const ProductionPlanManagement = (props) => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, []); // 의존성 배열 비우기;
+  }, []); // 의존성 배열 비우기
 
   // DatePicker 커스텀 에디터 컴포넌트
   const CustomDateEditor = useCallback((props) => {
@@ -568,6 +583,75 @@ const ProductionPlanManagement = (props) => {
     );
   }, []);
 
+  // ShiftType 커스텀 에디터 컴포넌트 (주/야간 유형 선택)
+  const ShiftTypeEditor = useCallback((props) => {
+    const { id, field, value, api } = props;
+
+    const handleChange = (event) => {
+      const newValue = event.target.value;
+      api.setEditCellValue({ id, field, value: newValue });
+
+      // 변경 후 자동으로 편집 모드 종료
+      setTimeout(() => {
+        api.commitCellChange({ id, field });
+        api.setCellMode(id, field, 'view');
+      }, 200);
+    };
+
+    return (
+        <Select
+            value={value || 'DAY'}
+            onChange={handleChange}
+            fullWidth
+            size="small"
+            sx={{ m: 0, p: 0 }}
+        >
+          <MenuItem value="DAY">주간</MenuItem>
+          <MenuItem value="NIGHT">야간</MenuItem>
+        </Select>
+    );
+  }, []);
+
+  // 주/야간 칩 컴포넌트 - 더 시각적으로 구분되는 디자인
+  const ShiftTypeChip = useCallback(({ type }) => {
+    const isDay = type === 'DAY';
+
+    // 주간(DAY) 스타일
+    const dayChipStyle = {
+      bgcolor: isDarkMode ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 193, 7, 0.1)',
+      color: isDarkMode ? '#ffc107' : '#ff8f00',
+      border: `1px solid ${isDarkMode ? 'rgba(255, 193, 7, 0.5)' : 'rgba(255, 193, 7, 0.3)'}`,
+      '& .MuiChip-icon': {
+        color: isDarkMode ? '#ffc107' : '#ff8f00'
+      }
+    };
+
+    // 야간(NIGHT) 스타일
+    const nightChipStyle = {
+      bgcolor: isDarkMode ? 'rgba(66, 165, 245, 0.2)' : 'rgba(66, 165, 245, 0.1)',
+      color: isDarkMode ? '#42a5f5' : '#1976d2',
+      border: `1px solid ${isDarkMode ? 'rgba(66, 165, 245, 0.5)' : 'rgba(66, 165, 245, 0.3)'}`,
+      '& .MuiChip-icon': {
+        color: isDarkMode ? '#42a5f5' : '#1976d2'
+      }
+    };
+
+    return (
+        <Chip
+            icon={isDay ? <WbSunnyIcon fontSize="small" /> : <NightsStayIcon fontSize="small" />}
+            label={isDay ? "주간" : "야간"}
+            size="small"
+            variant="outlined"
+            sx={{
+              fontWeight: 500,
+              ...(isDay ? dayChipStyle : nightChipStyle),
+              minWidth: '80px',
+              justifyContent: 'center'
+            }}
+        />
+    );
+  }, [isDarkMode]);
+
   // 생산계획 목록 그리드 컬럼 정의
   const planColumns = useMemo(() => ([
     {
@@ -605,6 +689,22 @@ const ProductionPlanManagement = (props) => {
               {showRequired ? '필수 입력' : params.value || ''}
             </Typography>
         );
+      }
+    },
+    {
+      field: 'shiftType',
+      headerName: '주/야간',
+      width: 120,
+      editable: true,
+      headerAlign: 'center',
+      align: 'center',
+      type: 'singleSelect',
+      valueOptions: [
+        { value: 'DAY', label: '주간' },
+        { value: 'NIGHT', label: '야간' },
+      ],
+      renderCell: (params) => {
+        return <ShiftTypeChip type={params.value || 'DAY'} />;
       }
     },
     {
@@ -741,7 +841,7 @@ const ProductionPlanManagement = (props) => {
         }
       }
     }
-  ]), []);
+  ]), [ShiftTypeChip]);
 
   // 생산계획 목록 그리드 버튼
   const planGridButtons = useMemo(() => ([
@@ -750,6 +850,13 @@ const ProductionPlanManagement = (props) => {
     {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
   ]), [handleAdd, handleSave, handleDelete]);
 
+  // 초기 정렬 상태 설정 - 생산계획ID 기준 내림차순 정렬
+  const initialState = useMemo(() => ({
+    sorting: {
+      sortModel: [{ field: 'prodPlanId', sort: 'desc' }]
+    }
+  }), []);
+
   // 그리드 속성
   const gridProps = useMemo(() => ({
     editMode: 'cell',
@@ -757,17 +864,20 @@ const ProductionPlanManagement = (props) => {
     onProcessRowUpdateError: (error) => {
       console.error('데이터 업데이트 오류:', error);
     },
+    initialState: initialState, // 초기 정렬 상태 적용
     slots: {
-      // 날짜 필드에 커스텀 에디터 적용
+      // 날짜 필드와 ShiftType 필드에 커스텀 에디터 적용
       editCell: (params) => {
-        if (params.field === 'planStartDate' || params.field
-            === 'planEndDate') {
+        if (params.field === 'planStartDate' || params.field === 'planEndDate') {
           return <CustomDateEditor {...params} />;
+        }
+        if (params.field === 'shiftType') {
+          return <ShiftTypeEditor {...params} />;
         }
         return null; // 다른 필드는 기본 에디터 사용
       }
     }
-  }), [handleProcessRowUpdate, CustomDateEditor]);
+  }), [handleProcessRowUpdate, CustomDateEditor, ShiftTypeEditor, initialState]);
 
   return (
       <Box sx={{p: 0, minHeight: '100vh'}}>
@@ -858,6 +968,27 @@ const ProductionPlanManagement = (props) => {
                 )}
             />
           </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Controller
+                name="shiftType"
+                control={control}
+                render={({field}) => (
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="shift-type-label">주/야간</InputLabel>
+                      <Select
+                          {...field}
+                          labelId="shift-type-label"
+                          label="주/야간"
+                          placeholder="주/야간"
+                      >
+                        <MenuItem value="">전체</MenuItem>
+                        <MenuItem value="DAY">주간</MenuItem>
+                        <MenuItem value="NIGHT">야간</MenuItem>
+                      </Select>
+                    </FormControl>
+                )}
+            />
+          </Grid>
           <Grid item xs={12} sm={12} md={3}>
             <LocalizationProvider dateAdapter={AdapterDateFns}
                                   adapterLocale={ko}>
@@ -910,6 +1041,9 @@ const ProductionPlanManagement = (props) => {
               • 생산계획관리 화면에서는 제품별 생산계획을 효율적으로 관리할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
+              • 계획번호, 제품 정보, 주/야간 유형, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
+            </Typography>
+            <Typography variant="body2" color={getTextColor()}>
               • 계획을 등록하고 작업지시를 생성하여 공정별 생산 일정을 관리할 수 있습니다.
             </Typography>
           </Stack>
@@ -925,7 +1059,7 @@ const ProductionPlanManagement = (props) => {
             • 생산계획관리에서는 생산 계획 정보를 등록하고 관리할 수 있습니다.
           </Typography>
           <Typography component="div" color={getTextColor()} paragraph>
-            • 계획번호, 제품 정보, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
+            • 계획번호, 제품 정보, 주/야간 유형, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
           </Typography>
           <Typography component="div" color={getTextColor()} paragraph>
             • 생산 계획 정보는 작업 지시, 생산 실적 관리 등에서 활용됩니다.

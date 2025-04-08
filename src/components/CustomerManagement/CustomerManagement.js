@@ -58,7 +58,7 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessType: '',
-      flagActive: null
+      // flagActive: null
     }
   });
 
@@ -80,7 +80,7 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessType: '',
-      flagActive: null
+      // flagActive: null
     });
   };
 
@@ -148,7 +148,6 @@ const CustomerManagement = (props) => {
           businessType
           address
           telNo
-          flagActive
           createUser
           createDate
           updateUser
@@ -191,7 +190,7 @@ const CustomerManagement = (props) => {
     businessType: row.businessType,
     address: row.address,
     telNo: row.telNo,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -203,7 +202,7 @@ const CustomerManagement = (props) => {
     businessType: row.businessType,
     address: row.address,
     telNo: row.telNo,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   // 저장 버튼 클릭 핸들러
@@ -371,7 +370,7 @@ const CustomerManagement = (props) => {
       businessType: '',
       address: '',
       telNo: '',
-      flagActive: 'Y',
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -431,7 +430,6 @@ const CustomerManagement = (props) => {
           businessType
           address
           telNo
-          flagActive
           createUser
           createDate
           updateUser
@@ -516,17 +514,17 @@ const CustomerManagement = (props) => {
     { field: 'businessType', headerName: '업종/업태', width: 100, editable: true },
     { field: 'address', headerName: '주소', width: 150 ,editable: true  },
     { field: 'telNo', headerName: '전화번호', width: 130, editable: true },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 90,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 90,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'createUser', headerName: '작성자', width: 90},
     { field: 'createDate', headerName: '작성일', width: 150},
     { field: 'updateUser', headerName: '수정자', width: 90},
@@ -630,28 +628,28 @@ const CustomerManagement = (props) => {
                 )}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
-            <Controller
-                name="flagActive"
-                control={control}
-                render={({ field }) => (
-                    <FormControl variant="outlined" size="small" fullWidth>
-                      <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
-                      <Select
-                          {...field}
-                          labelId="flagActive-label"
-                          label="사용여부"
-                          displayEmpty
-                          notched
-                      >
-                        <MenuItem value={null}>전체</MenuItem>
-                        <MenuItem value="Y">사용</MenuItem>
-                        <MenuItem value="N">미사용</MenuItem>
-                      </Select>
-                    </FormControl>
-                )}
-            />
-          </Grid>
+          {/*<Grid item xs={12} sm={6} md={2.4}>*/}
+          {/*  <Controller*/}
+          {/*      name="flagActive"*/}
+          {/*      control={control}*/}
+          {/*      render={({ field }) => (*/}
+          {/*          <FormControl variant="outlined" size="small" fullWidth>*/}
+          {/*            <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
+          {/*            <Select*/}
+          {/*                {...field}*/}
+          {/*                labelId="flagActive-label"*/}
+          {/*                label="사용여부"*/}
+          {/*                displayEmpty*/}
+          {/*                notched*/}
+          {/*            >*/}
+          {/*              <MenuItem value={null}>전체</MenuItem>*/}
+          {/*              <MenuItem value="Y">사용</MenuItem>*/}
+          {/*              <MenuItem value="N">미사용</MenuItem>*/}
+          {/*            </Select>*/}
+          {/*          </FormControl>*/}
+          {/*      )}*/}
+          {/*  />*/}
+          {/*</Grid>*/}
         </SearchCondition>
 
         {/* 그리드 영역 */}
