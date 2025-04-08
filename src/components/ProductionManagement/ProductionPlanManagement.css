@@ -42,8 +42,45 @@
   font-weight: 600;
 }
 
+/* 주/야간 칩 스타일링 */
+.shift-type-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  font-weight: 500;
+  border-radius: 16px;
+  padding: 0 12px;
+  height: 24px;
+  font-size: 0.75rem;
+}
+
+.shift-type-day {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ff8f00;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.shift-type-night {
+  background-color: rgba(66, 165, 245, 0.1);
+  color: #1976d2;
+  border: 1px solid rgba(66, 165, 245, 0.3);
+}
+
 /* 다크 모드 스타일링 */
 .dark-mode .production-plan-container {
   background-color: #001e3c;
   color: #b3c5e6;
-} 
+}
+
+.dark-mode .shift-type-day {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.5);
+}
+
+.dark-mode .shift-type-night {
+  background-color: rgba(66, 165, 245, 0.2);
+  color: #42a5f5;
+  border: 1px solid rgba(66, 165, 245, 0.5);
+}
