@@ -403,6 +403,7 @@ const UserManagement = (props) => {
         text: '자신보다 높은 권한을 부여하가나 수정할 수 없습니다.',
         confirmButtonText: '확인'
       })
+      return;
     }
 
     if (!selectedUser) {
@@ -438,6 +439,7 @@ const UserManagement = (props) => {
           text: '생성하실 아이디의 중복체크를 진행해주세요. ',
           confirmButtonText: '확인'
         })
+        return;
       }
 
       await upsertUser(detailInfo);
