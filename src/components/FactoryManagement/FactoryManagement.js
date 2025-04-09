@@ -41,7 +41,6 @@ const FactoryManagement = (props) => {
       factoryId: '',
       factoryName: '',
       factoryCode: '',
-      flagActive: null
     }
   });
   
@@ -72,7 +71,6 @@ const FactoryManagement = (props) => {
           address
           telNo
           remark
-          flagActive
           createUser
           createDate
           updateUser
@@ -107,7 +105,6 @@ const FactoryManagement = (props) => {
       factoryId: '',
       factoryName: '',
       factoryCode: '',
-      flagActive: null
     });
   };
 
@@ -172,7 +169,6 @@ const FactoryManagement = (props) => {
     address: row.address,
     telNo: row.telNo,
     remark: row.remark,
-    flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -182,7 +178,6 @@ const FactoryManagement = (props) => {
     address: row.address,
     telNo: row.telNo,
     remark: row.remark,
-    flagActive: row.flagActive
   });
 
 
@@ -266,7 +261,6 @@ const FactoryManagement = (props) => {
       factoryId: '자동입력',
       factoryName: '',
       factoryCode: '',
-      flagActive: 'Y',
       address: '',
       telNo: '',
       remark: '',
@@ -372,7 +366,6 @@ const FactoryManagement = (props) => {
           address
           telNo
           remark
-          flagActive
           createUser
           createDate
           updateUser
@@ -427,17 +420,17 @@ const FactoryManagement = (props) => {
       }
     },
     { field: 'factoryCode', headerName: '공장 코드', width: 100, editable: true  },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 100,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-          { value: 'Y', label: '사용' },
-          { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 100,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //       { value: 'Y', label: '사용' },
+    //       { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'address', headerName: '주소', width: 200, flex: 1, editable: true },
     { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
     { field: 'remark', headerName: '비고', width: 100, editable: true},
@@ -564,28 +557,28 @@ const FactoryManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="flagActive"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
-                <Select
-                  {...field}
-                  labelId="flagActive-label"
-                  label="사용여부"
-                  displayEmpty
-                  notched
-                >
-                  <MenuItem value={null}>전체</MenuItem>
-                  <MenuItem value="Y">사용</MenuItem>
-                  <MenuItem value="N">미사용</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="flagActive"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
+        {/*        <Select*/}
+        {/*          {...field}*/}
+        {/*          labelId="flagActive-label"*/}
+        {/*          label="사용여부"*/}
+        {/*          displayEmpty*/}
+        {/*          notched*/}
+        {/*        >*/}
+        {/*          <MenuItem value={null}>전체</MenuItem>*/}
+        {/*          <MenuItem value="Y">사용</MenuItem>*/}
+        {/*          <MenuItem value="N">미사용</MenuItem>*/}
+        {/*        </Select>*/}
+        {/*      </FormControl>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}

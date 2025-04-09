@@ -6,7 +6,7 @@ export const BOM_QUERY = `
             bomName
             materialType
             materialCategory
-            itemCd
+            systemMaterialId
             userMaterialId
             materialName
             materialStandard
@@ -22,10 +22,12 @@ export const BOM_QUERY = `
 `;
 
 export const BOM_DETAIL_QUERY = `
-    query getBomDetail($bomId: String!) {
-        getBomDetail(bomId: $bomId) {
+    query getBomDetails($bomId: String!) {
+        getBomDetails(bomId: $bomId) {
+            bomDetailId
             bomLevel
-            itemCd
+            materialType
+            systemMaterialId
             userMaterialId
             materialName
             parentItemCd
@@ -36,10 +38,6 @@ export const BOM_DETAIL_QUERY = `
             itemQty
             remark
             flagActive
-            createUser
-            createDate
-            updateUser
-            updateDate
         }
     }
 `;
@@ -51,19 +49,31 @@ export const BOM_MUTATION = `
 `;
 
 export const BOM_DELETE_MUTATION = `
-    mutation deleteBom($bomIds: [String!]!) {
-        deleteBom(bomIds: $bomIds)
+    mutation deleteBom($bomId: String!) {
+        deleteBom(bomId: $bomId)
     }
 `;
 
 export const BOM_DETAIL_MUTATION = `
-    mutation saveBomDetail($createdRows: [BomDetailInput], $updatedRows: [BomDetailUpdate]) {
-        saveBomDetail(createdRows: $createdRows, updatedRows: $updatedRows)
+    mutation saveBomDetails($createdRows: [BomDetailInput], $updatedRows: [BomDetailUpdate]) {
+        saveBomDetails(createdRows: $createdRows, updatedRows: $updatedRows)
     }
 `;
 
 export const BOM_DETAIL_DELETE_MUTATION = `
-    mutation deleteBomDetail($bomDetailIds: [String!]!) {
-        deleteBomDetail(bomDetailIds: $bomDetailIds)
+    mutation deleteBomDetails($bomDetailIds: [String!]!) {
+        deleteBomDetails(bomDetailIds: $bomDetailIds)
     }
-`; 
+`;
+
+export const MATERIALS_BY_TYPE_QUERY = `
+    query getMaterialsByType($materialType: String!) {
+    getMaterialsByType(materialType: $materialType) {
+        systemMaterialId
+        userMaterialId
+        materialName
+        materialStandard
+        unit
+  }
+}
+`;

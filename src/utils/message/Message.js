@@ -55,7 +55,25 @@ class Message {
     });
   }
 
-  // 삭제 확인 다이얼로그 표시
+  // 일반 확인 다이얼로그 표시
+  static showConfirm(title, message, callback) {
+    Swal.fire({
+      title: title,
+      html: `<div style="font-size: 1.2em;">${message}</div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: this.CONFIRM,
+      cancelButtonText: this.CANCEL
+    }).then((result) => {
+      if (result.isConfirmed && callback) {
+        callback();
+      }
+    });
+  }
+
+  // 삭제 확인 다이얼로그 표시 - 필요 시 customOptions 문구 사용 가능
   static showDeleteConfirm(callback, customOptions = {}) {
     Swal.fire({
       title: customOptions.title || this.DELETE,
@@ -74,4 +92,4 @@ class Message {
   }
 }
 
-export default Message; 
+export default Message;

@@ -1,11 +1,59 @@
-.status-wait {
+.defect-highlight {
+  color: #f44336 !important;
+  font-weight: 600;
+}
+
+.defect-rate-warning {
   color: #ff9800 !important;
+  font-weight: 600;
+}
+
+.status-wait,
+.status-planned {
+  color: #2196f3 !important;
+  font-weight: 600;
 }
 
 .status-inprogress {
-  color: #2196f3 !important;
+  color: #ff9800 !important;
+  font-weight: 600;
 }
 
 .status-completed {
   color: #4caf50 !important;
-} 
+  font-weight: 600;
+}
+
+.status-canceled {
+  color: #f44336 !important;
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+/* 통계 테이블 스타일 */
+.statistics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.statistics-table th {
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+  font-weight: 600;
+}
+
+.statistics-table td {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: center;
+}
+
+/* 다크 모드 스타일링 */
+.dark-mode .statistics-table th {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .statistics-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}

@@ -110,29 +110,45 @@ const CustomModal = ({
       type = 'text',
       required = false,
       options = [],
-      lock = false,           // 항상 잠금
+      lock = false,           // 잠금 상태 (disabled와 동일)
       lockOnEdit = false,     // 수정 시에만 잠금
       hide = false,           // 화면에서 숨김
       fullWidth = true,
       size = 'small',
-      rows = type === 'textarea' ? 4 : undefined,  // 기본값 설정
+      rows = type === 'textarea' ? 4 : undefined,
+      relation,
       ...rest
     } = field;
 
     // hide가 true면 렌더링하지 않음
     if (hide) return null;
 
-    // 잠금 상태 계산
+    // 잠금 상태 계산 (lock과 lockOnEdit만 사용)
     const isDisabled = lock || (modalType === 'edit' && lockOnEdit);
     const error = hasError(field);
 
     // 필드 값 변경 시 touched 상태 업데이트
-    const handleChange = (e) => {
+    const handleChange = async (e) => {
       if (!touchedFields[id]) {
         setTouchedFields(prev => ({ ...prev, [id]: true }));
       }
-      onChange(id, e.target.value);
+      
+      // 관계성 필드인 경우 비동기 처리
+      if (relation) {
+        try {
+          await onChange(id, e.target.value);
+        } catch (error) {
+          console.error('관계성 필드 처리 중 오류:', error);
+        }
+      } else {
+        onChange(id, e.target.value);
+      }
     };
+
+    // 관계성 필드의 경우 옵션 동적 로딩
+    const fieldOptions = relation ? 
+      (values[`${id}_options`] || options) : 
+      options;
 
     switch (type) {
       case 'text':
@@ -166,6 +182,7 @@ const CustomModal = ({
             fullWidth={fullWidth} 
             size={size}
             error={error}
+            disabled={isDisabled}
           >
             <InputLabel id={`${id}-label`}>{label}</InputLabel>
             <Select
@@ -174,11 +191,10 @@ const CustomModal = ({
               value={values[id] || ''}
               label={label}
               required={required}
-              disabled={isDisabled}
               onChange={handleChange}
               {...rest}
             >
-              {options.map((option) => (
+              {fieldOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
                 </MenuItem>

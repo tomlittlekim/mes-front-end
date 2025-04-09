@@ -35,6 +35,7 @@ import {DOMAINS, useDomain} from "../../../contexts/DomainContext";
 import Message from "../../../utils/message/Message";
 import HelpModal from "../../Common/HelpModal";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import DateRangePicker from "../../Common/DateRangePicker";
 
 /** GraphQL 쿼리 정의 */
 const MATERIAL_GET = gql`${RAW_SUB_MATERIAL_QUERY}`;
@@ -150,7 +151,7 @@ const MaterialManagement = ({tabId}) => {
         (isDarkMode ? '#1e3a5f' : '#e0e0e0');
 
     // Form 관련
-    const {control, handleSubmit, reset} = useForm({defaultValues: SEARCH_CONDITIONS});
+    const {control, handleSubmit, reset, setValue} = useForm({defaultValues: SEARCH_CONDITIONS});
 
     // Grid 관련 훅
     const {generateId, formatDateToYYYYMMDD, formatGridData} = useGridUtils();
@@ -241,6 +242,10 @@ const MaterialManagement = ({tabId}) => {
     // 상태 관리
     const [materialList, setMaterialList] = useState([]);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    const [dateRange, setDateRange] = useState({
+        startDate: null,
+        endDate: null
+    });
 
     // 행 선택 시 이벤트 핸들러
     const handleSelectionModelChange = (newSelection) => {
@@ -261,6 +266,13 @@ const MaterialManagement = ({tabId}) => {
         fromDate: data.fromDate ? format(data.fromDate, 'yyyy-MM-dd') : null,
         toDate: data.toDate ? format(data.toDate, 'yyyy-MM-dd') : null
     });
+
+    // 날짜 범위 변경 핸들러 추가
+    const handleDateRangeChange = (startDate, endDate) => {
+        setDateRange({ startDate, endDate });
+        setValue('fromDate', startDate);
+        setValue('toDate', endDate);
+    };
 
     /** CRUD 핸들러들 */
     const handleSearch = async (data) => {
@@ -397,36 +409,23 @@ const MaterialManagement = ({tabId}) => {
                     />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
+                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                     <Controller
-                        name="fromDate"
+                        name="dateRange"
                         control={control}
-                        render={({field}) => (
-                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                                <DatePicker
-                                    {...field}
-                                    label="시작일"
-                                    inputFormat="yyyy-MM-dd"
-                                    renderInput={(params) => <TextField {...params} size="small" fullWidth/>}
-                                />
-                            </LocalizationProvider>
+                        render={({ field }) => (
+                            <DateRangePicker
+                                startDate={dateRange.startDate}
+                                endDate={dateRange.endDate}
+                                onRangeChange={handleDateRangeChange}
+                                startLabel="시작일"
+                                endLabel="종료일"
+                                label="날짜"
+                                size="small"
+                            />
                         )}
                     />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Controller
-                        name="toDate"
-                        control={control}
-                        render={({field}) => (
-                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                                <DatePicker
-                                    {...field}
-                                    label="종료일"
-                                    inputFormat="yyyy-MM-dd"
-                                    renderInput={(params) => <TextField {...params} size="small" fullWidth/>}
-                                />
-                            </LocalizationProvider>
-                        )}
-                    />
+                    </LocalizationProvider>
                 </Grid>
             </SearchCondition>
 

@@ -38,7 +38,7 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      flagActive: null
+      // flagActive: null
     }
   });
 
@@ -83,7 +83,7 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      flagActive: null
+      // flagActive: null
     });
   };
 
@@ -157,7 +157,6 @@ const WarehouseManagement = (props) => {
           warehouseId
           warehouseName
           warehouseType
-          flagActive
           createUser
           createDate
           updateUser
@@ -202,7 +201,7 @@ const WarehouseManagement = (props) => {
       warehouseId: '자동입력',
       warehouseName: '',
       warehouseType: '',
-      flagActive: 'Y',
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -217,7 +216,7 @@ const WarehouseManagement = (props) => {
     factoryId: row.factoryId,
     warehouseName: row.warehouseName,
     warehouseType: row.warehouseType,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -225,7 +224,7 @@ const WarehouseManagement = (props) => {
     factoryId: row.factoryId,
     warehouseName: row.warehouseName,
     warehouseType: row.warehouseType,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
 
@@ -395,7 +394,6 @@ const WarehouseManagement = (props) => {
           warehouseId
           warehouseName
           warehouseType
-          flagActive
           createUser
           createDate
           updateUser
@@ -536,17 +534,17 @@ const WarehouseManagement = (props) => {
       type: 'singleSelect',
       valueOptions: warehouseTypeOptions,
     },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 90,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 90,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'createUser', headerName: '등록자', width: 100 },
     { field: 'createDate', headerName: '등록일', width: 150 },
     { field: 'updateUser', headerName: '수정자', width: 100 },
@@ -654,28 +652,28 @@ const WarehouseManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="flagActive"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
-                <Select
-                  {...field}
-                  labelId="flagActive-label"
-                  label="사용여부"
-                  displayEmpty
-                  notched
-                >
-                  <MenuItem value={null}>전체</MenuItem>
-                  <MenuItem value="Y">사용</MenuItem>
-                  <MenuItem value="N">미사용</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="flagActive"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
+        {/*        <Select*/}
+        {/*          {...field}*/}
+        {/*          labelId="flagActive-label"*/}
+        {/*          label="사용여부"*/}
+        {/*          displayEmpty*/}
+        {/*          notched*/}
+        {/*        >*/}
+        {/*          <MenuItem value={null}>전체</MenuItem>*/}
+        {/*          <MenuItem value="Y">사용</MenuItem>*/}
+        {/*          <MenuItem value="N">미사용</MenuItem>*/}
+        {/*        </Select>*/}
+        {/*      </FormControl>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}
