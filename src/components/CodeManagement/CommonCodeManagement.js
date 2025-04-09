@@ -375,7 +375,7 @@ const CommonCodeManagement = (props) => {
       codeId: '자동입력',
       codeName: '',
       codeDesc: '',
-      sortOrder: '',
+      sortOrder: 0,
       // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
