@@ -1,0 +1,78 @@
+.status-wait,
+.status-planned {
+  color: #2196f3 !important;
+  font-weight: 600;
+}
+
+.status-inprogress {
+  color: #ff9800 !important;
+  font-weight: 600;
+}
+
+.status-completed {
+  color: #4caf50 !important;
+  font-weight: 600;
+}
+
+.status-canceled {
+  color: #f44336 !important;
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+.defect-highlight {
+  color: #f44336;
+  font-weight: 600;
+}
+
+/* 다크 모드에서 색상 조정 */
+.dark-mode .status-wait,
+.dark-mode .status-planned {
+  color: #64b5f6 !important;
+}
+
+.dark-mode .status-inprogress {
+  color: #ffb74d !important;
+}
+
+.dark-mode .status-completed {
+  color: #81c784 !important;
+}
+
+.dark-mode .status-canceled {
+  color: #e57373 !important;
+}
+
+.dark-mode .defect-highlight {
+  color: #e57373;
+}
+
+/* 테이블 스타일 */
+.defect-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.defect-table th {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.defect-table td {
+  padding: 8px;
+  text-align: center;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 다크 모드 테이블 스타일 */
+.dark-mode .defect-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .defect-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}

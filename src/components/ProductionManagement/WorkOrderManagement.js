@@ -15,6 +15,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Chip
 } from '@mui/material';
 import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
 import {LocalizationProvider, DatePicker} from '@mui/x-date-pickers';
@@ -24,6 +25,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import NightsStayIcon from '@mui/icons-material/NightsStay';
 import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
 import {useDomain, DOMAINS} from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
@@ -51,7 +54,7 @@ const WorkOrderManagement = (props) => {
   const {loginUser} = useLocalStorageVO();
 
   // React Hook Form 설정
-  const { control, handleSubmit, reset, getValues, setValue } = useForm({
+  const {control, handleSubmit, reset, getValues, setValue} = useForm({
     defaultValues: {
       prodPlanId: '',
       productId: '',
@@ -81,16 +84,16 @@ const WorkOrderManagement = (props) => {
 
   // 상태 옵션 정의
   const stateOptions = [
-    { value: 'PLANNED', label: '계획됨' },
-    { value: 'IN_PROGRESS', label: '진행중' },
-    { value: 'COMPLETED', label: '완료됨' },
-    { value: 'CANCELED', label: '취소됨' }
+    {value: 'PLANNED', label: '계획됨'},
+    {value: 'IN_PROGRESS', label: '진행중'},
+    {value: 'COMPLETED', label: '완료됨'},
+    {value: 'CANCELED', label: '취소됨'}
   ];
 
   // 근무타입 옵션
   const shiftOptions = [
-    { value: 'DAY', label: '주간' },
-    { value: 'NIGHT', label: '야간' }
+    {value: 'DAY', label: '주간'},
+    {value: 'NIGHT', label: '야간'}
   ];
 
   // 도메인별 색상 설정 함수
@@ -151,9 +154,9 @@ const WorkOrderManagement = (props) => {
               site
               compCd
               prodPlanId
-              orderId
               productId
               planQty
+              shiftType
               planStartDate
               planEndDate
               flagActive
@@ -217,6 +220,18 @@ const WorkOrderManagement = (props) => {
       }
   `;
 
+  const START_WORK_ORDER_MUTATION = gql`
+      mutation StartWorkOrder($workOrderId: String!) {
+          startWorkOrder(workOrderId: $workOrderId)
+      }
+  `;
+
+  const COMPLETE_WORK_ORDER_MUTATION = gql`
+      mutation CompleteWorkOrder($workOrderId: String!) {
+          completeWorkOrder(workOrderId: $workOrderId)
+      }
+  `;
+
   // 새 생산계획 행 생성 함수
   const createNewWorkOrder = useCallback(() => {
     const currentDate = new Date();
@@ -229,7 +244,7 @@ const WorkOrderManagement = (props) => {
       prodPlanId: selectedPlan ? selectedPlan.prodPlanId : '',
       productId: selectedPlan ? selectedPlan.productId : '',
       orderQty: selectedPlan ? selectedPlan.planQty : 0,
-      shiftType: 'DAY',
+      shiftType: selectedPlan ? selectedPlan.shiftType || 'DAY' : 'DAY',
       state: 'PLANNED', // 기본값
       flagActive: true,
       createUser: currentUser,
@@ -269,7 +284,9 @@ const WorkOrderManagement = (props) => {
 
   // 생산계획 데이터 포맷 함수
   const formatPlanGridData = useCallback((data) => {
-    if (!data?.productionPlans) return [];
+    if (!data?.productionPlans) {
+      return [];
+    }
 
     return data.productionPlans.map((plan) => ({
       ...plan,
@@ -284,7 +301,9 @@ const WorkOrderManagement = (props) => {
 
   // 작업지시 데이터 포맷 함수
   const formatWorkOrderGridData = useCallback((data) => {
-    if (!data?.workOrders && !data?.workOrdersByProdPlanId) return [];
+    if (!data?.workOrders && !data?.workOrdersByProdPlanId) {
+      return [];
+    }
 
     const workOrders = data.workOrders || data.workOrdersByProdPlanId || [];
 
@@ -313,7 +332,7 @@ const WorkOrderManagement = (props) => {
 
   // 날짜 범위 변경 핸들러
   const handleDateRangeChange = useCallback((startDate, endDate) => {
-    setValue('dateRange', { startDate, endDate });
+    setValue('dateRange', {startDate, endDate});
   }, [setValue]);
 
   // 검색 실행 함수
@@ -332,7 +351,8 @@ const WorkOrderManagement = (props) => {
     if (filterData.dateRange) {
       if (filterData.dateRange.startDate) {
         try {
-          filterData.planStartDateFrom = format(filterData.dateRange.startDate, 'yyyy-MM-dd');
+          filterData.planStartDateFrom = format(filterData.dateRange.startDate,
+              'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid startDate:", error);
           filterData.planStartDateFrom = null;
@@ -341,7 +361,8 @@ const WorkOrderManagement = (props) => {
 
       if (filterData.dateRange.endDate) {
         try {
-          filterData.planStartDateTo = format(filterData.dateRange.endDate, 'yyyy-MM-dd');
+          filterData.planStartDateTo = format(filterData.dateRange.endDate,
+              'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid endDate:", error);
           filterData.planStartDateTo = null;
@@ -353,7 +374,7 @@ const WorkOrderManagement = (props) => {
     }
 
     // 생산계획 검색
-    executeQuery(PRODUCTION_PLANS_QUERY, { filter: filterData })
+    executeQuery(PRODUCTION_PLANS_QUERY, {filter: filterData})
     .then(response => {
       if (response.data) {
         const formattedData = formatPlanGridData(response.data);
@@ -368,7 +389,8 @@ const WorkOrderManagement = (props) => {
       setIsLoading(false);
       setPlanList([]);
     });
-  }, [executeQuery, PRODUCTION_PLANS_QUERY, formatPlanGridData, setUpdatedRows, setAddRows]);
+  }, [executeQuery, PRODUCTION_PLANS_QUERY, formatPlanGridData, setUpdatedRows,
+    setAddRows]);
 
   // 계획 선택 핸들러
   const handlePlanSelect = useCallback((params) => {
@@ -378,7 +400,7 @@ const WorkOrderManagement = (props) => {
 
     if (plan && plan.prodPlanId) {
       // 선택한 생산계획의 작업지시 조회
-      executeQuery(WORK_ORDERS_BY_PLAN_QUERY, { prodPlanId: plan.prodPlanId })
+      executeQuery(WORK_ORDERS_BY_PLAN_QUERY, {prodPlanId: plan.prodPlanId})
       .then(response => {
         if (response.data) {
           const formattedData = formatWorkOrderGridData(response.data);
@@ -393,7 +415,8 @@ const WorkOrderManagement = (props) => {
     } else {
       setWorkOrderList([]);
     }
-  }, [planList, executeQuery, WORK_ORDERS_BY_PLAN_QUERY, formatWorkOrderGridData]);
+  }, [planList, executeQuery, WORK_ORDERS_BY_PLAN_QUERY,
+    formatWorkOrderGridData]);
 
   // 작업지시 선택 핸들러
   const handleWorkOrderSelect = useCallback((params) => {
@@ -481,7 +504,8 @@ const WorkOrderManagement = (props) => {
     const validateRequiredFields = (rows, fieldNames) => {
       for (const row of rows) {
         for (const field of fieldNames) {
-          if (row[field] === undefined || row[field] === null || row[field] === '') {
+          if (row[field] === undefined || row[field] === null || row[field]
+              === '') {
             Message.showError({message: `${field} 필드는 필수 입력값입니다.`});
             return false;
           }
@@ -503,11 +527,11 @@ const WorkOrderManagement = (props) => {
       productId: row.productId || '',
       orderQty: parseFloat(row.orderQty) || 0,
       shiftType: row.shiftType || 'DAY',
-      state: row.state || 'PLANNED',
-      flagActive: row.flagActive === undefined ? true : Boolean(row.flagActive)
+      state: row.state || 'PLANNED'
+      // flagActive 필드 제거 (기본값 true 사용)
     }));
 
-    // 업데이트할 행 변환
+    // 업데이트할 행 변환 - flagActive 필드 제거
     const updatedWorkOrderInputs = updatedRows.map(updatedRow => {
       // 그리드에서 최신 데이터 찾기
       const currentRow = workOrderList.find(
@@ -519,8 +543,8 @@ const WorkOrderManagement = (props) => {
         productId: currentRow.productId || '',
         orderQty: parseFloat(currentRow.orderQty) || 0,
         shiftType: currentRow.shiftType || 'DAY',
-        state: currentRow.state || 'PLANNED',
-        flagActive: currentRow.flagActive === undefined ? true : Boolean(currentRow.flagActive)
+        state: currentRow.state || 'PLANNED'
+        // flagActive 필드 제거 (수정 불가)
       };
     });
 
@@ -542,7 +566,8 @@ const WorkOrderManagement = (props) => {
       Message.showSuccess(Message.SAVE_SUCCESS, () => {
         if (selectedPlan) {
           // 선택된 생산계획이 있으면 해당 생산계획의 작업지시만 다시 불러옴
-          executeQuery(WORK_ORDERS_BY_PLAN_QUERY, { prodPlanId: selectedPlan.prodPlanId })
+          executeQuery(WORK_ORDERS_BY_PLAN_QUERY,
+              {prodPlanId: selectedPlan.prodPlanId})
           .then(response => {
             if (response.data) {
               const formattedData = formatWorkOrderGridData(response.data);
@@ -560,9 +585,11 @@ const WorkOrderManagement = (props) => {
       }
       Message.showError({message: errorMessage});
     });
-  }, [workOrderList, updatedRows, selectedPlan, setAddRows, setUpdatedRows, executeMutation, SAVE_WORK_ORDER_MUTATION, WORK_ORDERS_BY_PLAN_QUERY, executeQuery, formatWorkOrderGridData]);
+  }, [workOrderList, updatedRows, selectedPlan, setAddRows, setUpdatedRows,
+    executeMutation, SAVE_WORK_ORDER_MUTATION, WORK_ORDERS_BY_PLAN_QUERY,
+    executeQuery, formatWorkOrderGridData]);
 
-  // 삭제 버튼 클릭 핸들러
+  // 삭제 버튼 클릭 핸들러 수정 - SoftDelete 적용
   const handleDeleteWorkOrder = useCallback(() => {
     if (!selectedWorkOrder) {
       Message.showWarning(Message.DELETE_SELECT_REQUIRED);
@@ -571,7 +598,8 @@ const WorkOrderManagement = (props) => {
 
     // 신규 추가된 행이면 바로 목록에서만 삭제
     if (selectedWorkOrder.id.startsWith('NEW_')) {
-      const updatedList = workOrderList.filter(w => w.id !== selectedWorkOrder.id);
+      const updatedList = workOrderList.filter(
+          w => w.id !== selectedWorkOrder.id);
       setWorkOrderList(updatedList);
       // 추가된 행 목록에서도 제거
       setAddRows(prev => prev.filter(w => w.id !== selectedWorkOrder.id));
@@ -581,11 +609,14 @@ const WorkOrderManagement = (props) => {
 
     // Message 클래스의 삭제 확인 다이얼로그 사용
     Message.showDeleteConfirm(() => {
-      executeMutation(DELETE_WORK_ORDER_MUTATION, {
-        workOrderId: selectedWorkOrder.workOrderId
+      executeMutation({
+        mutation: DELETE_WORK_ORDER_MUTATION,
+        variables: {workOrderId: selectedWorkOrder.workOrderId}
       })
       .then(() => {
-        const updatedList = workOrderList.filter(w => w.id !== selectedWorkOrder.id);
+        // 소프트 삭제 이후 목록에서 제거 (UI 상에서 표시되지 않도록)
+        const updatedList = workOrderList.filter(
+            w => w.id !== selectedWorkOrder.id);
         setWorkOrderList(updatedList);
         setSelectedWorkOrder(null);
         Message.showSuccess(Message.DELETE_SUCCESS);
@@ -595,7 +626,8 @@ const WorkOrderManagement = (props) => {
         Message.showError({message: '삭제 중 오류가 발생했습니다.'});
       });
     });
-  }, [selectedWorkOrder, workOrderList, setAddRows, executeMutation, DELETE_WORK_ORDER_MUTATION]);
+  }, [selectedWorkOrder, workOrderList, setAddRows, executeMutation,
+    DELETE_WORK_ORDER_MUTATION]);
 
   // 작업 시작 핸들러
   const handleStartWork = useCallback(() => {
@@ -604,36 +636,45 @@ const WorkOrderManagement = (props) => {
       return;
     }
 
-    if (selectedWorkOrder.state === 'IN_PROGRESS' || selectedWorkOrder.state === 'COMPLETED') {
+    if (selectedWorkOrder.state === 'IN_PROGRESS' || selectedWorkOrder.state
+        === 'COMPLETED') {
       Message.showWarning('이미 진행 중이거나 완료된 작업입니다.');
       return;
     }
 
-    // 상태 변경
-    const updatedOrder = { ...selectedWorkOrder, state: 'IN_PROGRESS' };
+    // 사용자 확인 다이얼로그 표시
+    Message.showConfirm(
+        '작업 시작',
+        `작업지시 [${selectedWorkOrder.workOrderId}]를 시작하시겠습니까?`,
+        () => {
+          // 백엔드 API 호출하여 상태 변경
+          executeMutation({
+            mutation: START_WORK_ORDER_MUTATION,
+            variables: {workOrderId: selectedWorkOrder.workOrderId}
+          })
+          .then((result) => {
+            if (result?.data?.startWorkOrder) {
+              // 상태 변경
+              const updatedOrder = {...selectedWorkOrder, state: 'IN_PROGRESS'};
 
-    setWorkOrderList(prev =>
-        prev.map(order => order.id === selectedWorkOrder.id ? updatedOrder : order)
+              setWorkOrderList(prev =>
+                  prev.map(
+                      order => order.id === selectedWorkOrder.id ? updatedOrder : order)
+              );
+
+              setSelectedWorkOrder(updatedOrder);
+              Message.showSuccess('작업이 시작되었습니다.');
+            } else {
+              Message.showError({message: '작업 시작 처리에 실패했습니다.'});
+            }
+          })
+          .catch((error) => {
+            console.error("Error starting work order:", error);
+            Message.showError({message: '작업 시작 중 오류가 발생했습니다.'});
+          });
+        }
     );
-
-    setUpdatedRows(prev => {
-      const existingIndex = prev.findIndex(row => row.workOrderId === selectedWorkOrder.workOrderId);
-      if (existingIndex !== -1) {
-        const updatedRows = [...prev];
-        updatedRows[existingIndex] = { ...updatedRows[existingIndex], state: 'IN_PROGRESS' };
-        return updatedRows;
-      } else {
-        return [...prev, { ...selectedWorkOrder, state: 'IN_PROGRESS' }];
-      }
-    });
-
-    setSelectedWorkOrder(updatedOrder);
-
-    // 자동 저장 옵션 (선택적)
-    Message.showSuccess('작업이 시작되었습니다. 변경사항을 저장하시겠습니까?', () => {
-      handleSaveWorkOrder();
-    });
-  }, [selectedWorkOrder, setUpdatedRows, handleSaveWorkOrder]);
+  }, [selectedWorkOrder, executeMutation, START_WORK_ORDER_MUTATION]);
 
   // 작업 완료 핸들러
   const handleCompleteWork = useCallback(() => {
@@ -647,34 +688,41 @@ const WorkOrderManagement = (props) => {
       return;
     }
 
-    // 상태 변경
-    const updatedOrder = { ...selectedWorkOrder, state: 'COMPLETED' };
+    // 사용자 확인 다이얼로그 표시
+    Message.showConfirm(
+        '작업 완료',
+        `작업지시 [${selectedWorkOrder.workOrderId}]를 완료 처리하시겠습니까?`,
+        () => {
+          // 백엔드 API 호출하여 상태 변경
+          executeMutation({
+            mutation: COMPLETE_WORK_ORDER_MUTATION,
+            variables: {workOrderId: selectedWorkOrder.workOrderId}
+          })
+          .then((result) => {
+            if (result?.data?.completeWorkOrder) {
+              // 상태 변경
+              const updatedOrder = {...selectedWorkOrder, state: 'COMPLETED'};
 
-    setWorkOrderList(prev =>
-        prev.map(order => order.id === selectedWorkOrder.id ? updatedOrder : order)
+              setWorkOrderList(prev =>
+                  prev.map(
+                      order => order.id === selectedWorkOrder.id ? updatedOrder : order)
+              );
+
+              setSelectedWorkOrder(updatedOrder);
+              Message.showSuccess('작업이 완료되었습니다.');
+            } else {
+              Message.showError({message: '작업 완료 처리에 실패했습니다.'});
+            }
+          })
+          .catch((error) => {
+            console.error("Error completing work order:", error);
+            Message.showError({message: '작업 완료 중 오류가 발생했습니다.'});
+          });
+        }
     );
-
-    setUpdatedRows(prev => {
-      const existingIndex = prev.findIndex(row => row.workOrderId === selectedWorkOrder.workOrderId);
-      if (existingIndex !== -1) {
-        const updatedRows = [...prev];
-        updatedRows[existingIndex] = { ...updatedRows[existingIndex], state: 'COMPLETED' };
-        return updatedRows;
-      } else {
-        return [...prev, { ...selectedWorkOrder, state: 'COMPLETED' }];
-      }
-    });
-
-    setSelectedWorkOrder(updatedOrder);
-
-    // 자동 저장 옵션 (선택적)
-    Message.showSuccess('작업이 완료되었습니다. 변경사항을 저장하시겠습니까?', () => {
-      handleSaveWorkOrder();
-    });
-  }, [selectedWorkOrder, setUpdatedRows, handleSaveWorkOrder]);
+  }, [selectedWorkOrder, executeMutation, COMPLETE_WORK_ORDER_MUTATION]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
-  // 수정 후: 문제 해결 코드
   useEffect(() => {
     // 컴포넌트 마운트 시에만 초기 데이터 로드
     let isMounted = true;
@@ -686,14 +734,16 @@ const WorkOrderManagement = (props) => {
           // 초기 빈 검색 조건으로 데이터 로드
           const filterData = {};
 
-          executeQuery(PRODUCTION_PLANS_QUERY, { filter: filterData })
+          executeQuery(PRODUCTION_PLANS_QUERY, {filter: filterData})
           .then(response => {
             if (response.data && isMounted) {
               const formattedData = formatPlanGridData(response.data);
               setPlanList(formattedData);
               setRefreshKey(prev => prev + 1);
             }
-            if (isMounted) setIsLoading(false);
+            if (isMounted) {
+              setIsLoading(false);
+            }
           })
           .catch(error => {
             console.error("Error fetching production plans:", error);
@@ -720,7 +770,7 @@ const WorkOrderManagement = (props) => {
     return () => {
       isMounted = false;
     };
-  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시에만 실행;
+  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시에만 실행
 
   // DatePicker 커스텀 에디터 컴포넌트
   const CustomDateEditor = useCallback((props) => {
@@ -852,14 +902,6 @@ const WorkOrderManagement = (props) => {
       }
     },
     {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 100,
-      headerAlign: 'center',
-      align: 'center',
-      valueFormatter: (params) => params.value ? '사용' : '미사용'
-    },
-    {
       field: 'createUser',
       headerName: '등록자',
       width: 120,
@@ -950,7 +992,11 @@ const WorkOrderManagement = (props) => {
           <FormControl fullWidth>
             <Select
                 value={params.value || 'DAY'}
-                onChange={(e) => params.api.setEditCellValue({ id: params.id, field: params.field, value: e.target.value })}
+                onChange={(e) => params.api.setEditCellValue({
+                  id: params.id,
+                  field: params.field,
+                  value: e.target.value
+                })}
                 size="small"
             >
               {shiftOptions.map(option => (
@@ -977,7 +1023,11 @@ const WorkOrderManagement = (props) => {
           <FormControl fullWidth>
             <Select
                 value={params.value || 'PLANNED'}
-                onChange={(e) => params.api.setEditCellValue({ id: params.id, field: params.field, value: e.target.value })}
+                onChange={(e) => params.api.setEditCellValue({
+                  id: params.id,
+                  field: params.field,
+                  value: e.target.value
+                })}
                 size="small"
             >
               {stateOptions.map(option => (
@@ -994,7 +1044,7 @@ const WorkOrderManagement = (props) => {
         let className = '';
 
         // CSS 클래스 결정
-        switch(params.value) {
+        switch (params.value) {
           case 'PLANNED':
             className = 'status-planned';
             break;
@@ -1017,16 +1067,6 @@ const WorkOrderManagement = (props) => {
             </Typography>
         );
       }
-    },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 100,
-      type: 'boolean',
-      editable: true,
-      headerAlign: 'center',
-      align: 'center',
-      valueFormatter: (params) => params.value ? '사용' : '미사용'
     },
     {
       field: 'createUser',
@@ -1093,8 +1133,13 @@ const WorkOrderManagement = (props) => {
     {label: '저장', onClick: handleSaveWorkOrder, icon: <SaveIcon/>},
     {label: '삭제', onClick: handleDeleteWorkOrder, icon: <DeleteIcon/>},
     {label: '작업시작', onClick: handleStartWork, icon: <PlayCircleOutlineIcon/>},
-    {label: '작업완료', onClick: handleCompleteWork, icon: <CheckCircleOutlineIcon/>}
-  ]), [handleAddWorkOrder, handleSaveWorkOrder, handleDeleteWorkOrder, handleStartWork, handleCompleteWork]);
+    {
+      label: '작업완료',
+      onClick: handleCompleteWork,
+      icon: <CheckCircleOutlineIcon/>
+    }
+  ]), [handleAddWorkOrder, handleSaveWorkOrder, handleDeleteWorkOrder,
+    handleStartWork, handleCompleteWork]);
 
   // 그리드 속성
   const gridProps = useMemo(() => ({
@@ -1104,6 +1149,21 @@ const WorkOrderManagement = (props) => {
       console.error('데이터 업데이트 오류:', error);
     }
   }), [handleProcessRowUpdate]);
+
+  // 초기 정렬 상태 설정 추가
+  // planList 그리드 - 생산계획ID 역순
+  const planInitialState = useMemo(() => ({
+    sorting: {
+      sortModel: [{field: 'prodPlanId', sort: 'desc'}]
+    }
+  }), []);
+
+  // workOrderList 그리드 - 작업지시ID 역순
+  const workOrderInitialState = useMemo(() => ({
+    sorting: {
+      sortModel: [{field: 'workOrderId', sort: 'desc'}]
+    }
+  }), []);
 
   return (
       <Box sx={{p: 0, minHeight: '100vh'}} className="work-order-container">
@@ -1218,7 +1278,8 @@ const WorkOrderManagement = (props) => {
             />
           </Grid>
           <Grid item xs={12} sm={12} md={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}
+                                  adapterLocale={ko}>
               <Controller
                   name="dateRange"
                   control={control}
@@ -1252,13 +1313,17 @@ const WorkOrderManagement = (props) => {
                     height={450}
                     onRowClick={handlePlanSelect}
                     tabId={props.tabId + "-production-plans"}
+                    gridProps={{
+                      initialState: planInitialState
+                    }}
                 />
               </Grid>
 
               {/* 작업지시 그리드 - 오른쪽 */}
               <Grid item xs={12} md={6}>
                 <EnhancedDataGridWrapper
-                    title={`작업지시목록 ${selectedPlan ? '- ' + selectedPlan.prodPlanId : ''}`}
+                    title={`작업지시목록 ${selectedPlan ? '- '
+                        + selectedPlan.prodPlanId : ''}`}
                     key={refreshKey + "-workorders"}
                     rows={workOrderList}
                     columns={workOrderColumns}
@@ -1266,7 +1331,10 @@ const WorkOrderManagement = (props) => {
                     height={450}
                     onRowClick={handleWorkOrderSelect}
                     tabId={props.tabId + "-work-orders"}
-                    gridProps={gridProps}
+                    gridProps={{
+                      ...gridProps,
+                      initialState: workOrderInitialState
+                    }}
                 />
               </Grid>
             </Grid>

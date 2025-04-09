@@ -479,6 +479,7 @@ const ProductionPlanManagement = (props) => {
     getValues]);
 
   // 삭제 버튼 클릭 핸들러
+// 삭제 버튼 클릭 핸들러 - SoftDelete로 변경
   const handleDelete = useCallback(() => {
     if (!selectedPlan) {
       Message.showWarning(Message.DELETE_SELECT_REQUIRED);
@@ -502,6 +503,7 @@ const ProductionPlanManagement = (props) => {
         variables: {prodPlanId: selectedPlan.prodPlanId}
       })
       .then(() => {
+        // 소프트 삭제 이후 목록에서 제거
         const updatedList = planList.filter(p => p.id !== selectedPlan.id);
         setPlanList(updatedList);
         setSelectedPlan(null);
@@ -512,8 +514,7 @@ const ProductionPlanManagement = (props) => {
         Message.showError({message: '삭제 중 오류가 발생했습니다.'});
       });
     });
-  }, [selectedPlan, planList, setAddRows, executeMutation,
-    DELETE_PRODUCTION_PLAN_MUTATION]);
+  }, [selectedPlan, planList, setAddRows, executeMutation, DELETE_PRODUCTION_PLAN_MUTATION]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -771,17 +772,6 @@ const ProductionPlanManagement = (props) => {
             </Typography>
         );
       }
-    },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 100,
-      type: 'boolean',
-      editable: true,
-      headerAlign: 'center',
-      align: 'center',
-      // MUI DataGrid에서 boolean 타입을 사용자 친화적으로 표시
-      valueFormatter: (params) => params.value ? '사용' : '미사용'
     },
     {
       field: 'createUser',
