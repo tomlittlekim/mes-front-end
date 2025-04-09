@@ -37,7 +37,7 @@ const LineManagement = (props) => {
       factoryCode: '',
       lineId: '',
       lineName: '',
-      flagActive: null
+      // flagActive: null
     }
   });
 
@@ -80,7 +80,7 @@ const LineManagement = (props) => {
       factoryCode: '',
       lineId: '',
       lineName: '',
-      flagActive: null
+      // flagActive: null
     });
   };
 
@@ -154,7 +154,6 @@ const LineManagement = (props) => {
           lineId
           lineName
           lineDesc
-          flagActive
           createUser
           createDate
           updateUser
@@ -200,7 +199,7 @@ const LineManagement = (props) => {
       lineId: '자동입력',
       lineName: '',
       lineDesc: '',
-      flagActive: 'Y',
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -214,7 +213,7 @@ const LineManagement = (props) => {
     factoryId: row.factoryId,
     lineName: row.lineName,
     lineDesc: row.lineDesc,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -222,7 +221,7 @@ const LineManagement = (props) => {
     factoryId: row.factoryId,
     lineName: row.lineName,
     lineDesc: row.lineDesc,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
 
@@ -432,7 +431,6 @@ const LineManagement = (props) => {
           lineId
           lineName
           lineDesc
-          flagActive
           createUser
           createDate
           updateUser
@@ -515,17 +513,17 @@ const LineManagement = (props) => {
     //   }
     // },
     { field: 'lineDesc', headerName: '라인 설명', width: 200, editable: true, flex:1},
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 90,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 90,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'createUser', headerName: '작성자', width: 100},
     { field: 'createDate', headerName: '작성일', width: 200},
     { field: 'updateUser', headerName: '수정자', width: 100},
@@ -666,28 +664,28 @@ const LineManagement = (props) => {
         {/*    )}*/}
         {/*  />*/}
         {/*</Grid>*/}
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="flagActive"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="useYn-label" shrink>사용여부</InputLabel>
-                <Select
-                  {...field}
-                  labelId="useYn-label"
-                  label="사용여부"
-                  displayEmpty
-                  notched
-                >
-                  <MenuItem value={null}>전체</MenuItem>
-                  <MenuItem value="Y">사용</MenuItem>
-                  <MenuItem value="N">미사용</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="flagActive"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*        <InputLabel id="useYn-label" shrink>사용여부</InputLabel>*/}
+        {/*        <Select*/}
+        {/*          {...field}*/}
+        {/*          labelId="useYn-label"*/}
+        {/*          label="사용여부"*/}
+        {/*          displayEmpty*/}
+        {/*          notched*/}
+        {/*        >*/}
+        {/*          <MenuItem value={null}>전체</MenuItem>*/}
+        {/*          <MenuItem value="Y">사용</MenuItem>*/}
+        {/*          <MenuItem value="N">미사용</MenuItem>*/}
+        {/*        </Select>*/}
+        {/*      </FormControl>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}
