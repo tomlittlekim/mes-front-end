@@ -5,9 +5,11 @@ import { useDomain, DOMAINS } from '../../../../contexts/DomainContext';
 import { useTheme } from '@mui/material';
 import { useGridUtils } from '../../../../utils/grid/useGridUtils';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
-import { gql } from '@apollo/client';
 import useLocalStorageVO from '../../../Common/UseLocalStorageVO';
 import Message from '../../../../utils/message/Message';
+import { printProductionResult, exportProductionResultToCSV } from '../utils/printUtils';
+import { formatWorkOrderData, formatProductionResultData } from '../utils/gridDataUtils';
+import { WORK_ORDERS_QUERY, PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY } from '../utils/graphqlQueries';
 
 /**
  * 생산실적조회 기능 제공 커스텀 훅
@@ -23,12 +25,10 @@ export const useProductionResultInquiry = (tabId) => {
   const { loginUser } = useLocalStorageVO();
 
   // React Hook Form 설정
-  const { control, handleSubmit, reset, setValue, getValues } = useForm({
+  const { control, handleSubmit, reset, setValue } = useForm({
     defaultValues: {
-      prodResultId: '',
       workOrderId: '',
       productId: '',
-      status: '',
       equipmentId: '',
       dateRange: {
         startDate: null,
@@ -39,84 +39,38 @@ export const useProductionResultInquiry = (tabId) => {
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
-  const [productionList, setProductionList] = useState([]);
-  const [selectedProduction, setSelectedProduction] = useState(null);
+  const [workOrderList, setWorkOrderList] = useState([]);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [productionResultList, setProductionResultList] = useState([]);
+  const [currentFilter, setCurrentFilter] = useState({
+    state: ['COMPLETED'],
+    flagActive: true
+  });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [equipmentOptions, setEquipmentOptions] = useState([
+    { value: 'EQ001', label: '생산라인 1호기' },
+    { value: 'EQ002', label: '생산라인 2호기' },
+    { value: 'EQ003', label: '생산라인 3호기' },
+    { value: 'EQ004', label: '조립라인 1호기' },
+    { value: 'EQ005', label: '조립라인 2호기' }
+  ]);
+
+  // GraphQL 기능 사용
+  const { executeQuery } = useGraphQL();
 
   // 그리드 유틸리티 훅 사용
   const { formatDateToYYYYMMDD } = useGridUtils();
 
-  // GraphQL 훅 사용
-  const { executeQuery } = useGraphQL();
-
-  // GraphQL 쿼리 정의
-  const PRODUCTION_RESULT_LIST_QUERY = gql`
-      query getProductionResultList($filter: ProductionResultInquiryFilter) {
-          productionResultList(filter: $filter) {
-              id
-              prodResultId
-              workOrderId
-              productId
-              productName
-              factoryId
-              factoryName
-              lineId
-              lineName
-              equipmentId
-              equipmentName
-              productionDate
-              planQuantity
-              actualQuantity
-              goodQuantity
-              defectQuantity
-              progressRate
-              defectRate
-              inputAmount
-              outputAmount
-              yieldRate
-              productionTime
-              startTime
-              endTime
-              worker
-              supervisor
-              status
-              createDate
-              updateDate
-              createUser
-              updateUser
-          }
-      }
-  `;
-
-  // 생산실적 목록 데이터 포맷 함수
-  const formatProductionListData = useCallback((data) => {
-    if (!data?.productionResultList) {
-      return [];
-    }
-
-    return data.productionResultList.map((result) => ({
-      ...result,
-      id: result.prodResultId,
-      planQuantity: result.planQuantity ? Number(result.planQuantity) : 0,
-      actualQuantity: result.actualQuantity ? Number(result.actualQuantity) : 0,
-      goodQuantity: result.goodQuantity ? Number(result.goodQuantity) : 0,
-      defectQuantity: result.defectQuantity ? Number(result.defectQuantity) : 0,
-      inputAmount: result.inputAmount ? Number(result.inputAmount) : 0,
-      outputAmount: result.outputAmount ? Number(result.outputAmount) : 0,
-      yieldRate: result.yieldRate ? Number(result.yieldRate) : 0,
-      createDate: result.createDate ? new Date(result.createDate) : null,
-      updateDate: result.updateDate ? new Date(result.updateDate) : null
-    }));
-  }, []);
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = useCallback((startDate, endDate) => {
+    setValue('dateRange', { startDate, endDate });
+  }, [setValue]);
 
   // 초기화 함수
   const handleReset = useCallback(() => {
-    // 기본값으로 폼 초기화
     reset({
-      prodResultId: '',
       workOrderId: '',
       productId: '',
-      status: '',
       equipmentId: '',
       dateRange: {
         startDate: null,
@@ -124,139 +78,188 @@ export const useProductionResultInquiry = (tabId) => {
       }
     });
 
-    // 기본 날짜 범위 재설정
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 7);
+    // 초기화 시 작업지시 목록과 생산실적 목록도 초기화
+    setSelectedWorkOrder(null);
+    setProductionResultList([]);
 
-    setValue('dateRange', {
-      startDate,
-      endDate
+    // 기본 검색 조건으로 데이터 로드 (완료된 작업지시만)
+    loadWorkOrders({
+      state: ['COMPLETED'],
+      flagActive: true
     });
   }, [reset, setValue]);
 
-  // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = useCallback((startDate, endDate) => {
-    setValue('dateRange', { startDate, endDate });
-  }, [setValue]);
+  // 작업지시 데이터 포맷 함수 (외부 유틸리티로 이동)
+  /* formatWorkOrderData 함수가 gridDataUtils.js로 이동 */
 
-  // 검색 실행 함수
-  const handleSearch = useCallback((data) => {
+  // 생산실적 데이터 포맷 함수 (외부 유틸리티로 이동)
+  /* formatProductionResultData 함수가 gridDataUtils.js로 이동 */
+
+  // 작업지시 목록 로드 함수
+  const loadWorkOrders = useCallback((filter = {}) => {
     setIsLoading(true);
-    setSelectedProduction(null);
 
-    // 날짜 형식 변환 - null 값도 허용
-    const filterData = {...data};
+    // 기본 필터 설정 - 완료된 작업지시만 조회
+    const searchFilter = {
+      ...filter,
+      state: filter.state || ['COMPLETED'],
+      flagActive: filter.flagActive !== undefined ? filter.flagActive : true
+    };
 
-    // dateRange 객체에서 시작일, 종료일 범위를 추출하여 필터 데이터로 변환
-    if (filterData.dateRange) {
-      if (filterData.dateRange.startDate) {
-        try {
-          filterData.fromDate = format(filterData.dateRange.startDate, 'yyyy-MM-dd');
-        } catch (error) {
-          console.error("Invalid startDate:", error);
-          filterData.fromDate = null;
-        }
-      }
+    // 현재 필터 상태 업데이트
+    setCurrentFilter(searchFilter);
 
-      if (filterData.dateRange.endDate) {
-        try {
-          filterData.toDate = format(filterData.dateRange.endDate, 'yyyy-MM-dd');
-        } catch (error) {
-          console.error("Invalid endDate:", error);
-          filterData.toDate = null;
-        }
-      }
-
-      // dateRange 객체 제거 (GraphQL에 불필요한 데이터 전송 방지)
-      delete filterData.dateRange;
-    }
-
-    // 생산실적 검색
-    executeQuery({
-      query: PRODUCTION_RESULT_LIST_QUERY,
-      variables: { filter: filterData }
+    return executeQuery({
+      query: WORK_ORDERS_QUERY,
+      variables: { filter: searchFilter }
     })
     .then(response => {
       if (response.data) {
-        const formattedData = formatProductionListData(response.data);
-        setProductionList(formattedData);
-        setRefreshKey(prev => prev + 1);
+        const formattedData = formatWorkOrderData(response.data);
+        setWorkOrderList(formattedData);
+      } else {
+        setWorkOrderList([]);
       }
       setIsLoading(false);
+      return response;
     })
     .catch(error => {
-      console.error("Error fetching production results:", error);
+      console.error("Error fetching work orders:", error);
       Message.showError({ message: '데이터를 불러오는데 실패했습니다.' });
       setIsLoading(false);
-      setProductionList([]);
+      setWorkOrderList([]);
+      throw error;
     });
-  }, [executeQuery, PRODUCTION_RESULT_LIST_QUERY, formatProductionListData]);
+  }, [executeQuery, formatWorkOrderData]);
 
-  // 생산실적 선택 핸들러
-  const handleProductionSelect = useCallback((params) => {
-    const production = productionList.find(p => p.id === params.id);
-    setSelectedProduction(production);
-  }, [productionList]);
+  // 생산실적 목록 로드 함수
+  const loadProductionResults = useCallback((workOrder) => {
+    if (workOrder && workOrder.workOrderId) {
+      executeQuery({
+        query: PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY,
+        variables: { workOrderId: workOrder.workOrderId }
+      })
+      .then(response => {
+        if (response.data && response.data.productionResultsByWorkOrderId) {
+          const results = formatProductionResultData(response.data);
+          setProductionResultList(results);
+        } else {
+          setProductionResultList([]);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching production results:", error);
+        setProductionResultList([]);
+      });
+    } else {
+      setProductionResultList([]);
+    }
+  }, [executeQuery, formatProductionResultData]);
 
-  // 출력 핸들러 추가
-  const handlePrint = useCallback(() => {
-    if (!selectedProduction) {
-      Message.showWarning('출력할 생산실적을 선택해주세요.');
-      return;
+  // 작업지시 선택 핸들러
+  const handleWorkOrderSelect = useCallback((params) => {
+    const workOrder = workOrderList.find(w => w.id === params.id);
+    if (workOrder) {
+      setSelectedWorkOrder(workOrder);
+      loadProductionResults(workOrder);
+    }
+  }, [workOrderList, loadProductionResults]);
+
+  // 검색 실행 함수
+  const handleSearch = useCallback((data) => {
+    // 선택 상태 초기화
+    setSelectedWorkOrder(null);
+    setProductionResultList([]);
+
+    // 날짜 형식 변환과 필터 객체 생성
+    const filter = {
+      state: ['COMPLETED'], // 완료된 작업지시만 조회
+      flagActive: true
+    };
+
+    // workOrderId가 있으면 추가
+    if (data.workOrderId) {
+      filter.workOrderId = data.workOrderId;
     }
 
-    Message.showSuccess('생산실적 정보가 출력됩니다.');
-    // 실제 인쇄 기능 구현 필요
-  }, [selectedProduction]);
-
-  // 엑셀 내보내기 핸들러 추가
-  const handleExport = useCallback(() => {
-    if (productionList.length === 0) {
-      Message.showWarning('내보낼 데이터가 없습니다.');
-      return;
+    // productId가 있으면 추가
+    if (data.productId) {
+      filter.productId = data.productId;
     }
 
-    Message.showSuccess('생산실적 데이터가 엑셀로 내보내집니다.');
-    // 실제 엑셀 내보내기 기능 구현 필요
-  }, [productionList]);
+    // equipmentId가 있으면 추가
+    if (data.equipmentId) {
+      filter.equipmentId = data.equipmentId;
+    }
 
-  // 컴포넌트 마운트 시 초기 데이터 로드 (생산계획관리와 동일한 방식으로 수정)
-  useEffect(() => {
-    let isMounted = true;
-
-    const timer = setTimeout(() => {
-      if (isMounted) {
+    // dateRange 객체에서 시작일/종료일을 추출하여 필터 데이터로 변환
+    if (data.dateRange) {
+      if (data.dateRange.startDate) {
         try {
-          // 기본 날짜 범위 설정 (오늘부터 1주일)
-          const endDate = new Date();
-          const startDate = new Date();
-          startDate.setDate(endDate.getDate() - 7);
-
-          setValue('dateRange', {
-            startDate,
-            endDate
-          });
-
-          // 초기 데이터 조회
-          handleSearch({
-            dateRange: {
-              startDate,
-              endDate
-            }
-          });
-        } catch (err) {
-          console.error("Initial load error:", err);
-          setIsLoading(false);
+          filter.planStartDateFrom = format(data.dateRange.startDate, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid startDate:", error);
         }
       }
-    }, 100);
 
+      if (data.dateRange.endDate) {
+        try {
+          filter.planStartDateTo = format(data.dateRange.endDate, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid endDate:", error);
+        }
+      }
+    }
+
+    // 작업지시 검색
+    loadWorkOrders(filter);
+  }, [loadWorkOrders]);
+
+  // 출력 핸들러
+  const handlePrint = useCallback(() => {
+    printProductionResult(selectedWorkOrder, productionResultList, loginUser?.userName);
+  }, [selectedWorkOrder, productionResultList, loginUser?.userName]);
+
+  // 엑셀 내보내기 핸들러
+  const handleExport = useCallback(() => {
+    exportProductionResultToCSV(selectedWorkOrder, productionResultList);
+  }, [productionResultList, selectedWorkOrder]);
+
+  // 컴포넌트 마운트 시 초기 데이터 로드
+  useEffect(() => {
+    // 첫 마운트 시 한 번만 실행하기 위한 플래그
+    let isMounted = true;
+
+    const init = () => {
+      if (isMounted) {
+        // 기본 날짜 범위 설정 (오늘부터 1주일)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 7);
+
+        setValue('dateRange', {
+          startDate,
+          endDate
+        });
+
+        // 초기 데이터 로드 (완료된 작업지시만)
+        loadWorkOrders({
+          state: ['COMPLETED'],
+          flagActive: true
+        });
+      }
+    };
+
+    // setTimeout을 사용해 렌더링 사이클과 분리
+    const timeoutId = setTimeout(init, 100);
+
+    // cleanup 함수
     return () => {
       isMounted = false;
-      clearTimeout(timer);
+      clearTimeout(timeoutId);
     };
-  }, []); // 빈 의존성 배열로 마운트 시 한 번만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 의존성 배열을 비워서 한 번만 실행되도록 설정
 
   // 도메인별 색상 설정 함수
   const getTextColor = useCallback(() => {
@@ -280,39 +283,34 @@ export const useProductionResultInquiry = (tabId) => {
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   }, [domain, isDarkMode]);
 
-  // 초기 정렬 상태 설정 - 생산실적ID 역순
-  const initialState = useMemo(() => ({
-    sorting: {
-      sortModel: [{ field: 'prodResultId', sort: 'desc' }]
-    }
-  }), []);
-
   return {
-    // 검색폼 상태 및 핸들러
+    // 검색폼 관련
     control,
     handleSubmit,
     reset,
     setValue,
-    getValues,
     handleDateRangeChange,
     handleReset,
     handleSearch,
 
-    // 생산실적 관련 상태 및 핸들러
+    // 작업지시 관련
     isLoading,
-    productionList,
-    selectedProduction,
-    handleProductionSelect,
-    handlePrint,    // 출력 핸들러 추가
-    handleExport,   // 엑셀 내보내기 핸들러 추가
+    workOrderList,
+    selectedWorkOrder,
+    handleWorkOrderSelect,
+
+    // 생산실적 관련
+    productionResultList,
+    handlePrint,
+    handleExport,
 
     // 색상 및 테마
     getTextColor,
     getBgColor,
     getBorderColor,
 
-    // 그리드 설정
-    initialState,
+    // 설비 옵션
+    equipmentOptions,
 
     // 리프레시 키
     refreshKey

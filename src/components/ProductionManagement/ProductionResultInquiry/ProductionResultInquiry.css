@@ -1,13 +1,3 @@
-.defect-highlight {
-  color: #f44336 !important;
-  font-weight: 600;
-}
-
-.defect-rate-warning {
-  color: #ff9800 !important;
-  font-weight: 600;
-}
-
 .status-wait,
 .status-planned {
   color: #2196f3 !important;
@@ -28,4 +18,31 @@
   color: #f44336 !important;
   font-weight: 600;
   text-decoration: line-through;
+}
+
+.defect-highlight {
+  color: #f44336;
+  font-weight: 600;
+}
+
+/* 다크 모드에서 색상 조정 */
+.dark-mode .status-wait,
+.dark-mode .status-planned {
+  color: #64b5f6 !important;
+}
+
+.dark-mode .status-inprogress {
+  color: #ffb74d !important;
+}
+
+.dark-mode .status-completed {
+  color: #81c784 !important;
+}
+
+.dark-mode .status-canceled {
+  color: #e57373 !important;
+}
+
+.dark-mode .defect-highlight {
+  color: #e57373;
 }

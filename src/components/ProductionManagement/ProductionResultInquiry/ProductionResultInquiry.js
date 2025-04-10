@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import './ProductionResultInquiry.css';
 import { Box, Typography, IconButton, Stack, Grid, useTheme, alpha } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { DOMAINS, useDomain } from '../../../contexts/DomainContext';
+import { useDomain } from '../../../contexts/DomainContext';
 import HelpModal from '../../Common/HelpModal';
 import { SearchCondition } from '../../Common';
-
+import WorkOrderList from './components/WorkOrderList';
 import ProductionResultList from './components/ProductionResultList';
 import SearchForm from './SearchForm';
 import { useProductionResultInquiry } from './hooks/useProductionResultInquiry';
@@ -17,25 +17,28 @@ import { useProductionResultInquiry } from './hooks/useProductionResultInquiry';
  * @returns {JSX.Element}
  */
 const ProductionResultInquiry = (props) => {
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  // 테마 설정
   const theme = useTheme();
-  const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 커스텀 훅 사용
   const {
-    // 검색폼 상태 및 핸들러
+    // 검색폼 관련
     control,
     handleSubmit,
     handleDateRangeChange,
     handleReset,
     handleSearch,
 
-    // 생산실적 관련 상태 및 핸들러
+    // 작업지시 관련
     isLoading,
-    productionList,
-    selectedProduction,
-    handleProductionSelect,
+    workOrderList,
+    selectedWorkOrder,
+    handleWorkOrderSelect,
+
+    // 생산실적 관련
+    productionResultList,
     handlePrint,
     handleExport,
 
@@ -44,23 +47,12 @@ const ProductionResultInquiry = (props) => {
     getBgColor,
     getBorderColor,
 
-    // 그리드 설정
-    initialState,
+    // 설비 옵션
+    equipmentOptions,
 
     // 리프레시 키
     refreshKey
   } = useProductionResultInquiry(props.tabId);
-
-  // SearchForm 컴포넌트에서 반환하는 검색 요소들
-  const searchFormItems = SearchForm({
-    control,
-    handleDateRangeChange
-  });
-
-  // 그리드 속성
-  const gridProps = {
-    initialState: initialState
-  };
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -101,23 +93,36 @@ const ProductionResultInquiry = (props) => {
         <SearchCondition
             onSearch={handleSubmit(handleSearch)}
             onReset={handleReset}
-            title="조회조건"
         >
-          {searchFormItems}
+          <SearchForm
+              control={control}
+              equipmentOptions={equipmentOptions}
+              handleDateRangeChange={handleDateRangeChange}
+          />
         </SearchCondition>
 
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              {/* 작업지시 목록 그리드 */}
+              <Grid item xs={12} md={6}>
+                <WorkOrderList
+                    workOrderList={workOrderList}
+                    onRowClick={handleWorkOrderSelect}
+                    tabId={props.tabId}
+                    height={450}
+                />
+              </Grid>
+
+              {/* 생산실적 목록 그리드 */}
+              <Grid item xs={12} md={6}>
                 <ProductionResultList
-                    productionList={productionList}
-                    refreshKey={refreshKey}
-                    onRowClick={handleProductionSelect}
+                    productionResultList={productionResultList}
+                    selectedWorkOrder={selectedWorkOrder}
                     onPrint={handlePrint}
                     onExport={handleExport}
                     tabId={props.tabId}
-                    gridProps={gridProps}
+                    height={450}
                 />
               </Grid>
             </Grid>
@@ -131,16 +136,16 @@ const ProductionResultInquiry = (props) => {
         }}>
           <Stack spacing={1}>
             <Typography variant="body2" color={getTextColor()}>
-              • 생산실적조회 화면에서는 등록된 생산실적을 조회할 수 있습니다.
+              • 생산실적조회 화면에서는 완료된 작업지시에 대한 생산실적을 조회할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 생산일자, 제품, 작업지시 등의 조건으로 검색이 가능합니다.
+              • 작업지시목록에서 특정 작업지시를 선택하면 해당 작업지시의 생산실적을 확인할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 그리드 헤더의 필터 기능을 사용하여 데이터를 필터링할 수 있습니다.
+              • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 확인하여 생산이력을 분석할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 출력 버튼을 통해 생산실적 정보를 인쇄하거나 엑셀로 내보낼 수 있습니다.
+              • 출력 및 엑셀 내보내기 기능을 통해 생산실적 데이터를 활용할 수 있습니다.
             </Typography>
           </Stack>
         </Box>
@@ -152,19 +157,19 @@ const ProductionResultInquiry = (props) => {
             title="생산실적조회 도움말"
         >
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 생산실적조회에서는 생산 작업의 실적 정보를 조회할 수 있습니다.
+            • 생산실적조회에서는 완료된 생산 작업의 실적 정보를 조회할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 상단의 검색조건을 사용하여 특정 기간, 제품, 작업지시 등의 생산실적을 조회할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
+            • 왼쪽 작업지시목록에서 작업지시를 선택하면 오른쪽에 해당 작업지시의 생산실적 정보가 표시됩니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()} paragraph>
             • 그리드의 컬럼을 클릭하여 정렬하거나, 필터 기능을 사용하여 데이터를 필터링할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 생산실적 데이터는 공장/라인/설비별로 그룹화하여 확인할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 출력 기능을 통해 생산실적 데이터를 인쇄할 수 있으며, 엑셀 내보내기 기능을 통해 분석용 데이터를 추출할 수 있습니다.
+            • 출력 및 엑셀 내보내기 기능을 통해 생산실적 데이터를 활용할 수 있습니다.
           </Typography>
         </HelpModal>
       </Box>
