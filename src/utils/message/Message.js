@@ -9,6 +9,7 @@ class Message {
   static UPDATE_SELECT_REQUIRED = '수정할 항목을 선택해주세요.';
   static SERVER_ERROR = '서버 연결 중 오류가 발생했습니다.';
   static ERROR = '오류';
+  static INFO = '안내';
   static SUCCESS = '성공';
   static DELETE = '삭제';
   static CANCEL = '취소';
@@ -50,6 +51,16 @@ class Message {
     Swal.fire({
       icon: 'warning',
       title: this.WARNING,
+      text: message,
+      confirmButtonText: this.CONFIRM
+    });
+  }
+
+  // 정보 메시지 표시
+  static showInfo(message) {
+    Swal.fire({
+      icon: 'info',
+      title: this.INFO,
       text: message,
       confirmButtonText: this.CONFIRM
     });

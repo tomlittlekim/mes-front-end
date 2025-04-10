@@ -1,0 +1,31 @@
+.defect-highlight {
+  color: #f44336 !important;
+  font-weight: 600;
+}
+
+.defect-rate-warning {
+  color: #ff9800 !important;
+  font-weight: 600;
+}
+
+.status-wait,
+.status-planned {
+  color: #2196f3 !important;
+  font-weight: 600;
+}
+
+.status-inprogress {
+  color: #ff9800 !important;
+  font-weight: 600;
+}
+
+.status-completed {
+  color: #4caf50 !important;
+  font-weight: 600;
+}
+
+.status-canceled {
+  color: #f44336 !important;
+  font-weight: 600;
+  text-decoration: line-through;
+}

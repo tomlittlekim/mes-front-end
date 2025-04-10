@@ -1,5 +1,5 @@
 import React from 'react';
-import ProductionResultInquiry from '../components/ProductionManagement/ProductionResultInquiry';
+import ProductionResultInquiry from '../components/ProductionManagement/ProductionResultInquiry/ProductionResultInquiry';
 import PageLayout from '../components/Layout/PageLayout';
 
 const ProductionResultInquiryPage = (props) => {

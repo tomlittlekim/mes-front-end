@@ -1,7 +1,9 @@
+// WorkOrderList.js 수정
 import React, { useMemo } from 'react';
 import { Typography } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
+import ShiftTypeChip from './ShiftTypeChip';
 
 /**
  * 작업지시 목록 컴포넌트
@@ -12,7 +14,7 @@ import { EnhancedDataGridWrapper } from '../../../Common';
  * @param {String} props.tabId - 탭 ID
  * @returns {JSX.Element}
  */
-const WorkOrderList = ({ workOrderList, onRowClick, tabId }) => {
+const WorkOrderList = ({ workOrderList, onRowClick, tabId, height = 350 }) => {
   // 작업지시 목록 그리드 컬럼 정의
   const workOrderColumns = useMemo(() => ([
     {
@@ -54,10 +56,9 @@ const WorkOrderList = ({ workOrderList, onRowClick, tabId }) => {
       width: 120,
       headerAlign: 'center',
       align: 'center',
-      valueFormatter: (params) => {
-        return params.value === 'DAY' ? '주간' : params.value === 'NIGHT' ? '야간'
-            : params.value;
-      }
+      renderCell: (params) => (
+          <ShiftTypeChip type={params.value || 'DAY'} />
+      )
     },
     {
       field: 'state',
@@ -129,7 +130,7 @@ const WorkOrderList = ({ workOrderList, onRowClick, tabId }) => {
           rows={workOrderList}
           columns={workOrderColumns}
           buttons={workOrderGridButtons}
-          height={350}
+          height={height}  // 외부에서 전달받은 높이 사용
           onRowClick={onRowClick}
           tabId={tabId + "-work-orders"}
       />

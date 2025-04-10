@@ -1,5 +1,5 @@
 import React from 'react';
-import DefectInquiry from '../components/ProductionManagement/DefectInquiry';
+import { DefectInquiry } from '../components/ProductionManagement/DefectInquiry';
 import PageLayout from '../components/Layout/PageLayout';
 
 const DefectInquiryPage = (props) => {

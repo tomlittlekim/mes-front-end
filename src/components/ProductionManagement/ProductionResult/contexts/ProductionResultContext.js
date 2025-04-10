@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext } from 'react';
 import { useProductionResultManagement } from '../hooks/useProductionResultManagement';
 
 // 생산실적 관리를 위한 컨텍스트 생성
