@@ -240,7 +240,7 @@ const UserManagement = (props) => {
     if (loginUser.priorityLevel === 5) {
       const devInitialData = async () => {
         const companyData = await getCompanySelect();
-        setCompanyOptions(companyData.getCompanySelect ?? []);
+        setCompanyOptions(companyData.getCompanies ?? []);
 
         const siteData = await getInitialCodes('ADDRESS');
         setSiteOptions(siteData.getInitialCodes ?? []);

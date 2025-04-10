@@ -2,27 +2,8 @@ import { graphFetch } from "./fetchConfig";
 
 // 메뉴 권한 그룹 조회 쿼리
 const menuRoleGroupQuery = `
-    query {
-        getMenuRoleGroup {
-            id
-            roleId
-            menuId
-            isOpen
-            isDelete
-            isInsert
-            isAdd
-            isPopup
-            isPrint
-            isSelect
-            isUpdate
-        }
-    }
-`;
-
-// 초기 메뉴 권한 조회 쿼리
-const initialMenuRoleQuery = `
-    query getInitialMenuRole($roleId: Int) {
-        getInitialMenuRole(roleId: $roleId) {
+    query getMenuRoleGroup($roleId: Int) {
+        getMenuRoleGroup(roleId: $roleId) {
             id
             roleId
             menuId
@@ -65,10 +46,7 @@ const upsertMenuRoleQuery = `
 `;
 
 // 메뉴 권한 그룹 조회
-export const getMenuRoleGroup = () => graphFetch(menuRoleGroupQuery);
-
-// 초기 메뉴 권한 조회
-export const getInitialMenuRole = (roleId) => graphFetch(initialMenuRoleQuery, { roleId });
+export const getMenuRoleGroup = (roleId) => graphFetch(menuRoleGroupQuery, { roleId });
 
 // 특정 메뉴의 권한 조회
 export const getMenuRole = (menuId) => graphFetch(menuRoleQuery, { menuId });
