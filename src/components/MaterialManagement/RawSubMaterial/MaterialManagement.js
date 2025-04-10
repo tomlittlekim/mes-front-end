@@ -446,9 +446,9 @@ const MaterialManagement = ({tabId}) => {
                         checkboxSelection: true,
                         onSelectionModelChange: handleSelectionModelChange,
                         onProcessUpdate: handleProcessRowUpdate,
-                        onProcessRowUpdateError: (error) => {
-                            console.error('Row update error:', error);
-                        }
+                        columnVisibilityModel: {
+                            systemMaterialId: false,
+                        },
                     }}
                 />
             {/*)}*/}

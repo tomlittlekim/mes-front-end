@@ -32,6 +32,7 @@ export const BOM_DETAIL_QUERY = `
             materialName
             parentItemCd
             userParentItemCd
+            parentMaterialType
             parentMaterialName
             materialStandard
             unit
@@ -69,6 +70,7 @@ export const BOM_DETAIL_DELETE_MUTATION = `
 export const MATERIALS_BY_TYPE_QUERY = `
     query getMaterialsByType($materialType: String!) {
     getMaterialsByType(materialType: $materialType) {
+        materialCategory
         systemMaterialId
         userMaterialId
         materialName
