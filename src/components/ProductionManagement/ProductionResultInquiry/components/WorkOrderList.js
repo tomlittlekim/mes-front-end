@@ -1,4 +1,3 @@
-// WorkOrderList.js 수정
 import React, { useMemo } from 'react';
 import { Typography } from '@mui/material';
 import { format } from 'date-fns';
@@ -6,12 +5,13 @@ import { EnhancedDataGridWrapper } from '../../../Common';
 import ShiftTypeChip from './ShiftTypeChip';
 
 /**
- * 작업지시 목록 컴포넌트
+ * 완료된 작업지시 목록 컴포넌트
  *
  * @param {Object} props - 컴포넌트 속성
  * @param {Array} props.workOrderList - 작업지시 목록 데이터
  * @param {Function} props.onRowClick - 행 클릭 핸들러
  * @param {String} props.tabId - 탭 ID
+ * @param {Number} props.height - 그리드 높이
  * @returns {JSX.Element}
  */
 const WorkOrderList = ({ workOrderList, onRowClick, tabId, height = 350 }) => {
@@ -121,18 +121,25 @@ const WorkOrderList = ({ workOrderList, onRowClick, tabId, height = 350 }) => {
     }
   ]), []);
 
-  // 작업지시 목록 그리드 버튼
+  // 작업지시 목록 그리드 버튼 - 생산실적조회에서는 버튼 불필요
   const workOrderGridButtons = useMemo(() => ([]), []);
 
   return (
       <EnhancedDataGridWrapper
-          title="작업지시 목록"
+          title="완료된 작업지시 목록"
           rows={workOrderList}
           columns={workOrderColumns}
           buttons={workOrderGridButtons}
-          height={height}  // 외부에서 전달받은 높이 사용
+          height={height}
           onRowClick={onRowClick}
           tabId={tabId + "-work-orders"}
+          gridProps={{
+            initialState: {
+              sorting: {
+                sortModel: [{ field: 'workOrderId', sort: 'desc' }]
+              }
+            }
+          }}
       />
   );
 };

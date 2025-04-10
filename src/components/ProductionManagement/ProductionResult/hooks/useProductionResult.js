@@ -5,8 +5,8 @@ import Message from '../../../../utils/message/Message';
 
 // GraphQL 쿼리 정의
 const SAVE_PRODUCTION_RESULT_MUTATION = gql`
-    mutation SaveProductionResult($createdRows: [ProductionResultInput], $updatedRows: [ProductionResultUpdate]) {
-        saveProductionResult(createdRows: $createdRows, updatedRows: $updatedRows)
+    mutation SaveProductionResult($createdRows: [ProductionResultInput], $updatedRows: [ProductionResultUpdate], $defectInfos: [DefectInfoInput]) {
+        saveProductionResult(createdRows: $createdRows, updatedRows: $updatedRows, defectInfos: $defectInfos)
     }
 `;
 
@@ -52,149 +52,100 @@ export const useProductionResult = () => {
    * @param {boolean} isNewResult - 신규 생산실적 여부
    * @param {Object} productionResult - 생산실적 데이터
    * @param {Object} selectedWorkOrder - 선택된 작업지시 객체
-   * @param {Array} defectList - 불량정보 목록
+   * @param {Array} defectInfos - 불량정보 목록
    * @param {Function} onSuccess - 성공 시 콜백 함수
+   * @returns {Promise} GraphQL mutation 결과를 반환하는 Promise
    */
-  const saveProductionResult = useCallback((isNewResult, productionResult, selectedWorkOrder, defectList, onSuccess) => {
+  const saveProductionResult = useCallback((isNewResult, productionResult, selectedWorkOrder, defectInfos, onSuccess) => {
+    // 디버깅 로그 추가
+    console.log('[saveProductionResult] 호출됨:', {
+      isNewResult,
+      productionResult,
+      selectedWorkOrder,
+      defectInfos: defectInfos || []
+    });
+
+    // 변수 준비
+    let createdRows = null;
+    let updatedRows = null;
+    let defectInfoInputs = null;
+
     if (isNewResult) {
       // 신규 생산실적 생성
-      const createInput = {
+      createdRows = [{
         workOrderId: selectedWorkOrder.workOrderId,
         goodQty: productionResult.goodQty || 0,
         defectQty: productionResult.defectQty || 0,
-        equipmentId: productionResult.equipmentId,
+        equipmentId: productionResult.equipmentId || "",
         resultInfo: productionResult.resultInfo || "",
         defectCause: productionResult.defectCause || "",
         flagActive: true
-      };
-
-      executeMutation({
-        mutation: SAVE_PRODUCTION_RESULT_MUTATION,
-        variables: {
-          createdRows: [createInput],
-          updatedRows: null
-        }
-      })
-      .then((result) => {
-        if (result.data && result.data.saveProductionResult) {
-          // 새로운 생산실적 ID 조회
-          executeQuery({
-            query: PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY,
-            variables: { workOrderId: selectedWorkOrder.workOrderId }
-          })
-          .then(response => {
-            if (response.data && response.data.productionResultsByWorkOrderId.length > 0) {
-              const newProdResult = response.data.productionResultsByWorkOrderId[0];
-
-              // 불량정보 저장 (불량이 있는 경우)
-              if (defectList.length > 0 && newProdResult.prodResultId) {
-                saveDefectInfo(newProdResult.prodResultId, selectedWorkOrder.workOrderId, defectList, selectedWorkOrder.productId, onSuccess);
-              } else {
-                Message.showSuccess('생산실적이 저장되었습니다.', onSuccess);
-              }
-            } else {
-              Message.showSuccess('생산실적이 저장되었습니다.', onSuccess);
-            }
-          })
-          .catch(error => {
-            console.error("Error fetching new production result:", error);
-            Message.showSuccess('생산실적이 저장되었습니다.', onSuccess);
-          });
-        } else {
-          Message.showError({ message: '생산실적 저장에 실패했습니다.' });
-        }
-      })
-      .catch((error) => {
-        console.error("Error saving production result:", error);
-        Message.showError({ message: '생산실적 저장 중 오류가 발생했습니다.' });
-      });
+      }];
     } else {
       // 기존 생산실적 수정
-      const updateInput = {
+      updatedRows = [{
         prodResultId: productionResult.prodResultId,
         workOrderId: selectedWorkOrder.workOrderId,
         goodQty: productionResult.goodQty || 0,
         defectQty: productionResult.defectQty || 0,
-        equipmentId: productionResult.equipmentId,
+        equipmentId: productionResult.equipmentId || "",
         resultInfo: productionResult.resultInfo || "",
         defectCause: productionResult.defectCause || "",
         flagActive: true
-      };
+      }];
+    }
 
-      executeMutation({
-        mutation: SAVE_PRODUCTION_RESULT_MUTATION,
-        variables: {
-          createdRows: null,
-          updatedRows: [updateInput]
-        }
-      })
-      .then((result) => {
-        if (result.data && result.data.saveProductionResult) {
-          // 불량정보 저장 (불량이 있는 경우)
-          if (defectList.length > 0 && productionResult.prodResultId) {
-            saveDefectInfo(productionResult.prodResultId, selectedWorkOrder.workOrderId, defectList, selectedWorkOrder.productId, onSuccess);
-          } else {
-            Message.showSuccess('생산실적이 저장되었습니다.', onSuccess);
-          }
-        } else {
-          Message.showError({ message: '생산실적 저장에 실패했습니다.' });
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating production result:", error);
-        Message.showError({ message: '생산실적 수정 중 오류가 발생했습니다.' });
+    // 불량정보가 있는 경우 데이터 구조 최적화
+    if (defectInfos && defectInfos.length > 0) {
+      defectInfoInputs = defectInfos.map(defect => {
+        // 불량정보 객체 최적화
+        const optimizedDefect = {
+          prodResultId: productionResult.prodResultId,
+          productId: selectedWorkOrder.productId,
+          defectQty: Number(defect.defectQty),
+          defectType: defect.defectType,
+          defectCause: defect.defectCause,
+          resultInfo: defect.resultInfo || defect.defectType,
+          state: 'NEW',
+          flagActive: true
+        };
+
+        console.log('[saveProductionResult] 최적화된 불량정보:', optimizedDefect);
+        return optimizedDefect;
       });
     }
-  }, [executeMutation, executeQuery]);
 
-  /**
-   * 불량정보 저장 함수
-   *
-   * @param {string} prodResultId - 생산실적 ID
-   * @param {string} workOrderId - 작업지시 ID
-   * @param {Array} defectList - 불량정보 목록
-   * @param {string} productId - 제품 ID
-   * @param {Function} onSuccess - 성공 시 콜백 함수
-   */
-  const saveDefectInfo = useCallback((prodResultId, workOrderId, defectList, productId, onSuccess) => {
-    const SAVE_DEFECT_INFO_MUTATION = gql`
-        mutation SaveDefectInfo($prodResultId: String!, $workOrderId: String!, $defectInputs: [DefectInfoInputType]!) {
-            saveDefectInfoForProductionResult(
-                prodResultId: $prodResultId,
-                workOrderId: $workOrderId,
-                defectInputs: $defectInputs
-            )
-        }
-    `;
+    console.log('[saveProductionResult] 생산실적 저장 요청:', {
+      createdRows,
+      updatedRows,
+      defectInfoInputs
+    });
 
-    // 불량정보 DTO 변환
-    const defectInputs = defectList.map(defect => ({
-      workOrderId: workOrderId,
-      prodResultId: prodResultId,
-      productId: productId,
-      defectQty: defect.defectQty,
-      defectType: defect.defectName,
-      defectReason: defect.defectReason || '',
-      resultInfo: defect.resultInfo || defect.defectName,
-      state: defect.state || 'NEW',
-      defectCause: defect.defectCause || ''
-    }));
-
-    executeMutation({
-      mutation: SAVE_DEFECT_INFO_MUTATION,
+    // GraphQL 뮤테이션 실행
+    return executeMutation({
+      mutation: SAVE_PRODUCTION_RESULT_MUTATION,
       variables: {
-        prodResultId,
-        workOrderId,
-        defectInputs
+        createdRows: createdRows,
+        updatedRows: updatedRows,
+        defectInfos: defectInfoInputs
       }
     })
     .then((result) => {
-      Message.showSuccess('생산실적과 불량정보가 저장되었습니다.', onSuccess);
+      console.log('[saveProductionResult] 저장 결과:', result);
+
+      if (result.data && result.data.saveProductionResult) {
+        Message.showSuccess('생산실적이 저장되었습니다.', onSuccess);
+        return result;
+      } else {
+        const error = new Error('생산실적 저장에 실패했습니다.');
+        Message.showError({ message: error.message });
+        throw error;
+      }
     })
     .catch((error) => {
-      console.error("Error saving defect info:", error);
-      Message.showWarning('생산실적은 저장되었으나 불량정보 저장에 실패했습니다.');
-      onSuccess();  // 생산실적은 저장되었으므로 새로고침
+      console.error("[saveProductionResult] Error saving production result:", error);
+      Message.showError({ message: error.message || '생산실적 저장 중 오류가 발생했습니다.' });
+      throw error;
     });
   }, [executeMutation]);
 
@@ -226,7 +177,6 @@ export const useProductionResult = () => {
 
   return {
     saveProductionResult,
-    saveDefectInfo,
     deleteProductionResult
   };
 };

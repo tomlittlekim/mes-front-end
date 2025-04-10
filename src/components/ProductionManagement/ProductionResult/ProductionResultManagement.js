@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './ProductionResultManagement.css';
-import { Box, IconButton, Stack, Typography, useTheme, alpha } from '@mui/material';
+import { Grid, Box, IconButton, Stack, Typography, useTheme, alpha } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DOMAINS, useDomain } from '../../../contexts/DomainContext';
 import HelpModal from '../../Common/HelpModal';
@@ -8,8 +8,8 @@ import useLocalStorageVO from '../../Common/UseLocalStorageVO';
 import { SearchCondition } from '../../Common';
 import WorkOrderList from './components/WorkOrderList';
 import ProductionResultList from './components/ProductionResultList';
-import DefectInfoList from './components/DefectInfo/DefectInfoList';
 import SearchForm from './SearchForm';
+import DefectInfoModal from './components/DefectInfoModal'; // 불량정보 모달 컴포넌트 추가
 import { useProductionResultManagement } from './hooks/useProductionResultManagement';
 
 /**
@@ -27,6 +27,17 @@ const ProductionResultManagement = (props) => {
 
   // 상태 및 커스텀 훅
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  // 불량유형 목록 (실제 구현에서는 API에서 가져올 수 있음)
+  const [defectTypes, setDefectTypes] = useState([
+    { value: 'APPEARANCE', label: '외관불량' },
+    { value: 'FUNCTIONAL', label: '기능불량' },
+    { value: 'DIMENSION', label: '치수불량' },
+    { value: 'MATERIAL', label: '재질불량' },
+    { value: 'PROCESS', label: '공정불량' },
+    { value: 'PACKAGE', label: '포장불량' },
+    { value: 'OTHER', label: '기타' }
+  ]);
 
   const {
     // 검색폼 상태 및 핸들러
@@ -47,16 +58,21 @@ const ProductionResultManagement = (props) => {
     // 생산실적 관련 상태
     productionResultList,
     productionResult,
+    setProductionResultList,
+    setProductionResult,
     handleCreateResult,
     handleSave,
     handleDelete,
     handleProductionResultSelect,
 
-    // 불량정보 관련 상태
-    defectList,
-    handleOpenDefectModal,
-    handleEditDefect,
-    handleDeleteDefect,
+    // 불량정보 모달 관련 상태 및 핸들러
+    isDefectInfoModalOpen,
+    openDefectInfoModal,
+    closeDefectInfoModal,
+    handleSaveDefectInfos,
+    currentProductionResult,
+    defectInfos,
+    handleProductionResultEdit,
 
     // 옵션 데이터
     equipmentOptions,
@@ -137,43 +153,36 @@ const ProductionResultManagement = (props) => {
 
         {/* 그리드 영역 */}
         {!isLoading && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* 상단 그리드 영역 */}
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                {/* 작업지시 목록 그리드 */}
-                <Box sx={{ flex: 1 }}>
-                  <WorkOrderList
-                      workOrderList={workOrderList}
-                      onRowClick={handleWorkOrderSelect}
-                      tabId={props.tabId}
-                  />
-                </Box>
+            <Grid container spacing={2}>
+              {/* 작업지시 목록 그리드 */}
+              <Grid item xs={12} md={6}>
+                <WorkOrderList
+                    workOrderList={workOrderList}
+                    onRowClick={handleWorkOrderSelect}
+                    tabId={props.tabId}
+                    height={450}  // 높이 일치
+                />
+              </Grid>
 
-                {/* 생산실적 목록 그리드 */}
-                <Box sx={{ flex: 1 }}>
-                  <ProductionResultList
-                      productionResultList={productionResultList}
-                      selectedWorkOrder={selectedWorkOrder}
-                      onRowClick={handleProductionResultSelect}
-                      onCreateResult={handleCreateResult}
-                      onSave={handleSave}
-                      onDelete={handleDelete}
-                      equipmentOptions={equipmentOptions}
-                      tabId={props.tabId}
-                  />
-                </Box>
-              </Stack>
-
-              {/* 불량정보 영역 */}
-              {selectedWorkOrder && productionResult && (
-                  <DefectInfoList
-                      defectList={defectList}
-                      onOpenDefectModal={handleOpenDefectModal}
-                      onEditDefect={handleEditDefect}
-                      onDeleteDefect={handleDeleteDefect}
-                  />
-              )}
-            </Box>
+              {/* 생산실적 목록 그리드 */}
+              <Grid item xs={12} md={6}>
+                <ProductionResultList
+                    productionResultList={productionResultList}
+                    selectedWorkOrder={selectedWorkOrder}
+                    onRowClick={handleProductionResultSelect}
+                    onCreateResult={handleCreateResult}
+                    onSave={handleSave}
+                    onDelete={handleDelete}
+                    equipmentOptions={equipmentOptions}
+                    setProductionResultList={setProductionResultList}
+                    setProductionResult={setProductionResult}
+                    productionResult={productionResult}
+                    onRowEdit={handleProductionResultEdit}
+                    tabId={props.tabId}
+                    height={450}  // 높이 일치
+                />
+              </Grid>
+            </Grid>
         )}
 
         {/* 하단 정보 영역 */}
@@ -193,7 +202,7 @@ const ProductionResultManagement = (props) => {
               • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 기록하여 생산이력을 관리합니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 불량정보를 등록하여 상세한 불량 원인과 수량을 관리할 수 있습니다.
+              • 불량수량이 1개 이상인 경우 불량정보를 반드시 입력해야 생산실적이 저장됩니다.
             </Typography>
           </Stack>
         </Box>
@@ -208,18 +217,30 @@ const ProductionResultManagement = (props) => {
             • 생산실적등록에서는 생산 작업의 실적 정보를 등록하고 관리할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 작업지시목록에서 작업지시를 선택한 후 신규 등록 버튼을 클릭하여 생산실적을 등록합니다.
+            • 작업지시목록에서 작업지시를 선택한 후 등록 버튼을 클릭하여 생산실적을 등록합니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 양품수량, 불량수량을 입력하면 자동으로 진척률과 불량률이 계산됩니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 불량정보 추가 버튼을 클릭하여 상세한 불량 정보(유형, 수량, 원인 등)를 등록할 수 있습니다.
+            • 불량수량이 1개 이상인 경우, 불량정보를 등록해야 저장할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 저장 버튼을 클릭하여 입력한 생산실적 정보를 저장합니다.
           </Typography>
         </HelpModal>
+
+        {/* 불량정보 모달 */}
+        {isDefectInfoModalOpen && (
+            <DefectInfoModal
+                open={isDefectInfoModalOpen}
+                onClose={closeDefectInfoModal}
+                onSave={handleSaveDefectInfos}
+                productionResult={currentProductionResult}
+                selectedWorkOrder={selectedWorkOrder}
+                defectTypes={defectTypes}
+            />
+        )}
       </Box>
   );
 };

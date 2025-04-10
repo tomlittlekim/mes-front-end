@@ -21,7 +21,7 @@
   font-weight: 600;
 }
 
-/* 작업지시 상태별 색상 표시 (추가) */
+/* 작업지시 상태별 색상 표시 */
 .status-planned {
   color: #1976d2 !important;
   font-weight: 500;
@@ -58,7 +58,7 @@
   font-weight: 600;
 }
 
-/* 선택된 행 강조 표시 (옵션) */
+/* 선택된 행 강조 표시 */
 .MuiDataGrid-row.Mui-selected {
   background-color: rgba(25, 118, 210, 0.12) !important;
 }
