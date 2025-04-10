@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 
 /**
  * 불량 목록 컴포넌트
@@ -14,7 +13,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
  * @param {Function} props.onRowClick - 행 클릭 핸들러
  * @param {Function} props.onPrint - 출력 버튼 클릭 핸들러
  * @param {Function} props.onExport - 엑셀 내보내기 버튼 클릭 핸들러
- * @param {Function} props.onViewDetail - 상세 보기 버튼 클릭 핸들러
  * @param {Number} props.refreshKey - 새로고침 키
  * @param {String} props.tabId - 탭 ID
  * @returns {JSX.Element}
@@ -24,7 +22,6 @@ const DefectList = ({
   onRowClick,
   onPrint,
   onExport,
-  onViewDetail,
   refreshKey,
   tabId
 }) => {
@@ -157,27 +154,8 @@ const DefectList = ({
       width: 100,
       headerAlign: 'center',
       align: 'center'
-    },
-    {
-      field: 'actions',
-      headerName: '상세보기',
-      width: 100,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: false,
-      renderCell: (params) => (
-          <IconButton
-              size="small"
-              onClick={(event) => {
-                event.stopPropagation();
-                onViewDetail(params.id);
-              }}
-          >
-            <VisibilityIcon fontSize="small" />
-          </IconButton>
-      )
     }
-  ]), [onViewDetail]);
+  ]), []);
 
   // 불량 목록 그리드 버튼
   const defectGridButtons = useMemo(() => ([
@@ -192,7 +170,7 @@ const DefectList = ({
           rows={defectList}
           columns={defectColumns}
           buttons={defectGridButtons}
-          height={450} // PlanList와 같은 높이로 변경
+          height={450}
           onRowClick={onRowClick}
           tabId={tabId + "-defect-info"}
       />
