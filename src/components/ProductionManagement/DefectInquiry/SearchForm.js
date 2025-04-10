@@ -66,6 +66,22 @@ const SearchForm = ({ control, handleDateRangeChange }) => {
           )}
       />
     </Grid>,
+    <Grid item xs={12} sm={6} md={3} key="productName">
+      <Controller
+          name="productName"
+          control={control}
+          render={({ field }) => (
+              <TextField
+                  {...field}
+                  label="제품명"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  placeholder="제품명을 입력하세요"
+              />
+          )}
+      />
+    </Grid>,
     <Grid item xs={12} sm={6} md={3} key="defectType">
       <Controller
           name="defectType"
