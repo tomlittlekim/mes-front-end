@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShiftTypeChip from './ShiftTypeChip';
+import ProductMaterialSelector from '../editors/ProductMaterialSelector';
 
 /**
  * 생산계획 목록 컴포넌트
@@ -19,6 +20,7 @@ import ShiftTypeChip from './ShiftTypeChip';
  * @param {Number} props.refreshKey - 새로고침 키
  * @param {String} props.tabId - 탭 ID
  * @param {Object} props.gridProps - 그리드 추가 속성
+ * @param {Array} props.productMaterials - 제품 정보 목록
  * @returns {JSX.Element}
  */
 const PlanList = ({
@@ -29,7 +31,8 @@ const PlanList = ({
   onDelete,
   refreshKey,
   tabId,
-  gridProps
+  gridProps,
+  productMaterials
 }) => {
   // 생산계획 목록 그리드 컬럼 정의
   const planColumns = useMemo(() => ([
@@ -55,6 +58,9 @@ const PlanList = ({
       editable: true,
       headerAlign: 'center',
       align: 'center',
+      renderEditCell: (params) => (
+          <ProductMaterialSelector {...params} productMaterials={productMaterials} />
+      ),
       renderCell: (params) => {
         // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
         const isNewRow = params.row.id?.toString().startsWith('NEW_');
@@ -62,11 +68,61 @@ const PlanList = ({
         // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
         const showRequired = isNewRow && (!params.value || params.value === '');
 
+        if (showRequired) {
+          return (
+              <Typography variant="body2" sx={{ color: '#f44336' }}>
+                필수 입력
+              </Typography>
+          );
+        }
+
+        // productId 값이 있으면 해당 제품의 userMaterialId 찾아서 표시
+        if (params.value) {
+          const product = productMaterials.find(p => p.systemMaterialId === params.value);
+          if (product) {
+            return (
+                <Typography variant="body2">
+                  {product.userMaterialId || params.value}
+                </Typography>
+            );
+          }
+        }
+
+        // 기본값 표시 (productId 값 자체)
         return (
-            <Typography variant="body2" sx={{ color: showRequired ? '#f44336' : 'inherit' }}>
-              {showRequired ? '필수 입력' : params.value || ''}
+            <Typography variant="body2">
+              {params.value || ''}
             </Typography>
         );
+      }
+    },
+    {
+      field: 'productName',
+      headerName: '제품명',
+      width: 180,
+      editable: true,
+      headerAlign: 'center',
+      align: 'left',
+      renderEditCell: (params) => (
+          <ProductMaterialSelector {...params} productMaterials={productMaterials} />
+      ),
+      renderCell: (params) => {
+        // params.value가 있으면 그대로 표시
+        if (params.value) {
+          return <Typography variant="body2">{params.value}</Typography>;
+        }
+
+        // params.value가 없지만 productId가 있는 경우, productId로 제품명 조회
+        if (params.row.productId) {
+          const product = productMaterials.find(p => p.systemMaterialId === params.row.productId);
+          if (product && product.materialName) {
+            // 이 경우 실제 params.value는 업데이트되지 않지만, 화면에는 제품명 표시
+            return <Typography variant="body2">{product.materialName}</Typography>;
+          }
+        }
+
+        // 둘 다 없는 경우 빈 문자열 표시
+        return <Typography variant="body2"></Typography>;
       }
     },
     {
@@ -208,7 +264,7 @@ const PlanList = ({
         }
       }
     }
-  ]), []);
+  ]), [productMaterials]);
 
   // 생산계획 목록 그리드 버튼
   const planGridButtons = useMemo(() => ([
