@@ -3,7 +3,7 @@ import { graphFetch } from "./fetchConfig";
 // 회사 선택 목록 조회 쿼리
 const companySelectQuery = `
     query {
-        getCompanySelect {
+        getCompanies {
             id
             site
             compCd

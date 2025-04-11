@@ -58,8 +58,14 @@ export const useGridRow = ({
      */
     const handleRowAdd = useCallback((setDataList) => {
         const newRow = createNewRow();
-        setDataList(prev => [newRow, ...prev]);
-        setAddRows(prev => [newRow, ...prev]);
+        setDataList(prev => {
+            const safePrev = Array.isArray(prev) ? prev : [];
+            return [newRow, ...safePrev];
+        });
+        setAddRows(prev => {
+            const safePrev = Array.isArray(prev) ? prev : [];
+            return [newRow, ...safePrev];
+        });
     }, [createNewRow]);
 
     /**

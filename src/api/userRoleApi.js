@@ -21,6 +21,7 @@ const rolesForSelectQuery = `
         getRolesForSelect {
             roleId
             roleName
+            compCd
             priorityLevel
         }
     }
@@ -50,4 +51,4 @@ export const getRolesForSelect = () => graphFetch(rolesForSelectQuery);
 export const upsertUserRole = (req) => graphFetch(upsertRoleQuery, { req });
 
 // 권한 삭제
-export const deleteUserRole = (roleId) => graphFetch(deleteRoleQuery, { roleId }); 
+export const deleteUserRole = (roleId) => graphFetch(deleteRoleQuery, { roleId });

@@ -37,6 +37,7 @@ function useLocalStorageVO() {
         localStorage.removeItem('auth');
         localStorage.removeItem('isAuthenticated');
         setLoginUser({ id: -1 });
+        window.location.href = '/';
     }
 
     return { setUserInfo, logout, loginUser };

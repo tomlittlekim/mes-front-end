@@ -30,6 +30,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import Swal from 'sweetalert2';
 import SyncIcon from '@mui/icons-material/Sync';
 import {useNavigate} from "react-router-dom";
+import useLocalStorageVO from "./UseLocalStorageVO";
 
 // 탭 레이블 컴포넌트를 memo로 최적화
 const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
@@ -80,6 +81,7 @@ const AppHeader = (props) => {
   const { theme, toggleTheme } = useTheme();
   const { domain, toggleDomain, nginxEnv, domainName } = useDomain();
   const muiTheme = useMuiTheme();
+  const { logout } = useLocalStorageVO();
   
   // 사용자 메뉴 상태
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
@@ -125,10 +127,7 @@ const AppHeader = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        // 로그아웃 처리
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('username');
-        window.location.href = '/login';
+        logout()
       }
     });
   }, [muiTheme.palette.primary.main, muiTheme.palette.grey]);
