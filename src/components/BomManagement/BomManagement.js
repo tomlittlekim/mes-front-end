@@ -554,7 +554,7 @@ const BomManagement = (props) => {
 
     /** BOM detail Input 타입으로 변환 */
     const transformRowForMutation = (row) => ({
-        bomId: row.bomId || '',
+        bomId: selectedBom.bomId || '',
         // bomDetailId: row.bomDetailId || '',
         bomLevel: parseInt(row.bomLevel) || 0,
         systemMaterialId: row.systemMaterialId || '',
@@ -615,12 +615,12 @@ const BomManagement = (props) => {
     /** BOM Detail 그리드 행 관리 훅 */
     const {
         selectedRows: detailSelectedRows,
-        addRows: detailAddRows,
-        updatedRows: detailUpdatedRows,
-        setAddRows: setDetailAddRows,
+        addRows: detailAddRows = [],
+        updatedRows: detailUpdatedRows = [],
+    setAddRows: setDetailAddRows,
         setUpdatedRows: setDetailUpdatedRows,
         handleRowSelect: handleDetailRowSelect,
-        handleRowUpdate,
+        handleRowUpdate: handleDetailRowUpdate,
         handleRowAdd: handleDetailRowAdd,
         formatSaveData: formatDetailSaveData,
         formatDeleteData: formatDetailDeleteData
@@ -667,8 +667,8 @@ const BomManagement = (props) => {
     };
 
     // 행 업데이트 시 이벤트 핸들러 - BOM Detail
-    const handleDetailRowUpdate = (newRow, oldRow) => {
-        return handleRowUpdate(newRow, oldRow, setBomDetailList);
+    const handleDetailProcessUpdate = (newRow, oldRow) => {
+        return handleDetailRowUpdate(newRow, oldRow, setBomDetailList);
     };
 
     // 검색조건 초기화
@@ -685,46 +685,10 @@ const BomManagement = (props) => {
         setBomDetailList([]);
     };
 
-    const handleSave = async () => {
+    const handleDetailSave = async () => {
+        const { createdRows, updatedRows } = formatDetailSaveData(detailAddRows, detailUpdatedRows);
 
-        // detailAddRows와 detailUpdatedRows가 배열이 아닌 경우 빈 배열로 초기화
-        const safeDetailAddRows = Array.isArray(detailAddRows) ? detailAddRows : [];
-        const safeDetailUpdatedRows = Array.isArray(detailUpdatedRows) ? detailUpdatedRows : [];
-
-        // 필수값 validation
-        const invalidRows = [...safeDetailAddRows, ...safeDetailUpdatedRows].filter(row => {
-            const bomLevel = row.bomLevel?.toString().trim();
-            const systemMaterialId = row.systemMaterialId?.toString().trim();
-            const parentItemCd = row.parentItemCd?.toString().trim();
-            const itemQty = row.itemQty?.toString().trim();
-
-            return !bomLevel || !systemMaterialId || !parentItemCd || !itemQty;
-        });
-
-        if (invalidRows.length > 0) {
-            Message.showWarning('BOM 레벨, 제품ID, 상위품목ID, 필요수량은 필수 입력값입니다.');
-            return;
-        }
-
-        // 데이터 포맷팅
-        const createdRows = safeDetailAddRows.map(row => ({
-            bomId: selectedBom.bomId,
-            bomLevel: parseInt(row.bomLevel),
-            systemMaterialId: row.systemMaterialId,
-            parentItemCd: row.parentItemCd,
-            itemQty: parseFloat(row.itemQty),
-            remark: row.remark || ''
-        }));
-
-        const updatedRows = safeDetailUpdatedRows.map(row => ({
-            bomId: selectedBom.bomId,
-            bomDetailId: row.bomDetailId,
-            bomLevel: parseInt(row.bomLevel),
-            systemMaterialId: row.systemMaterialId,
-            parentItemCd: row.parentItemCd,
-            itemQty: parseFloat(row.itemQty),
-            remark: row.remark || ''
-        }));
+        console.log('생성: ', createdRows, '/업뎃: ',updatedRows)
 
         try {
             await handleDetailGridSave({
@@ -732,9 +696,6 @@ const BomManagement = (props) => {
                 updatedRows
             });
 
-            // 저장 후 addRows와 updatedRows 초기화
-            setDetailAddRows([]);
-            setDetailUpdatedRows([]);
         } catch (error) {
             console.error('저장 실패:', error);
             Message.showError('저장 중 오류가 발생했습니다.');
@@ -1066,7 +1027,7 @@ const BomManagement = (props) => {
     // BOM 우측 상세 그리드 버튼
     const bomDetailGridButtons = [
         {label: '행추가', onClick: () => handleDetailRowAdd(setBomDetailList), icon: <AddIcon/>, disabled: !selectedBom},
-        {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
+        {label: '저장', onClick: handleDetailSave, icon: <SaveIcon/>},
         {label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon/>}
     ];
 
@@ -1235,7 +1196,7 @@ const BomManagement = (props) => {
                                 editMode: 'cell',
                                 checkboxSelection: true,
                                 onSelectionModelChange: handleDetailSelect,
-                                onProcessUpdate: handleDetailRowUpdate,
+                                onProcessUpdate: handleDetailProcessUpdate,
                                 columnVisibilityModel: {
                                     bomId: false,
                                     bomDetailId: false,
