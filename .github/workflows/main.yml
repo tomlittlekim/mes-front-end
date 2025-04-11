@@ -45,9 +45,7 @@ jobs:
         chmod 600 my_ec2_key.pem
         ssh -o StrictHostKeyChecking=no -i my_ec2_key.pem ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
         
-        whoami
-        sudo su -
-        
+        docker login -u ${{ secrets.DOCKER_ID }} -p ${{ secrets.DOCKER_PWD }}
         docker stop nginx || true
         docker rm nginx || true
         docker pull 8pin/imos:nginx
