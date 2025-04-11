@@ -1,10 +1,10 @@
 import React from 'react';
 import StatCardContainer from './StatCardContainer';
 import KpiChart from '../components/Dashboard/KpiChart';
-import IotChart from '../components/Dashboard/IotChart';
 import ApiStatus from '../components/Dashboard/ApiStatus';
 import { Grid, Box, Card, CardContent, useTheme } from '@mui/material';
 import { useDomain, DOMAINS } from '../contexts/DomainContext';
+import IotChart from "../components/Charts/IotChart";
 
 // 여기서는 실제 API 호출을 대신하여 목업 데이터를 사용합니다
 const DashboardContainer = (props) => {
@@ -152,21 +152,7 @@ const DashboardContainer = (props) => {
           </Card>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Card sx={{ 
-            boxShadow: 3,
-            bgcolor: getCardBgColor(),
-            border: `1px solid ${getBorderColor()}`,
-            height: '100%'
-          }}>
-            <CardContent sx={{ 
-              height: '100%',
-              p: 2,
-              pb: 3,
-              '&:last-child': { pb: 3 }
-            }}>
-              <IotChart />
-            </CardContent>
-          </Card>
+          <IotChart/>
         </Grid>
       </Grid>
 

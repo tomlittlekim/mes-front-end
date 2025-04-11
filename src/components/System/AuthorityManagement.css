@@ -53,4 +53,50 @@
   .permission-table td {
     padding: 4px;
   }
+}
+
+.authority-management-container {
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.status-badge.inactive {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+/* 다크 모드 스타일 */
+[data-mui-color-scheme="dark"] .status-badge.active {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+[data-mui-color-scheme="dark"] .status-badge.inactive {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #e57373;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 600px) {
+  .authority-management-container {
+    padding: 10px;
+  }
+  
+  .status-badge {
+    padding: 2px 4px;
+    font-size: 0.75rem;
+  }
 } 

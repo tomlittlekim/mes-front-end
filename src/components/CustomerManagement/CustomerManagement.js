@@ -20,7 +20,8 @@ import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../C
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
-import Message from '../../utils/message/Message'; // Message 유틸리티 클래스 임포트
+import Message from '../../utils/message/Message';
+import {graphFetch} from "../../api/fetchConfig"; // Message 유틸리티 클래스 임포트
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -57,7 +58,7 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessType: '',
-      flagActive: null
+      // flagActive: null
     }
   });
 
@@ -79,7 +80,7 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessType: '',
-      flagActive: null
+      // flagActive: null
     });
   };
 
@@ -147,7 +148,6 @@ const CustomerManagement = (props) => {
           businessType
           address
           telNo
-          flagActive
           createUser
           createDate
           updateUser
@@ -156,14 +156,14 @@ const CustomerManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+
+    graphFetch(
         query,
-        data
+        {filter:data}
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getVendors.map((row, index) => ({
+        const rowsWithId = data.getVendors.map((row, index) => ({
           ...row,
           id: row.vendorId  // 또는 row.factoryId || index + 1
         }));
@@ -190,7 +190,7 @@ const CustomerManagement = (props) => {
     businessType: row.businessType,
     address: row.address,
     telNo: row.telNo,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -202,7 +202,7 @@ const CustomerManagement = (props) => {
     businessType: row.businessType,
     address: row.address,
     telNo: row.telNo,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   // 저장 버튼 클릭 핸들러
@@ -241,6 +241,7 @@ const CustomerManagement = (props) => {
 
     // 필수 필드 검증
     const requiredFields = {
+      vendorName: '거래처명',
       businessRegNo: '사업자등록 번호'
     };
 
@@ -252,20 +253,14 @@ const CustomerManagement = (props) => {
     const createdVendorInputs = addRows.map(transformRowForMutation);
     const updatedVendorInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createVendorMutation,
-        variables: {
+
+    graphFetch(
+        createVendorMutation,
+        {
           createdRows: createdVendorInputs,
           updatedRows: updatedVendorInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -301,6 +296,19 @@ const CustomerManagement = (props) => {
       }
     `;
 
+    const isDeleteAddRows = addRows.find(f => f.id === selectedVendor.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedVendor.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedVendor.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedVendor.id);
+      setUpdatedRows(updatedRowsLit)
+    }
+
 
     Swal.fire({
       title: '삭제 확인',
@@ -314,17 +322,10 @@ const CustomerManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteVendorMutation,
-            variables: {vendorId: selectedVendor.vendorId}
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+        graphFetch(
+            deleteVendorMutation,
+            {vendorId: selectedVendor.vendorId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -369,7 +370,7 @@ const CustomerManagement = (props) => {
       businessType: '',
       address: '',
       telNo: '',
-      flagActive: 'Y',
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -396,27 +397,15 @@ const CustomerManagement = (props) => {
       codeClassId: "CD20250331110039125"
     };
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+    graphFetch(
         query,
         variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridCodes.map((row) => ({
+            const options = data.getGridCodes.map((row) => ({
               value: row.codeId,
               label: row.codeName
             }));
@@ -441,7 +430,6 @@ const CustomerManagement = (props) => {
           businessType
           address
           telNo
-          flagActive
           createUser
           createDate
           updateUser
@@ -450,14 +438,13 @@ const CustomerManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          {filter: getValues()}
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getVendors.map((row, index) => ({
+          const rowsWithId = data.getVendors.map((row, index) => ({
             ...row,
             id: row.vendorId  // 또는 row.factoryId || index + 1
           }));
@@ -476,7 +463,25 @@ const CustomerManagement = (props) => {
   // 거래처 목록 그리드 컬럼 정의
   const customerColumns = [
     { field: 'vendorId', headerName: '거래처코드', width: 140, flex: 1 },
-    { field: 'vendorName', headerName: '거래처명', width: 120 , editable: true},
+    {
+      field: 'vendorName',
+      headerName: '거래처명',
+      width: 120 ,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     {
       field: 'vendorType',
       headerName: '거래처 유형',
@@ -509,17 +514,17 @@ const CustomerManagement = (props) => {
     { field: 'businessType', headerName: '업종/업태', width: 100, editable: true },
     { field: 'address', headerName: '주소', width: 150 ,editable: true  },
     { field: 'telNo', headerName: '전화번호', width: 130, editable: true },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 90,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 90,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'createUser', headerName: '작성자', width: 90},
     { field: 'createDate', headerName: '작성일', width: 150},
     { field: 'updateUser', headerName: '수정자', width: 90},
@@ -532,30 +537,6 @@ const CustomerManagement = (props) => {
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
-
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -647,28 +628,28 @@ const CustomerManagement = (props) => {
                 )}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
-            <Controller
-                name="flagActive"
-                control={control}
-                render={({ field }) => (
-                    <FormControl variant="outlined" size="small" fullWidth>
-                      <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
-                      <Select
-                          {...field}
-                          labelId="flagActive-label"
-                          label="사용여부"
-                          displayEmpty
-                          notched
-                      >
-                        <MenuItem value={null}>전체</MenuItem>
-                        <MenuItem value="Y">사용</MenuItem>
-                        <MenuItem value="N">미사용</MenuItem>
-                      </Select>
-                    </FormControl>
-                )}
-            />
-          </Grid>
+          {/*<Grid item xs={12} sm={6} md={2.4}>*/}
+          {/*  <Controller*/}
+          {/*      name="flagActive"*/}
+          {/*      control={control}*/}
+          {/*      render={({ field }) => (*/}
+          {/*          <FormControl variant="outlined" size="small" fullWidth>*/}
+          {/*            <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
+          {/*            <Select*/}
+          {/*                {...field}*/}
+          {/*                labelId="flagActive-label"*/}
+          {/*                label="사용여부"*/}
+          {/*                displayEmpty*/}
+          {/*                notched*/}
+          {/*            >*/}
+          {/*              <MenuItem value={null}>전체</MenuItem>*/}
+          {/*              <MenuItem value="Y">사용</MenuItem>*/}
+          {/*              <MenuItem value="N">미사용</MenuItem>*/}
+          {/*            </Select>*/}
+          {/*          </FormControl>*/}
+          {/*      )}*/}
+          {/*  />*/}
+          {/*</Grid>*/}
         </SearchCondition>
 
         {/* 그리드 영역 */}

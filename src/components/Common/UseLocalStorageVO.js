@@ -9,7 +9,8 @@ function useLocalStorageVO() {
             userNm: '',
             userEmail: '',
             userRole: -1,
-            roleNm: ''
+            roleNm: '',
+            priorityLevel: -1
         };
     });
 
@@ -28,6 +29,7 @@ function useLocalStorageVO() {
             userEmail: auth.email,
             userRole: auth.roleId,
             roleNm: auth.roleNm,
+            priorityLevel: auth.priorityLevel
         })
     }
 
@@ -35,6 +37,7 @@ function useLocalStorageVO() {
         localStorage.removeItem('auth');
         localStorage.removeItem('isAuthenticated');
         setLoginUser({ id: -1 });
+        window.location.href = '/';
     }
 
     return { setUserInfo, logout, loginUser };

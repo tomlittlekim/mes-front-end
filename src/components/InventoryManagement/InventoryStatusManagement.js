@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import './InventoryStatusManagement.css';
+import React, { useState, useEffect, useCallback } from 'react';
+import './ReceivingManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
   TextField, 
@@ -20,15 +20,16 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
+import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
+import DateRangePicker from '../Common/DateRangePicker';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import PrintIcon from '@mui/icons-material/Print';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
+import { GRAPHQL_URL } from '../../config';
+import Message from '../../utils/message/Message';
+import ko from "date-fns/locale/ko";
+
 
 const InventoryStatusManagement = (props) => {
   // 현재 테마 가져오기
@@ -59,68 +60,153 @@ const InventoryStatusManagement = (props) => {
   };
   
   // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, getValues, setValue } = useForm({
     defaultValues: {
-      warehouseId: '',
-      itemType: '',
-      itemId: '',
-      itemName: '',
-      fromDate: null,
-      toDate: null
+      inManagementId: '',
+      inType: '',
+      factoryName: '',
+      warehouseName: '',
+      createUser: '',
+      hasInvoice: '',
+      dateRange: {
+        startDate: null,
+        endDate: null
+      }
     }
   });
-
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [inventoryList, setInventoryList] = useState([]);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 초기화 함수
   const handleReset = () => {
     reset({
-      warehouseId: '',
-      itemType: '',
-      itemId: '',
-      itemName: '',
-      fromDate: null,
-      toDate: null
+      inManagementId: '',
+      inType: '',
+      factoryName: '',
+      warehouseName: '',
+      createUser: '',
+      hasInvoice: '',
+      dateRange: {
+        startDate: null,
+        endDate: null
+      }
     });
   };
+  
+
+  // 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [receivingList, setReceivingList] = useState([]);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  
+  // 추가 코드 
+  const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링용 키
+  const [addRows,setAddRows] = useState([]);
+  const [updatedDetailRows, setUpdatedDetailRows] = useState([]); // 수정된 필드만 저장하는 객체
+
+  // 공장 타입 옵션
+  const [factoryTypeOptions, setFactoryTypeOptions] = useState([]);
+  // 창고 타입 옵션
+  const [warehouseTypeOptions, setWarehouseTypeOptions] = useState([]);
+
+  const GET_INVENTORY_STATUS_LIST = `
+    query getInventoryStatusList($filter: InventoryStatusFilter) {
+      getInventoryStatusList(filter: $filter) {
+        warehouseName
+        supplierName
+        manufacturerName
+        systemMaterialId
+        materialName
+        unit
+        qty
+      }
+    }
+  `
 
   // 검색 실행 함수
-  const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: 'M001', warehouseId: '자재창고A', warehouseName: '자재창고A', location: 'A-101', itemId: '1332', itemName: '밀키루', type: '원자재', spec: '정품 잉크 믹스', unit: 'Kg', price: 5000, openingQty: 100, inQty: 50, outQty: 35, adjustQty: 0, currentQty: 115, safetyQty: 30, issuedBy: '김창고', lastUpdated: '2024-04-15' },
-      { id: 'M002', warehouseId: '자재창고B', warehouseName: '자재창고B', location: 'B-202', itemId: '4523', itemName: '박력분', type: '원자재', spec: '밀가루, 고급형', unit: 'Kg', price: 3000, openingQty: 200, inQty: 100, outQty: 70, adjustQty: -5, currentQty: 225, safetyQty: 50, issuedBy: '박관리', lastUpdated: '2024-04-16' },
-      { id: 'M003', warehouseId: '자재창고A', warehouseName: '자재창고A', location: 'A-103', itemId: '2245', itemName: '포장비닐', type: '부자재', spec: '100cm(폭) 롤형태', unit: 'EA', price: 300, openingQty: 500, inQty: 200, outQty: 150, adjustQty: 0, currentQty: 550, safetyQty: 100, issuedBy: '이자재', lastUpdated: '2024-04-17' },
-      { id: 'M004', warehouseId: '완제품창고', warehouseName: '완제품창고', location: 'C-303', itemId: '8872', itemName: '완제품박스', type: '부자재', spec: '30x40x15cm', unit: 'EA', price: 500, openingQty: 1000, inQty: 500, outQty: 800, adjustQty: 10, currentQty: 710, safetyQty: 200, issuedBy: '정완제', lastUpdated: '2024-04-18' }
-    ];
-    
-    setInventoryList(dummyData);
-  };
+  const handleSearch = useCallback(async (data) => {
+    setUpdatedDetailRows([]);
+    setAddRows([]);
 
-  // 인쇄 버튼 클릭 핸들러
-  const handlePrint = () => {
-    Swal.fire({
-      icon: 'info',
-      title: '인쇄',
-      text: '인쇄 기능이 실행되었습니다.',
-      confirmButtonText: '확인'
-    });
-  };
+    console.log('검색 데이터:', data);
 
-  // 내보내기 버튼 클릭 핸들러
-  const handleExport = () => {
-    Swal.fire({
-      icon: 'info',
-      title: '내보내기',
-      text: '데이터가 엑셀 파일로 내보내기 되었습니다.',
-      confirmButtonText: '확인'
-    });
-  };
+    try {
+      // 필터 객체 생성 - 백엔드의 InventoryInManagementFilter와 일치
+      const filter = {
+        warehouseName: data.warehouseName || null,
+        supplierName: data.supplierName || null,
+        manufacturerName: data.manufacturerName || null,
+        materialName: data.materialName || null,
+      };
+
+      console.log('GraphQL 필터:', filter);
+
+      // 직접 fetch API를 사용하여 요청 (fetchGraphQL 함수 대신)
+      const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: GET_INVENTORY_STATUS_LIST,
+          variables: { filter }
+        })
+      });
+      
+      console.log('응답 상태:', response.status, response.statusText);
+      
+      const responseText = await response.text();
+      console.log('응답 내용:', responseText.substring(0, 200));
+      
+      if (responseText.trim()) {
+        const result = JSON.parse(responseText);
+        console.log('파싱된 결과:', result);
+        
+        if (result.data && result.data.getInventoryStatusList) {
+          // 받아온 데이터로 상태 업데이트
+          setReceivingList(result.data.getInventoryStatusList.map(item => ({
+            id: item.systemMaterialId,
+            warehouseName: item.warehouseName,
+            supplierName: item.supplierName,
+            manufactureName: item.manufacturerName,
+            systemMaterialId: item.systemMaterialId,
+            materialName: item.materialName,
+            unit: item.unit,
+            qty: item.qty
+          })));
+          
+          // 선택 상태 초기화
+        } else {
+          console.error('응답 데이터가 예상 형식과 다릅니다:', result);
+          // 응답 데이터에 문제가 있거나 빈 배열이면 빈 배열로 설정
+          setReceivingList([]);
+          
+          Swal.fire({
+            icon: 'info',
+            title: '알림',
+            text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.' + 
+                  (result.errors ? ` 오류: ${result.errors[0]?.message || '알 수 없는 오류'}` : '')
+          });
+        }
+      } else {
+        console.error('빈 응답을 받았습니다');
+        setReceivingList([]);
+        
+        Swal.fire({
+          icon: 'error',
+          title: '오류 발생',
+          text: '서버로부터 빈 응답을 받았습니다.'
+        });
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+      setReceivingList([]); // 오류 발생 시 빈 배열로 설정
+      
+      Swal.fire({
+        icon: 'error',
+        title: '데이터 조회 실패',
+        text: `오류: ${error.message || '알 수 없는 오류가 발생했습니다.'}`
+      });
+    }
+  }, []);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -131,34 +217,72 @@ const InventoryStatusManagement = (props) => {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [handleSearch]);
 
-  // 재고 현황 그리드 컬럼 정의
-  const inventoryColumns = [
-    { field: 'warehouseId', headerName: '창고코드', width: 110 },
-    { field: 'warehouseName', headerName: '창고명', width: 120 },
-    { field: 'location', headerName: '위치', width: 100 },
-    { field: 'itemId', headerName: '자재ID', width: 100 },
-    { field: 'itemName', headerName: '자재명', width: 150, flex: 1 },
-    { field: 'type', headerName: '품목유형', width: 100 },
-    { field: 'spec', headerName: '규격', width: 150 },
-    { field: 'unit', headerName: '단위', width: 70 },
-    { field: 'price', headerName: '단가', width: 80, type: 'number' },
-    { field: 'openingQty', headerName: '기초수량', width: 90, type: 'number' },
-    { field: 'inQty', headerName: '입고수량', width: 90, type: 'number' },
-    { field: 'outQty', headerName: '출고수량', width: 90, type: 'number' },
-    { field: 'adjustQty', headerName: '조정수량', width: 90, type: 'number' },
-    { field: 'currentQty', headerName: '현재고', width: 90, type: 'number' },
-    { field: 'safetyQty', headerName: '안전재고', width: 90, type: 'number' },
-    { field: 'issuedBy', headerName: '담당자', width: 100 },
-    { field: 'lastUpdated', headerName: '최종수정일', width: 120 }
+  // 재고 목록 그리드 컬럼 정의
+  const receivingColumns = [
+    { field: 'warehouseName', 
+      headerName: '창고이름', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+      flex: 1,
+     }, 
+    { field: 'supplierName', 
+      headerName: '공급업체', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+      flex: 1,
+      },
+    { field: 'manufactureName', 
+      headerName: '제조사', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+      flex: 1,
+      },
+    { field: 'systemMaterialId', 
+      headerName: '자재ID', 
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+      type: 'singleSelect',
+      flex: 1,
+     },
+    { field: 'materialName', 
+      headerName: '자재명', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+      flex: 1,
+      },
+    { field: 'unit', 
+      headerName: '단위', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+     },
+    { field: 'qty', 
+      headerName: '현재수량',
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      editable: false,
+     },
   ];
 
-  // 재고 현황 그리드 버튼
-  const inventoryGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> },
-    { label: '인쇄', onClick: handlePrint, icon: <PrintIcon /> },
-    { label: '내보내기', onClick: handleExport, icon: <FileDownloadIcon /> }
+  // 재고 목록 그리드 버튼
+  const receivingGridButtons = [
+    // { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
+    // { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
+    // { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> },
   ];
 
   return (
@@ -178,7 +302,7 @@ const InventoryStatusManagement = (props) => {
             color: getTextColor()
           }}
         >
-          자재/재고현황
+          자재 / 재고현황
         </Typography>
         <IconButton
           onClick={() => setIsHelpModalOpen(true)}
@@ -203,135 +327,99 @@ const InventoryStatusManagement = (props) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="warehouseId"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="warehouseId-label">창고</InputLabel>
-                <Select
-                  {...field}
-                  labelId="warehouseId-label"
-                  label="창고"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="자재창고A">자재창고A</MenuItem>
-                  <MenuItem value="자재창고B">자재창고B</MenuItem>
-                  <MenuItem value="자재창고C">자재창고C</MenuItem>
-                  <MenuItem value="완제품창고">완제품창고</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="itemType"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="itemType-label">품목유형</InputLabel>
-                <Select
-                  {...field}
-                  labelId="itemType-label"
-                  label="품목유형"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="원자재">원자재</MenuItem>
-                  <MenuItem value="부자재">부자재</MenuItem>
-                  <MenuItem value="반제품">반제품</MenuItem>
-                  <MenuItem value="완제품">완제품</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="itemId"
+            name="warehouseName"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label="자재코드"
+                label="창고이름"
                 variant="outlined"
                 size="small"
                 fullWidth
-                placeholder="자재코드를 입력하세요"
+                placeholder="창고이름을 입력하세요"
               />
             )}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="itemName"
+            name="supplierName"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label="자재명"
+                label="공급업체"
                 variant="outlined"
                 size="small"
                 fullWidth
-                placeholder="자재명을 입력하세요"
+                placeholder="공급업체를 입력하세요"
               />
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Controller
-                name="fromDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="시작일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="manufactureName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="제조사"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="제조사를 입력하세요"
               />
-              <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-              <Controller
-                name="toDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="종료일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+            name="materialName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="자재"
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder="자재를 입력하세요"
               />
-            </Stack>
-          </LocalizationProvider>
+            )}
+          />
         </Grid>
       </SearchCondition>
       
       {/* 그리드 영역 */}
       {!isLoading && (
-        <MuiDataGridWrapper
-          title="자재/재고현황"
-          rows={inventoryList}
-          columns={inventoryColumns}
-          buttons={inventoryGridButtons}
-          height={500}
-          gridProps={{
-            editMode: 'row'
-          }}
-        />
+        <Grid container spacing={1}>
+          {/* 재고 기본 정보 그리드 */}
+          <Grid item xs={12} md={12}>
+          <EnhancedDataGridWrapper
+              title="재고 현황"
+              key={refreshKey}  // refreshKey가 변경되면 전체 그리드가 재마운트됩니다.
+              rows={receivingList}
+              columns={receivingColumns}
+              buttons={receivingGridButtons}
+              height={450}
+              // onRowClick={handleReceivingSelect}
+              tabId={props.tabId + "-factories"}
+              gridProps={{
+                editMode: 'cell',
+                sx: {
+                  '& .MuiDataGrid-cell': {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }
+                }
+              }}
+              />
+          </Grid>
+        </Grid>
       )}
-      
+
       {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
@@ -352,4 +440,5 @@ const InventoryStatusManagement = (props) => {
   );
 };
 
-export default InventoryStatusManagement; 
+export default InventoryStatusManagement;  
+

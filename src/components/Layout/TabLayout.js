@@ -27,6 +27,7 @@ import NoticeBoardPage from '../../pages/NoticeBoardPage';
 import AuthorityManagementPage from '../../pages/AuthorityManagementPage';
 import UserManagementPage from '../../pages/UserManagementPage';
 import CompanyInfoPage from '../../pages/CompanyInfoPage';
+import MenuManagement from '../System/MenuManagement';
 import './TabLayout.css';
 
 // 각 페이지가 유효한 컴포넌트인지 확인
@@ -57,6 +58,7 @@ const MemoizedNoticeBoard = typeof NoticeBoardPage === 'function' ? memo(NoticeB
 const MemoizedAuthorityManagement = typeof AuthorityManagementPage === 'function' ? memo(AuthorityManagementPage) : AuthorityManagementPage;
 const MemoizedUserManagement = typeof UserManagementPage === 'function' ? memo(UserManagementPage) : UserManagementPage;
 const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(CompanyInfoPage) : CompanyInfoPage;
+const MemoizedMenuManagement = typeof MenuManagement === 'function' ? memo(MenuManagement) : MenuManagement;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -114,6 +116,8 @@ const getTabComponent = (tabId) => {
       return <MemoizedUserManagement tabId={tabId} />;
     case 'sy-company':
       return <MemoizedCompanyInfo tabId={tabId} />;
+    case 'sy-menu':
+      return <MemoizedMenuManagement tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
       return <div>탭 컨텐츠를 찾을 수 없습니다</div>;

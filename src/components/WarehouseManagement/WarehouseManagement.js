@@ -22,6 +22,8 @@ import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../C
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
+import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -36,7 +38,7 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      flagActive: null
+      // flagActive: null
     }
   });
 
@@ -81,7 +83,7 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      flagActive: null
+      // flagActive: null
     });
   };
 
@@ -155,7 +157,6 @@ const WarehouseManagement = (props) => {
           warehouseId
           warehouseName
           warehouseType
-          flagActive
           createUser
           createDate
           updateUser
@@ -164,14 +165,13 @@ const WarehouseManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        {filter: data}
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getWarehouse.map((row, index) => ({
+        const rowsWithId = data.getWarehouse.map((row, index) => ({
           ...row,
           id: row.warehouseId ,
           createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -201,7 +201,7 @@ const WarehouseManagement = (props) => {
       warehouseId: '자동입력',
       warehouseName: '',
       warehouseType: '',
-      flagActive: 'Y',
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -216,7 +216,7 @@ const WarehouseManagement = (props) => {
     factoryId: row.factoryId,
     warehouseName: row.warehouseName,
     warehouseType: row.warehouseType,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -224,7 +224,7 @@ const WarehouseManagement = (props) => {
     factoryId: row.factoryId,
     warehouseName: row.warehouseName,
     warehouseType: row.warehouseType,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
 
@@ -243,6 +243,31 @@ const WarehouseManagement = (props) => {
       return;
     }
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      warehouseName: '창고명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
+
+
     const createWarehouseMutation = `
       mutation saveWarehouse($createdRows: [WarehouseInput], $updatedRows: [WarehouseUpdate]) {
         saveWarehouse(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -252,20 +277,13 @@ const WarehouseManagement = (props) => {
     const createdWarehouseInputs = addRows.map(transformRowForMutation);
     const updatedWarehouseInputs = updatedRows.map(transformRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createWarehouseMutation,
-        variables: {
+    graphFetch(
+        createWarehouseMutation,
+        {
           createdRows: createdWarehouseInputs,
           updatedRows: updatedWarehouseInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -295,6 +313,19 @@ const WarehouseManagement = (props) => {
       return;
     }
 
+    const isDeleteAddRows = addRows.find(f => f.id === selectedWarehouse.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedWarehouse.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedWarehouse.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedWarehouse.id);
+      setUpdatedRows(updatedRowsLit)
+    }
+
     const deleteWarehouseMutation = `
       mutation deleteWarehouse($warehouseId: String!) {
         deleteWarehouse(warehouseId: $warehouseId)
@@ -313,17 +344,12 @@ const WarehouseManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteWarehouseMutation,
-            variables: {warehouseId: selectedWarehouse.warehouseId}
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+
+
+        graphFetch(
+            deleteWarehouseMutation,
+            {warehouseId: selectedWarehouse.warehouseId}
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -368,7 +394,6 @@ const WarehouseManagement = (props) => {
           warehouseId
           warehouseName
           warehouseType
-          flagActive
           createUser
           createDate
           updateUser
@@ -377,14 +402,13 @@ const WarehouseManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          {filter: getValues() }
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getWarehouse.map((row, index) => ({
+          const rowsWithId = data.getWarehouse.map((row, index) => ({
             ...row,
             id: row.warehouseId ,
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -417,27 +441,15 @@ const WarehouseManagement = (props) => {
       codeClassId: "CD20250401114109083"
     };
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+    graphFetch(
         query,
         variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridCodes.map((row) => ({
+            const options = data.getGridCodes.map((row) => ({
               value: row.codeId,
               label: row.codeName
             }));
@@ -458,30 +470,20 @@ const WarehouseManagement = (props) => {
       }
     `;
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query
-      })
-    }).then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      return response.json();
-    }).then((data) => {
+    graphFetch(
+        query,
+    ).then((data) => {
       if (data.errors) {
         console.error(data.errors);
       } else {
         // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.data.getGridFactory.map((row) => ({
+        const options = data.getGridFactory.map((row) => ({
           value: row.factoryId,
           label: row.factoryId
         }));
         setFactoryTypeOptions(options);
 
-        const models = data.data.getGridFactory.map((row) => ({
+        const models = data.getGridFactory.map((row) => ({
           factoryId: row.factoryId,
           factoryName: row.factoryName,
           factoryCode: row.factoryCode
@@ -505,7 +507,25 @@ const WarehouseManagement = (props) => {
     },
     { field: 'factoryName', headerName: '공장명', width: 150 },
     { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
-    { field: 'warehouseName', headerName: '창고 명', width: 100, editable: true },
+    {
+      field: 'warehouseName',
+      headerName: '창고 명',
+      width: 100,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     {
       field: 'warehouseType',
       headerName: '창고 유형',
@@ -514,17 +534,17 @@ const WarehouseManagement = (props) => {
       type: 'singleSelect',
       valueOptions: warehouseTypeOptions,
     },
-    {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 90,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
-    },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 90,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'createUser', headerName: '등록자', width: 100 },
     { field: 'createDate', headerName: '등록일', width: 150 },
     { field: 'updateUser', headerName: '수정자', width: 100 },
@@ -539,28 +559,7 @@ const WarehouseManagement = (props) => {
   ];
 
 
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
+
 
 
   return (
@@ -653,28 +652,28 @@ const WarehouseManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="flagActive"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>
-                <Select
-                  {...field}
-                  labelId="flagActive-label"
-                  label="사용여부"
-                  displayEmpty
-                  notched
-                >
-                  <MenuItem value={null}>전체</MenuItem>
-                  <MenuItem value="Y">사용</MenuItem>
-                  <MenuItem value="N">미사용</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="flagActive"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
+        {/*        <Select*/}
+        {/*          {...field}*/}
+        {/*          labelId="flagActive-label"*/}
+        {/*          label="사용여부"*/}
+        {/*          displayEmpty*/}
+        {/*          notched*/}
+        {/*        >*/}
+        {/*          <MenuItem value={null}>전체</MenuItem>*/}
+        {/*          <MenuItem value="Y">사용</MenuItem>*/}
+        {/*          <MenuItem value="N">미사용</MenuItem>*/}
+        {/*        </Select>*/}
+        {/*      </FormControl>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}

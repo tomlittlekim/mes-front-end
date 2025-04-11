@@ -21,21 +21,6 @@ export const useGridUtils = () => {
     }, []);
 
     /**
-     * 현재 날짜를 YYYY-MM-DD 형식으로 반환
-     */
-    const getCurrentDate = useCallback(() => {
-        return formatDateToYYYYMMDD(new Date());
-    }, [formatDateToYYYYMMDD]);
-
-    /**
-     * flagActive 값을 Y/N 형식으로 변환
-     */
-    const formatFlagActive = useCallback((value) => {
-        if (value === null) return 'N';
-        return value ? 'Y' : 'N';
-    }, []);
-
-    /**
      * 그리드 데이터 포맷팅
      */
     const formatGridData = useCallback((data, dataKey, formatter) => {
@@ -46,8 +31,6 @@ export const useGridUtils = () => {
     return {
         generateId,
         formatDateToYYYYMMDD,
-        getCurrentDate,
-        formatFlagActive,
         formatGridData
     };
 }; 

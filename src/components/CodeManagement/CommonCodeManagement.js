@@ -22,6 +22,8 @@ import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
+import Message from "../../utils/message/Message";
+import {graphFetch} from "../../api/fetchConfig";
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -70,14 +72,13 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
-      fetchGraphQL(
-          GRAPHQL_URL,
+      graphFetch(
           query,
-          getValues()
+          { filter: getValues() }
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.data.getCodeClass.map((row, index) => ({
+          const rowsWithId = data.getCodeClass.map((row, index) => ({
             ...row,
             id: row.codeClassId  // 또는 row.factoryId || index + 1
           }));
@@ -110,14 +111,13 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
-    fetchGraphQL(
-        GRAPHQL_URL,
+    graphFetch(
         query,
-        data
+        { filter: data }
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.data.getCodeClass.map((row, index) => ({
+        const rowsWithId = data.getCodeClass.map((row, index) => ({
           ...row,
           id: row.codeClassId  // 또는 row.factoryId || index + 1
         }));
@@ -239,6 +239,29 @@ const CommonCodeManagement = (props) => {
     }
   `;
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      codeClassName: '코드그룹명'
+    };
+
+    if (!validateRequiredFields(addCodeClassRows, requiredFields) ||
+        !validateRequiredFields(updatedCodeClassRows, requiredFields)) {
+      return;
+    }
+
     const createdCodeClassInputs = addCodeClassRows.map(transformRowForMutation);
     const updatedCodeClassInputs = updatedCodeClassRows.map(transformRowForUpdate);
 
@@ -256,20 +279,13 @@ const CommonCodeManagement = (props) => {
     }
 
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: creatCodeClassMutation,
-        variables: {
+    graphFetch(
+        creatCodeClassMutation,
+        {
           createdRows: createdCodeClassInputs,
           updatedRows: updatedCodeClassInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -303,7 +319,6 @@ const CommonCodeManagement = (props) => {
           codeName
           codeDesc
           sortOrder
-          flagActive
           createUser
           createDate
           updateUser
@@ -312,30 +327,15 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
-    const variables = {
-      codeClassId: codeGroup.codeClassId
-    }
-
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
+    graphFetch(
         query,
-        variables
-      })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
+        { codeClassId: codeGroup.codeClassId }
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL Errors:", data.errors);
           } else {
-            const rowsWithId = data.data.getCodes.map((row) => ({
+            console.log(data);
+            const rowsWithId = data.getCodes.map((row) => ({
               ...row,
               id: row.codeId
             }));
@@ -375,8 +375,8 @@ const CommonCodeManagement = (props) => {
       codeId: '자동입력',
       codeName: '',
       codeDesc: '',
-      sortOrder: '',
-      flagActive: 'Y',
+      sortOrder: 0,
+      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -401,6 +401,29 @@ const CommonCodeManagement = (props) => {
       return;
     }
 
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      codeName: '코드명'
+    };
+
+    if (!validateRequiredFields(addCodeRows, requiredFields) ||
+        !validateRequiredFields(updatedCodeRows, requiredFields)) {
+      return;
+    }
+
     const createCodeMutation = `
       mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
         saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -410,20 +433,13 @@ const CommonCodeManagement = (props) => {
     const createdCodeInputs = addCodeRows.map(transformCodeRowForMutation);
     const updatedCodeInputs = updatedCodeRows.map(transformCodeRowForUpdate);
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query: createCodeMutation,
-        variables: {
+    graphFetch(
+        createCodeMutation,
+        {
           createdRows: createdCodeInputs,
           updatedRows: updatedCodeInputs,
         }
-      })
-    })
-        .then((res) => res.json())
-        .then((data) => {
+    ).then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
           } else {
@@ -460,6 +476,18 @@ const CommonCodeManagement = (props) => {
       }
     `;
 
+    const isDeleteAddRows = addCodeRows.find(f => f.id === selectedCode.id)
+    const isDeleteUpdateRows = updatedCodeRows.find(f => f.id === selectedCode.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addCodeRows.filter(f => f.id !== selectedCode.id);
+      setAddCodeRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedCodeRows.filter(f => f.id !== selectedCode.id);
+      setUpdatedCodeRows(updatedRowsLit)
+    }
 
     Swal.fire({
       title: '삭제 확인',
@@ -473,17 +501,10 @@ const CommonCodeManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include', // 쿠키 자동 전송 설정
-          body: JSON.stringify({
-            query: deleteCodeMutation,
-            variables: {codeId: selectedCode.codeId} // 선택된 공장의 factoryId를 사용
-          })
-        })
-            .then((res) => res.json())
-            .then((data) => {
+        graphFetch(
+            deleteCodeMutation,
+            { codeId: selectedCode.codeId }
+        ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
                 Swal.fire({
@@ -541,7 +562,25 @@ const CommonCodeManagement = (props) => {
   // 코드 그룹 DataGrid 컬럼 정의
   const codeGroupColumns = [
     { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
-    { field: 'codeClassName', headerName: '코드그룹 명', width: 130, editable: true },
+    {
+      field: 'codeClassName',
+      headerName: '코드그룹명',
+      width: 130,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
     { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
   ];
 
@@ -549,19 +588,38 @@ const CommonCodeManagement = (props) => {
   const codeColumns = [
     { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
     { field: 'codeId', headerName: '코드ID', width: 150 },
-    { field: 'codeName', headerName: '코드명', width: 80, editable: true },
-    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
     {
-      field: 'flagActive',
-      headerName: '사용여부',
-      width: 85,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'Y', label: '사용' },
-        { value: 'N', label: '미사용' }
-      ]
+      field: 'codeName',
+      headerName: '코드명',
+      width: 80,
+      editable: true
+      ,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
     },
+    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
+    // {
+    //   field: 'flagActive',
+    //   headerName: '사용여부',
+    //   width: 85,
+    //   editable: true,
+    //   type: 'singleSelect',
+    //   valueOptions: [
+    //     { value: 'Y', label: '사용' },
+    //     { value: 'N', label: '미사용' }
+    //   ]
+    // },
     { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
     { field: 'createUser', headerName: '작성자', width: 90},
     { field: 'createDate', headerName: '작성일', width: 135},
@@ -615,7 +673,7 @@ const CommonCodeManagement = (props) => {
     codeName: row.codeName,
     codeDesc: row.codeDesc,
     sortOrder: row.sortOrder,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -630,31 +688,8 @@ const CommonCodeManagement = (props) => {
     codeName: row.codeName,
     codeDesc: row.codeDesc,
     sortOrder: row.sortOrder,
-    flagActive: row.flagActive
+    // flagActive: row.flagActive
   });
-
-  /**
-   * 공통 GraphQL API 호출 함수
-   * @param {string} url - GraphQL 엔드포인트 URL
-   * @param {string} query - GraphQL 쿼리 문자열
-   * @param {object} filter - 쿼리에 전달할 filter 객체
-   * @returns {Promise<object>} - GraphQL 응답 JSON
-   */
-  function fetchGraphQL(url, query, filter) {
-    const variables = { filter };
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({ query, variables })
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        });
-  }
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>

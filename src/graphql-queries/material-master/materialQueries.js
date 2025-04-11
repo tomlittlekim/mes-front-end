@@ -88,3 +88,22 @@ export const DELETE_MUTATION = `
         deleteMaterials(systemMaterialIds: $systemMaterialIds)
     }
 `;
+
+/** material 관련된 dropdown 데이터 가져오는 유틸성 쿼리 */
+export const ALL_MATERIALS_QUERY = `
+    query getAllMaterials {
+        getAllMaterials {
+            materialType
+            categories {
+                materialCategory
+                materials {
+                    systemMaterialId
+                    userMaterialId
+                    materialName
+                    materialStandard
+                    unit
+                }
+            }
+        }
+    }
+`;
