@@ -28,6 +28,11 @@ import AuthorityManagementPage from '../../pages/AuthorityManagementPage';
 import UserManagementPage from '../../pages/UserManagementPage';
 import CompanyInfoPage from '../../pages/CompanyInfoPage';
 import MenuManagement from '../System/MenuManagement';
+import PlanVsActualPage from '../../pages/Report/PlanVsActualPage';
+import PeriodicProductionPage from '../../pages/Report/PeriodicProductionPage';
+import DailyYieldPage from '../../pages/Report/DailyYieldPage';
+import InventoryMovementPage from '../../pages/Report/InventoryMovementPage';
+import DailyProductionPage from '../../pages/Report/DailyProductionPage';
 import './TabLayout.css';
 
 // 각 페이지가 유효한 컴포넌트인지 확인
@@ -59,6 +64,11 @@ const MemoizedAuthorityManagement = typeof AuthorityManagementPage === 'function
 const MemoizedUserManagement = typeof UserManagementPage === 'function' ? memo(UserManagementPage) : UserManagementPage;
 const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(CompanyInfoPage) : CompanyInfoPage;
 const MemoizedMenuManagement = typeof MenuManagement === 'function' ? memo(MenuManagement) : MenuManagement;
+const MemoizedPlanVsActual = typeof PlanVsActualPage === 'function' ? memo(PlanVsActualPage) : PlanVsActualPage;
+const MemoizedPeriodicProduction = typeof PeriodicProductionPage === 'function' ? memo(PeriodicProductionPage) : PeriodicProductionPage;
+const MemoizedDailyYield = typeof DailyYieldPage === 'function' ? memo(DailyYieldPage) : DailyYieldPage;
+const MemoizedInventoryMovement = typeof InventoryMovementPage === 'function' ? memo(InventoryMovementPage) : InventoryMovementPage;
+const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo(DailyProductionPage) : DailyProductionPage;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -118,9 +128,20 @@ const getTabComponent = (tabId) => {
       return <MemoizedCompanyInfo tabId={tabId} />;
     case 'sy-menu':
       return <MemoizedMenuManagement tabId={tabId} />;
+    case 'rp-mpv':
+      return <MemoizedPlanVsActual tabId={tabId} />;
+    case 'rp-ppr':
+      return <MemoizedPeriodicProduction tabId={tabId} />;
+    case 'rp-dpr':
+      return <MemoizedDailyYield tabId={tabId} />;
+    case 'rp-imr':
+      return <MemoizedInventoryMovement tabId={tabId} />;
+    case 'rp-dr':
+      return <MemoizedDailyProduction tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
-      return <div>탭 컨텐츠를 찾을 수 없습니다</div>;
+      console.warn(`No component found for tab ID: ${tabId}`);
+      return <div>탭 컨텐츠를 찾을 수 없습니다 ({tabId})</div>;
   }
 };
 
