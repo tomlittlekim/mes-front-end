@@ -92,7 +92,6 @@ const PopupChart = ({ open, onClose }) => {
             setLines(newLines);
         }
     }).catch((err) => {
-        console.warn("❌ 서버 요청 실패:", err.message);
     });
 });
 

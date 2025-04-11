@@ -64,7 +64,6 @@ const IOTChart = () => {
                     }
                 }
             }).catch((err) => {
-                console.warn("❌ 서버 요청 실패:", err.message);
             });
 
         }, 30000); // 30초마다
