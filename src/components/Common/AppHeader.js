@@ -31,6 +31,7 @@ import Swal from 'sweetalert2';
 import SyncIcon from '@mui/icons-material/Sync';
 import {useNavigate} from "react-router-dom";
 import useLocalStorageVO from "./UseLocalStorageVO";
+import { alpha } from '@mui/material/styles';
 
 // 탭 레이블 컴포넌트를 memo로 최적화
 const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
@@ -277,12 +278,28 @@ const AppHeader = (props) => {
           {tabs && tabs.length > 0 && (
             <div className="tab-wrapper">
               {/* 왼쪽 스크롤 버튼 */}
-              <div 
-                className={`tab-scroll-buttons left ${showLeftScroll ? 'visible' : ''}`}
-                onClick={handleScrollLeft}
-              >
-                <KeyboardArrowLeftIcon fontSize="small" />
-              </div>
+              {showLeftScroll && (
+                <Tooltip title="왼쪽으로 스크롤">
+                  <span>
+                    <IconButton
+                      onClick={handleScrollLeft}
+                      size="small"
+                      sx={{ 
+                        position: 'absolute',
+                        left: 0,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        zIndex: 1,
+                        backgroundColor: alpha(muiTheme.palette.background.paper, 0.7),
+                        '&:hover': { backgroundColor: alpha(muiTheme.palette.background.paper, 0.9) }
+                      }}
+                      disabled={!showLeftScroll}
+                    >
+                      <KeyboardArrowLeftIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
               
               <div 
                 className="custom-tabs"
@@ -305,12 +322,28 @@ const AppHeader = (props) => {
               </div>
               
               {/* 오른쪽 스크롤 버튼 */}
-              <div 
-                className={`tab-scroll-buttons right ${showRightScroll ? 'visible' : ''}`}
-                onClick={handleScrollRight}
-              >
-                <KeyboardArrowRightIcon fontSize="small" />
-              </div>
+              {showRightScroll && (
+                <Tooltip title="오른쪽으로 스크롤">
+                  <span>
+                    <IconButton
+                      onClick={handleScrollRight}
+                      size="small"
+                      sx={{ 
+                        position: 'absolute',
+                        right: 40,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        zIndex: 1,
+                        backgroundColor: alpha(muiTheme.palette.background.paper, 0.7),
+                        '&:hover': { backgroundColor: alpha(muiTheme.palette.background.paper, 0.9) }
+                      }}
+                      disabled={!showRightScroll}
+                    >
+                      <KeyboardArrowRightIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
             </div>
           )}
         </div>
@@ -318,15 +351,24 @@ const AppHeader = (props) => {
         <Divider orientation="vertical" flexItem className="header-divider" />
         
         <div className="header-actions">
+          {/* 전체 탭 닫기 버튼 */}
           <Tooltip title="모든 탭 닫기">
-            <IconButton 
-              onClick={handleCloseAllTabs} 
-              size="small" 
-              className="header-action-button"
-              disabled={tabs.length <= 1}
-            >
-              <CloseAllIcon fontSize="small" />
-            </IconButton>
+            <span>
+              <IconButton
+                onClick={handleCloseAllTabs}
+                size="small"
+                sx={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 1,
+                }}
+                disabled={tabs.length <= 1}
+              >
+                <CloseAllIcon fontSize="small" />
+              </IconButton>
+            </span>
           </Tooltip>
           
           <Tooltip title={`${theme === 'dark' ? '라이트' : '다크'} 모드로 전환`}>

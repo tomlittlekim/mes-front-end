@@ -55,4 +55,41 @@ body.pems .info-section-title {
 
 body.dark.pems .info-section-title {
   border-bottom-color: #3d2814;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+}
+
+.status-badge.inactive {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #d32f2f;
+}
+
+/* 다크 모드 스타일 */
+[data-theme='dark'] .status-badge.active {
+  background-color: rgba(46, 125, 50, 0.2);
+  color: #66bb6a;
+}
+
+[data-theme='dark'] .status-badge.inactive {
+  background-color: rgba(211, 47, 47, 0.2);
+  color: #ef5350;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 600px) {
+  .status-badge {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
 } 

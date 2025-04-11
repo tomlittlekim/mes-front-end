@@ -1,4 +1,5 @@
-// useProductionPlanManagement.js - 수정된 버전
+// useProductionPlanManagement.js - 제품 정보 로드 및 캐싱 기능 추가
+
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
@@ -10,6 +11,7 @@ import Message from '../../../../utils/message/Message';
 import useLocalStorageVO from '../../../Common/UseLocalStorageVO';
 import CustomDateEditor from '../editors/CustomDateEditor';
 import ShiftTypeEditor from '../editors/ShiftTypeEditor';
+import ProductMaterialSelector from '../editors/ProductMaterialSelector';
 
 // GraphQL 쿼리 정의
 const PRODUCTION_PLANS_QUERY = gql`
@@ -29,6 +31,21 @@ const PRODUCTION_PLANS_QUERY = gql`
             createDate
             updateUser
             updateDate
+        }
+    }
+`;
+
+// 제품 정보 조회 쿼리 수정
+const PRODUCT_MATERIALS_QUERY = gql`
+    query getProductMaterials {
+        productMaterials {
+            systemMaterialId
+            userMaterialId
+            materialName
+            materialStandard
+            materialCategory
+            materialType
+            unit
         }
     }
 `;
@@ -63,6 +80,7 @@ export const useProductionPlanManagement = (tabId) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
+      productName: '', // 제품명 필드 추가
       shiftType: '',
       planDateRange: {
         startDate: null,
@@ -76,6 +94,58 @@ export const useProductionPlanManagement = (tabId) => {
   const [planList, setPlanList] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // 제품 정보 상태 추가
+  const [productMaterials, setProductMaterials] = useState([]);
+  const [isProductMaterialsLoaded, setIsProductMaterialsLoaded] = useState(false);
+
+  // 제품 정보를 ID 기준으로 맵핑하는 객체 생성 (메모이제이션)
+  const productMap = useMemo(() => {
+    const map = {};
+    productMaterials.forEach(product => {
+      if (product.systemMaterialId) {
+        map[product.systemMaterialId] = product;
+      }
+    });
+    return map;
+  }, [productMaterials]);
+
+  // 제품 정보 로드 함수
+  const loadProductMaterials = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await executeQuery({ query: PRODUCT_MATERIALS_QUERY });
+
+      if (response?.data?.productMaterials) {
+        console.log("제품 정보 로드 성공:", response.data.productMaterials.length);
+        setProductMaterials(response.data.productMaterials);
+        setIsProductMaterialsLoaded(true);
+
+        // 제품 정보 로드 후, 현재 planList에 있는 행들의 제품명 업데이트
+        setPlanList(prev => {
+          return prev.map(plan => {
+            const product = response.data.productMaterials.find(
+                p => p.systemMaterialId === plan.productId
+            );
+
+            if (product && !plan.productName) {
+              return { ...plan, productName: product.materialName || '' };
+            }
+
+            return plan;
+          });
+        });
+      } else {
+        console.error("제품 정보 로드: 데이터가 없습니다.", response);
+        Message.showWarning('제품 정보를 불러오는데 실패했습니다.');
+      }
+    } catch (error) {
+      console.error("제품 정보 로드 오류:", error);
+      Message.showError({ message: '제품 정보를 불러오는데 실패했습니다.' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [executeQuery]);
 
   // API 통신 시 Date 객체를 문자열로 변환하는 함수
   const formatDateToString = useCallback((dateObj) => {
@@ -117,6 +187,7 @@ export const useProductionPlanManagement = (tabId) => {
       prodPlanId: '자동입력',
       orderId: '',
       productId: '',
+      productName: '', // 제품명 필드 추가
       shiftType: 'DAY', // 기본값으로 주간(DAY) 설정
       planQty: 0,
       planStartDate: currentDate,
@@ -160,22 +231,57 @@ export const useProductionPlanManagement = (tabId) => {
     })
   });
 
+  // 제품명을 캐싱된 제품 정보에서 조회하여 채우는 함수
+  const enrichPlanListWithProductNames = useCallback((plans) => {
+    return plans.map(plan => {
+      const productId = plan.productId;
+      let productName = '';
+
+      // 제품ID가 있고 productMap에 해당 ID가 존재하면 제품명 채우기
+      if (productId && productMap[productId]) {
+        productName = productMap[productId].materialName || '';
+      }
+
+      return {
+        ...plan,
+        productName
+      };
+    });
+  }, [productMap]);
+
   // 그리드 데이터 포맷 함수
   const formatGridData = useCallback((data) => {
     if (!data?.productionPlans) {
       return [];
     }
 
-    return data.productionPlans.map((plan) => ({
-      ...plan,
-      id: plan.prodPlanId,
-      planQty: plan.planQty ? Number(plan.planQty) : 0,
-      planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
-      planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
-      createDate: plan.createDate ? new Date(plan.createDate) : null,
-      updateDate: plan.updateDate ? new Date(plan.updateDate) : null
-    }));
-  }, []);
+    let formattedData = data.productionPlans.map((plan) => {
+      // 기본 필드 포맷
+      const formattedPlan = {
+        ...plan,
+        id: plan.prodPlanId,
+        planQty: plan.planQty ? Number(plan.planQty) : 0,
+        planStartDate: plan.planStartDate ? new Date(plan.planStartDate) : null,
+        planEndDate: plan.planEndDate ? new Date(plan.planEndDate) : null,
+        createDate: plan.createDate ? new Date(plan.createDate) : null,
+        updateDate: plan.updateDate ? new Date(plan.updateDate) : null
+      };
+
+      // 제품 정보 업데이트
+      // productId가 있고 제품 정보맵에서 찾을 수 있는 경우
+      if (plan.productId && productMap[plan.productId]) {
+        const product = productMap[plan.productId];
+        // productName이 없는 경우에만 설정 (기존 productName이 있으면 유지)
+        if (!formattedPlan.productName) {
+          formattedPlan.productName = product.materialName || '';
+        }
+      }
+
+      return formattedPlan;
+    });
+
+    return formattedData;
+  }, [productMap]);
 
   // 초기화 함수
   const handleReset = useCallback(() => {
@@ -183,6 +289,7 @@ export const useProductionPlanManagement = (tabId) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
+      productName: '', // 제품명 필드 추가
       shiftType: '',
       planDateRange: {
         startDate: null,
@@ -233,7 +340,17 @@ export const useProductionPlanManagement = (tabId) => {
     .then(response => {
       if (response.data) {
         const formattedData = formatGridData(response.data);
-        setPlanList(formattedData);
+
+        // 제품명 기준 필터링 (프론트엔드에서 처리)
+        let filteredData = formattedData;
+        if (data.productName && data.productName.trim() !== '') {
+          const searchTerm = data.productName.trim().toLowerCase();
+          filteredData = formattedData.filter(plan =>
+              plan.productName && plan.productName.toLowerCase().includes(searchTerm)
+          );
+        }
+
+        setPlanList(filteredData);
         setRefreshKey(prev => prev + 1);
       }
       setIsLoading(false);
@@ -255,7 +372,7 @@ export const useProductionPlanManagement = (tabId) => {
 
   // 행 업데이트 처리 핸들러
   const handleProcessRowUpdate = useCallback((newRow, oldRow) => {
-    const isNewRow = oldRow.id.startsWith('NEW_');
+    const isNewRow = oldRow.id.toString().startsWith('NEW_');
 
     // 깊은 복제로 원본 데이터 보존
     const processedRow = { ...newRow };
@@ -271,6 +388,21 @@ export const useProductionPlanManagement = (tabId) => {
       }
     }
 
+    // 제품 정보 일관성 확인
+    // 제품ID가 변경되었을 때 제품명 자동 업데이트
+    if (processedRow.productId !== oldRow.productId) {
+      const product = productMaterials.find(p => p.systemMaterialId === processedRow.productId);
+      if (product) {
+        processedRow.productName = product.materialName || '';
+      }
+    }
+    // 제품명이 변경되었을 때 제품ID 자동 업데이트
+    else if (processedRow.productName !== oldRow.productName) {
+      const product = productMaterials.find(p => p.materialName === processedRow.productName);
+      if (product) {
+        processedRow.productId = product.systemMaterialId || '';
+      }
+    }
     // 그리드 상태 업데이트
     setPlanList((prev) => {
       return prev.map((row) => row.id === oldRow.id ? { ...row, ...processedRow } : row);
@@ -301,13 +433,20 @@ export const useProductionPlanManagement = (tabId) => {
     }
 
     return processedRow;
-  }, [setAddRows, setUpdatedRows]);
+  }, [setAddRows, setUpdatedRows, productMaterials]);
 
   // 등록 버튼 클릭 핸들러
   const handleAdd = useCallback(() => {
     const newRow = createNewRow();
     setPlanList(prev => [newRow, ...prev]);
     setAddRows(prev => [newRow, ...prev]);
+    // 새 행이 추가된 후 약간의 딜레이 후 편집 모드로 전환
+    setTimeout(() => {
+      // 여기서 제품ID 셀을 클릭하거나 편집 모드로 전환하는 로직 추가
+      // MUI DataGrid에서는 api를 통해 접근해야 함
+      const rowId = newRow.id;
+      // 노트: 여기서 실제 DataGrid API에 접근하여 편집 모드 활성화 코드 필요
+    }, 100);
   }, [createNewRow, setAddRows]);
 
   // 저장 버튼 클릭 핸들러
@@ -431,25 +570,36 @@ export const useProductionPlanManagement = (tabId) => {
     });
   }, [selectedPlan, planList, setAddRows, executeMutation]);
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
+  // 컴포넌트 마운트 시 제품 정보 로드
   useEffect(() => {
     let isMounted = true;
-    const timer = setTimeout(() => {
-      if (isMounted) {
-        try {
+
+    const loadInitialData = async () => {
+      try {
+        console.log("초기 데이터 로드 시작...");
+
+        // 1. 제품 정보 먼저 로드
+        await loadProductMaterials();
+        console.log("제품 정보 로드 완료, 제품 수:", productMaterials.length);
+
+        // 2. 제품 정보 로드 후 생산계획 목록 조회
+        if (isMounted) {
           handleSearch({});
-        } catch (err) {
-          console.error("Initial load error:", err);
+        }
+      } catch (err) {
+        console.error("초기 데이터 로드 오류:", err);
+        if (isMounted) {
           setIsLoading(false);
         }
       }
-    }, 100);
+    };
+
+    loadInitialData();
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
-  }, []);  // 여기서 빈 의존성 배열로 수정
+  }, []);
 
   // 초기 정렬 상태 설정 - 생산계획ID 기준 내림차순 정렬
   const initialState = useMemo(() => ({
@@ -479,9 +629,14 @@ export const useProductionPlanManagement = (tabId) => {
     handleDelete,
     handleProcessRowUpdate,
 
+    // 제품 정보 관련 상태
+    productMaterials,
+    isProductMaterialsLoaded,
+
     // 에디터 컴포넌트
     CustomDateEditor,
     ShiftTypeEditor,
+    ProductMaterialSelector,
 
     // 그리드 속성
     initialState,

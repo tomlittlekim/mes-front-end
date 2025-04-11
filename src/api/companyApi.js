@@ -1,48 +1,86 @@
-import { graphFetch } from "./fetchConfig";
+import { graphFetch } from './fetchConfig';
 
-// 회사 선택 목록 조회 쿼리
-const companySelectQuery = `
-    query {
-        getCompanies {
-            id
-            site
-            compCd
-            businessRegistrationNumber
-            corporateRegistrationNumber
-            companyName
-            imagePath
-            businessAddress
-            businessType
-            businessItem
-            paymentDate
-            expiredDate
-            flagSubscription
-            loginId
-            phoneNumber
-            flagActive
-        }
+// 회사 목록 조회 쿼리
+const companiesQuery = `
+  query {
+    getCompanies {
+      id
+      site
+      compCd
+      businessRegistrationNumber
+      corporateRegistrationNumber
+      companyName
+      imagePath
+      businessAddress
+      businessType
+      businessItem
+      paymentDate
+      expiredDate
+      flagSubscription
+      loginId
+      phoneNumber
+      flagActive
     }
+  }
+`;
+
+// 회사 상세 정보 조회 쿼리
+const companyDetailsQuery = `
+  query {
+    getCompanyDetails {
+      id
+      site
+      compCd
+      businessRegistrationNumber
+      corporateRegistrationNumber
+      companyName
+      imagePath
+      businessAddress
+      businessType
+      businessItem
+      paymentDate
+      expiredDate
+      flagSubscription
+      loginId
+      phoneNumber
+      flagActive
+    }
+  }
 `;
 
 // 회사 생성/수정 뮤테이션
-const upsertCompanyQuery = `
-    mutation upsertCompany($req: CompanyInput) {
-        upsertCompany(req: $req)
-    }
+const upsertCompanyMutation = `
+  mutation upsertCompany($req: CompanyInput!) {
+    upsertCompany(req: $req)
+  }
 `;
 
 // 회사 삭제 뮤테이션
-const deleteCompanyQuery = `
-    mutation deleteCompany($id: Int) {
-        deleteCompany(id: $id)
-    }
+const deleteCompanyMutation = `
+  mutation deleteCompany($id: Int!) {
+    deleteCompany(id: $id)
+  }
 `;
 
-// 회사 선택 목록 조회
-export const getCompanySelect = () => graphFetch(companySelectQuery);
+// 회사 선택 옵션 조회 쿼리
+const companiesForSelectQuery = `
+  query {
+    getCompaniesForSelect {
+      id
+      site
+      compCd
+      companyName
+    }
+  }
+`;
 
-// 회사 생성/수정
-export const upsertCompany = (req) => graphFetch(upsertCompanyQuery, { req });
+// API 함수들
+export const getCompanies = () => graphFetch(companiesQuery);
 
-// 회사 삭제
-export const deleteCompany = (id) => graphFetch(deleteCompanyQuery, { id }); 
+export const getCompanyDetails = () => graphFetch(companyDetailsQuery);
+
+export const upsertCompany = (req) => graphFetch(upsertCompanyMutation, { req });
+
+export const deleteCompany = (id) => graphFetch(deleteCompanyMutation, { id });
+
+export const getCompaniesForSelect = () => graphFetch(companiesForSelectQuery); 

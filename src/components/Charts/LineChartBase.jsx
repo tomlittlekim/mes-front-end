@@ -11,8 +11,9 @@ import {
 } from 'recharts';
 import {DOMAINS, useDomain} from "../../contexts/DomainContext";
 import {useTheme} from "@mui/material";
+import React from "react";
 
-const LineChartBase = ({ data, lines }) => {
+const LineChartBase = ({ data, lines,  disableDoubleClick = false }) => {
     const theme = useTheme();
     const {domain} = useDomain();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -44,8 +45,8 @@ const LineChartBase = ({ data, lines }) => {
             <LineChart data={data} margin={{top: 5, right: 30, left: 0, bottom: 5}}>
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis
-                    dataKey="x"
-                    tick={{ fill: getTextColor() }}
+                    dataKey="timeLabel"
+                    tick={false}          // 눈금 라벨 제거
                 />
                 <YAxis
                     tick={{ fill: getTextColor() }}
@@ -57,7 +58,7 @@ const LineChartBase = ({ data, lines }) => {
                         color: getTextColor()
                     }}
                 />
-                <Legend/>
+                {/*<Legend/>*/}
                 {lines.map(({key, color}, index) => (
                     <Line
                         key={index}
@@ -65,7 +66,8 @@ const LineChartBase = ({ data, lines }) => {
                         dataKey={key}
                         stroke={color}
                         strokeWidth={2}
-                        activeDot={{r: 6}}
+                        // activeDot={{r: 6}}
+                        dot = {false}
                     />
                 ))}
             </LineChart>
