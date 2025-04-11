@@ -1,3 +1,5 @@
+// ProductionPlanManagement.js 수정
+
 import React, { useCallback, useState } from 'react';
 import './ProductionPlanManagement.css';
 import { Box, IconButton, Stack, Typography, useTheme, alpha, Grid } from '@mui/material';
@@ -9,6 +11,7 @@ import { SearchCondition } from '../../Common';
 import PlanList from './components/PlanList';
 import SearchForm from './SearchForm';
 import { useProductionPlanManagement } from './hooks/useProductionPlanManagement';
+import ProductMaterialSelector from "./editors/ProductMaterialSelector";
 
 /**
  * 생산계획관리 컴포넌트
@@ -46,9 +49,18 @@ const ProductionPlanManagement = (props) => {
     handleDelete,
     handleProcessRowUpdate,
 
+    // 그리드 행 관련 상태 - 추가
+    addRows,
+    updatedRows,
+
+    // 제품 정보
+    productMaterials,
+    isProductMaterialsLoaded,
+
     // 에디터 컴포넌트
     CustomDateEditor,
     ShiftTypeEditor,
+    ProductMaterialSelector,
 
     // 그리드 속성
     initialState,
@@ -87,18 +99,28 @@ const ProductionPlanManagement = (props) => {
       console.error('데이터 업데이트 오류:', error);
     },
     initialState: initialState,
-    slots: {
-      editCell: (params) => {
-        if (params.field === 'planStartDate' || params.field === 'planEndDate') {
-          return <CustomDateEditor {...params} />;
-        }
-        if (params.field === 'shiftType') {
-          return <ShiftTypeEditor {...params} />;
-        }
-        return null;
-      }
+
+    // slots 부분을 제거하여 PlanList.js 내의 renderEditCell이 작동하도록 함
+
+    // 새로운 행 모드 설정
+    isCellEditable: (params) => {
+      // 새로 추가된 행이거나 기존 행의 편집 가능 컬럼인 경우에만 편집 가능
+      return params.row.id?.toString().startsWith('NEW_') ||
+          ['orderId', 'productId', 'productName', 'shiftType', 'planQty', 'planStartDate', 'planEndDate'].includes(params.field);
     }
   };
+
+  // 새로운 행 모드 설정 (조건부로 추가)
+  if (addRows && addRows.length > 0) {
+    gridProps.rowModesModel = {
+      ...addRows.reduce((acc, row) => {
+        if (row && row.id && row.id.toString().startsWith('NEW_')) {
+          acc[row.id] = { mode: 'edit' };
+        }
+        return acc;
+      }, {})
+    };
+  }
 
   // SearchForm 컴포넌트에서 반환하는 검색 요소들
   const searchFormItems = SearchForm({ control, handleDateRangeChange });
@@ -139,7 +161,7 @@ const ProductionPlanManagement = (props) => {
           </IconButton>
         </Box>
 
-        {/* 검색 조건 영역 - 수정된 부분 */}
+        {/* 검색 조건 영역 */}
         <SearchCondition
             onSearch={handleSubmit(handleSearch)}
             onReset={handleReset}
@@ -160,6 +182,7 @@ const ProductionPlanManagement = (props) => {
                     refreshKey={refreshKey}
                     tabId={props.tabId}
                     gridProps={gridProps}
+                    productMaterials={productMaterials} // 명시적으로 전달
                 />
               </Grid>
             </Grid>

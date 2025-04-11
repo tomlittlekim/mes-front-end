@@ -97,7 +97,7 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
         { id: 'rp-ppr', name: '기간별생산실적' },
         { id: 'rp-dpr', name: '일일생산수율' },
         { id: 'rp-imr', name: '입출고현황' },
-        { id: 'rp-dpr', name: '생산일보' }
+        { id: 'rp-dr', name: '생산일보' }
       ]
     },
     {

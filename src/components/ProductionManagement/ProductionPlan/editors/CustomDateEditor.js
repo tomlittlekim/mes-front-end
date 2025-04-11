@@ -15,10 +15,29 @@ const CustomDateEditor = (props) => {
     // DataGrid API를 사용하여 셀 값을 업데이트
     api.setEditCellValue({ id, field, value: newValue });
 
-    // 변경 후 자동으로 편집 모드 종료 (선택적)
+    // 변경 후 자동으로 편집 모드 종료 - 수정된 부분
     setTimeout(() => {
-      api.commitCellChange({ id, field });
-      api.setCellMode(id, field, 'view');
+      try {
+        // 최신 버전의 DataGrid API 사용
+        if (api.stopCellEditMode) {
+          api.stopCellEditMode({ id, field });
+        }
+        // 이전 버전의 DataGrid API 사용을 시도
+        else if (api.commitCellChange) {
+          api.commitCellChange({ id, field });
+          api.setCellMode(id, field, 'view');
+        }
+        // 둘 다 없는 경우에는 setCellMode만 시도
+        else {
+          api.setCellMode(id, field, 'view');
+        }
+      } catch (error) {
+        console.error('셀 편집 모드 종료 중 오류:', error);
+        // 오류 발생 시 적어도 셀 모드를 view로 전환 시도
+        try {
+          api.setCellMode(id, field, 'view');
+        } catch {}
+      }
     }, 200);
   };
 
