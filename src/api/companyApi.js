@@ -1,29 +1,5 @@
 import { graphFetch } from './fetchConfig';
 
-// 회사 목록 조회 쿼리
-const companiesQuery = `
-  query {
-    getCompanies {
-      id
-      site
-      compCd
-      businessRegistrationNumber
-      corporateRegistrationNumber
-      companyName
-      imagePath
-      businessAddress
-      businessType
-      businessItem
-      paymentDate
-      expiredDate
-      flagSubscription
-      loginId
-      phoneNumber
-      flagActive
-    }
-  }
-`;
-
 // 회사 상세 정보 조회 쿼리
 const companyDetailsQuery = `
   query {
@@ -75,7 +51,32 @@ const companiesForSelectQuery = `
 `;
 
 // API 함수들
-export const getCompanies = () => graphFetch(companiesQuery);
+export const getCompanies = async (searchCondition = {}) => {
+  const companiesQuery = `
+  query getCompanies($req: CompanySearchCondition) {
+    getCompanies(req: $req) {
+      id
+      site
+      compCd
+      businessRegistrationNumber
+      corporateRegistrationNumber
+      companyName
+      imagePath
+      businessAddress
+      businessType
+      businessItem
+      paymentDate
+      expiredDate
+      flagSubscription
+      loginId
+      phoneNumber
+      flagActive
+    }
+  }`;
+
+  const result = await graphFetch(companiesQuery, { req:searchCondition });
+  return result.getCompanies;
+};
 
 export const getCompanyDetails = () => graphFetch(companyDetailsQuery);
 
