@@ -357,13 +357,6 @@ const AppHeader = (props) => {
               <IconButton
                 onClick={handleCloseAllTabs}
                 size="small"
-                sx={{
-                  position: 'absolute',
-                  right: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 1,
-                }}
                 disabled={tabs.length <= 1}
               >
                 <CloseAllIcon fontSize="small" />
