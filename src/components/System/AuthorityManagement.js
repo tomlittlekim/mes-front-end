@@ -86,12 +86,11 @@ const AuthorityManagement = (props) => {
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
   const [addRows,setAddRows] = useState([]);
 
-  // React Hook Form 설정 - 검색
-  const { control: searchControl, handleSubmit: handleSearchSubmit, reset: resetSearch, getValues } = useForm({
-    defaultValues: {
-      site: null,
-      compCd: null
-    }
+  // 검색 조건 상태 관리
+  const [searchCondition, setSearchCondition] = useState({
+    site: null,
+    compCd: null,
+    priorityLevel: null
   });
 
   // 상세 정보 상태 관리
@@ -113,11 +112,16 @@ const AuthorityManagement = (props) => {
     }));
   };
 
+  // 검색 조건이 변경될 때마다 검색 실행
+  useEffect(() => {
+    handleSearch(searchCondition);
+  }, [searchCondition]);
+
   // 권한 목록 검색
   const handleSearch = async (data) => {
     setIsLoading(true);
     try {
-      const response = await getRoles(data.site, data.compCd);
+      const response = await getRoles(data);
       const rolesWithId = (response.getRoles ?? []).map(role => ({
         ...role,
         id: role.roleId
@@ -138,6 +142,14 @@ const AuthorityManagement = (props) => {
     }
   };
 
+  // 검색 조건 변경 핸들러
+  const handleSearchChange = (field, value) => {
+    setSearchCondition(prev => ({
+      ...prev,
+      [field]: value === '' ? null : value
+    }));
+  };
+
   // 초기화 핸들러
   const onReset = () => {
     if (isEditMode) {
@@ -156,11 +168,11 @@ const AuthorityManagement = (props) => {
       }
       setIsEditMode(false);
     } else {
-      resetSearch({
-        site: '',
-        compCd: ''
+      setSearchCondition({
+        site: null,
+        compCd: null,
+        priorityLevel: null
       });
-      handleSearch({});
     }
   };
 
@@ -264,11 +276,6 @@ const AuthorityManagement = (props) => {
       disabled: !selectedRole
     }
   ];
-
-  // 초기 데이터 로드
-  useEffect(() => {
-    handleSearch({});
-  }, []);
 
   // 권한 선택 핸들러
   const handleRoleSelect = async (params) => {
@@ -682,65 +689,63 @@ const AuthorityManagement = (props) => {
       }}>
         <SearchCondition
           title="권한 검색"
-          onSubmit={handleSearchSubmit(handleSearch)}
+          onSearch={() => {}} // 검색 버튼 클릭 시 아무 동작도 하지 않음 (자동 검색)
           onReset={onReset}
         >
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="site"
-                control={searchControl}
-                render={({ field }) => (
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="search-site-label">지역</InputLabel>
-                    <Select
-                      {...field}
-                      labelId="search-site-label"
-                      label="지역"
-                      value={field.value || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value === '' ? null : value);
-                      }}
-                    >
-                      <MenuItem value="">전체</MenuItem>
-                      {siteOptions.map((option) => (
-                        <MenuItem key={option.codeId} value={option.codeId}>
-                          {option.codeName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              />
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>지역</InputLabel>
+                <Select
+                  label="지역"
+                  name="site"
+                  value={searchCondition.site || ''}
+                  onChange={(e) => handleSearchChange('site', e.target.value)}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {(siteOptions || []).map((option) => (
+                    <MenuItem key={option.codeId} value={option.codeId}>
+                      {option.codeName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="compCd"
-                control={searchControl}
-                render={({ field }) => (
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="search-company-label">회사</InputLabel>
-                    <Select
-                      {...field}
-                      labelId="search-company-label"
-                      label="회사"
-                      value={field.value || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value === '' ? null : value);
-                      }}
-                    >
-                      <MenuItem value="">전체</MenuItem>
-                      {companyOptions.map((option) => (
-                        <MenuItem key={option.compCd} value={option.compCd}>
-                          {option.companyName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              />
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>회사</InputLabel>
+                <Select
+                  label="회사"
+                  name="compCd"
+                  value={searchCondition.compCd || ''}
+                  onChange={(e) => handleSearchChange('compCd', e.target.value)}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {(companyOptions || []).map((option) => (
+                    <MenuItem key={option.compCd} value={option.compCd}>
+                      {option.companyName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>권한 레벨</InputLabel>
+                <Select
+                  label="권한 레벨"
+                  name="priorityLevel"
+                  value={searchCondition.priorityLevel || ''}
+                  onChange={(e) => handleSearchChange('priorityLevel', e.target.value)}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {(priorityLevelOptions || []).map((option) => (
+                    <MenuItem key={option.roleId} value={option.priorityLevel}>
+                      {option.roleName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
         </SearchCondition>

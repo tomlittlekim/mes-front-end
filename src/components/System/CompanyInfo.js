@@ -83,11 +83,17 @@ const CompanyInfo = (props) => {
       setSiteOptions(siteData || []);
 
       if (isDeveloper) {
-        const response = await getCompanies(searchCondition);
-        const companiesWithId = response.map(company => ({
+        // 검색 조건 정제
+        const refinedSearchCondition = {
+          companyName: searchCondition.companyName || null,
+          site: searchCondition.site || null
+        };
+
+        const response = await getCompanies(refinedSearchCondition);
+        const companiesWithId = Array.isArray(response) ? response.map(company => ({
           ...company,
           id: company.id
-        }));
+        })) : [];
         setCompanyList(companiesWithId);
       } else {
         const response = await getCompanyDetails();
@@ -490,7 +496,7 @@ const CompanyInfo = (props) => {
                 <EnhancedDataGridWrapper
                   rows={companyList}
                   columns={columns}
-                  height={550}
+                  height={600}
                   buttons={gridButtons}
                   onRowClick={handleCompanySelect}
                   tabId={props.id + "-companies"}

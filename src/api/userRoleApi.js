@@ -2,8 +2,8 @@ import { graphFetch } from "./fetchConfig";
 
 // 권한 목록 조회 쿼리
 const rolesQuery = `
-    query {
-        getRoles {
+    query getRoles($req: RoleSearchRequest) {
+        getRoles(req: $req) {
             roleId
             site
             compCd
@@ -42,7 +42,7 @@ const deleteRoleQuery = `
 `;
 
 // 권한 목록 조회
-export const getRoles = () => graphFetch(rolesQuery);
+export const getRoles = (req) => graphFetch(rolesQuery, {req: req});
 
 // 권한 선택용 목록 조회
 export const getRolesForSelect = () => graphFetch(rolesForSelectQuery);
