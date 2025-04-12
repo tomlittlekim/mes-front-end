@@ -34,6 +34,8 @@ import DailyYieldPage from '../../pages/Report/DailyYieldPage';
 import InventoryMovementPage from '../../pages/Report/InventoryMovementPage';
 import DailyProductionPage from '../../pages/Report/DailyProductionPage';
 import './TabLayout.css';
+import IntegratedMonitoringPage from "../../pages/Monitoring/IntegratedMonitoringPage";
+import KPIMonitoringPage from "../../pages/Monitoring/KPIMonitoringPage";
 
 // 각 페이지가 유효한 컴포넌트인지 확인
 // React 19에서는 memo 함수에 전달되는 인자가 컴포넌트인지 더 엄격하게 검사합니다.
@@ -69,6 +71,8 @@ const MemoizedPeriodicProduction = typeof PeriodicProductionPage === 'function' 
 const MemoizedDailyYield = typeof DailyYieldPage === 'function' ? memo(DailyYieldPage) : DailyYieldPage;
 const MemoizedInventoryMovement = typeof InventoryMovementPage === 'function' ? memo(InventoryMovementPage) : InventoryMovementPage;
 const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo(DailyProductionPage) : DailyProductionPage;
+const MemoizedIntegratedMonitoring = typeof IntegratedMonitoringPage === 'function' ? memo(IntegratedMonitoringPage) : IntegratedMonitoringPage;
+const MemoizedKPIMonitoring = typeof KPIMonitoringPage === 'function' ? memo(KPIMonitoringPage) : KPIMonitoringPage;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -138,6 +142,10 @@ const getTabComponent = (tabId) => {
       return <MemoizedInventoryMovement tabId={tabId} />;
     case 'rp-dr':
       return <MemoizedDailyProduction tabId={tabId} />;
+    case 'mo-integrated':
+      return <MemoizedIntegratedMonitoring tabId={tabId} />;
+    case 'mo-kpi':
+      return <MemoizedKPIMonitoring tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
       console.warn(`No component found for tab ID: ${tabId}`);
