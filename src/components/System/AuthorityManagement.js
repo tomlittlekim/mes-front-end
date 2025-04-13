@@ -360,8 +360,8 @@ const AuthorityManagement = (props) => {
         try {
           const response = await deleteUserRole(selectedRole.roleId);
           await Swal.fire({
-            icon: 'success',
-            title: '성공',
+          icon: 'success',
+          title: '성공',
             text: '권한이 성공적으로 삭제되었습니다.',
             confirmButtonText: '확인'
           });
@@ -384,8 +384,8 @@ const AuthorityManagement = (props) => {
             icon: 'error',
             title: '오류',
             text: error.message || '권한 삭제 중 오류가 발생했습니다.',
-            confirmButtonText: '확인'
-          });
+          confirmButtonText: '확인'
+        });
         }
       }
     });
@@ -660,24 +660,24 @@ const AuthorityManagement = (props) => {
   }
 
   return (
-    <Box sx={{ p: 0, minHeight: '100vh' }}>
-      <Box sx={{
-        display: 'flex',
+      <Box sx={{ p: 0, minHeight: '100vh' }}>
+        <Box sx={{
+          display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+          alignItems: 'center',
         mb: 2
       }}>
         <Typography variant="h5" sx={{ color: getTextColor() }}>
           권한 관리
-        </Typography>
-        <IconButton
+          </Typography>
+          <IconButton
           color="primary"
-          onClick={() => setIsHelpModalOpen(true)}
+              onClick={() => setIsHelpModalOpen(true)}
           size="small"
-        >
-          <HelpOutlineIcon />
-        </IconButton>
-      </Box>
+          >
+            <HelpOutlineIcon />
+          </IconButton>
+        </Box>
 
       <Paper sx={{
         p: 2,
@@ -728,64 +728,64 @@ const AuthorityManagement = (props) => {
                   ))}
                 </Select>
               </FormControl>
-            </Grid>
+          </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>권한 레벨</InputLabel>
-                <Select
+                      <Select
                   label="권한 레벨"
                   name="priorityLevel"
                   value={searchCondition.priorityLevel || ''}
                   onChange={(e) => handleSearchChange('priorityLevel', e.target.value)}
-                >
-                  <MenuItem value="">전체</MenuItem>
+                      >
+                        <MenuItem value="">전체</MenuItem>
                   {(priorityLevelOptions || []).map((option) => (
                     <MenuItem key={option.roleId} value={option.priorityLevel}>
                       {option.roleName}
                     </MenuItem>
                   ))}
-                </Select>
-              </FormControl>
+                      </Select>
+                    </FormControl>
             </Grid>
           </Grid>
         </SearchCondition>
       </Paper>
 
-      {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 권한 목록 그리드 */}
+        {!isLoading && (
+            <Grid container spacing={2}>
+              {/* 권한 목록 그리드 */}
           <Grid item xs={12} md={8}>
-            <EnhancedDataGridWrapper
-              title="권한 목록"
+                <EnhancedDataGridWrapper
+                    title="권한 목록"
               rows={roleList}
               columns={roleColumns}
               buttons={roleGridButtons}
-              height={450}
+                    height={450}
               onRowClick={handleRoleSelect}
               tabId={props.id + "-users"}
               gridProps={{
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}
-            />
-          </Grid>
+                />
+              </Grid>
 
           {/* 권한 상세 정보 영역 */}
           <Grid item xs={12} md={4}>
-            <Paper sx={{
-              height: '100%',
-              p: 2,
-              boxShadow: theme.shadows[2],
-              borderRadius: 1,
-              display: 'flex',
-              flexDirection: 'column',
+                <Paper sx={{
+                  height: '100%',
+                  p: 2,
+                  boxShadow: theme.shadows[2],
+                  borderRadius: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
               overflow: 'hidden',
               bgcolor: getBgColor()
-            }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: getTextColor() }}>
                   권한 상세 정보
-                </Typography>
+                    </Typography>
                 {selectedRole && !isEditMode && (
                   <IconButton
                     color="primary"
@@ -941,33 +941,33 @@ const AuthorityManagement = (props) => {
                         >
                           취소
                         </Button>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          startIcon={<SaveIcon />}
-                          onClick={handleSave}
-                        >
-                          저장
-                        </Button>
+                          <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={<SaveIcon />}
+                              onClick={handleSave}
+                          >
+                            저장
+                          </Button>
                       </Grid>
                     )}
                   </Grid>
-                ) : (
-                  <Box
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center"
-                    justifyContent="center"
-                    height="100%"
-                  >
-                    <Typography variant="body1" color="text.secondary">
+                    ) : (
+                        <Box
+                            display="flex"
+                            flexDirection="column"
+                            alignItems="center"
+                            justifyContent="center"
+                            height="100%"
+                        >
+                          <Typography variant="body1" color="text.secondary">
                       권한을 선택하면 상세 정보가 표시됩니다.
-                    </Typography>
+                          </Typography>
+                        </Box>
+                    )}
                   </Box>
-                )}
-              </Box>
-            </Paper>
-          </Grid>
+                </Paper>
+              </Grid>
 
           {/* 메뉴 권한 그리드 */}
           {selectedRole && (
@@ -1006,41 +1006,41 @@ const AuthorityManagement = (props) => {
               </Paper>
             </Grid>
           )}
-        </Grid>
-      )}
+            </Grid>
+        )}
 
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{
-        bgcolor: getBgColor(),
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
+        {/* 하단 정보 영역 */}
+        <Box mt={2} p={2} sx={{
+          bgcolor: getBgColor(),
+          borderRadius: 1,
+          border: `1px solid ${getBorderColor()}`
+        }}>
+          <Stack spacing={1}>
+            <Typography variant="body2" color={getTextColor()}>
             • 권한관리에서는 시스템의 권한을 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
+            </Typography>
+            <Typography variant="body2" color={getTextColor()}>
             • 권한별로 우선순위 레벨을 설정하여 권한의 중요도를 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
+            </Typography>
+            <Typography variant="body2" color={getTextColor()}>
             • 기본 권한으로 설정된 권한은 신규 사용자 등록 시 자동으로 부여됩니다.
-          </Typography>
-        </Stack>
-      </Box>
+            </Typography>
+          </Stack>
+        </Box>
 
-      {/* 도움말 모달 */}
-      <HelpModal
-        open={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
+        {/* 도움말 모달 */}
+        <HelpModal
+            open={isHelpModalOpen}
+            onClose={() => setIsHelpModalOpen(false)}
         title="권한 관리 도움말"
         content={
           <div>
             <Typography variant="body1" paragraph>
               권한 관리 페이지에서는 시스템의 권한을 관리할 수 있습니다.
-            </Typography>
+          </Typography>
             <Typography variant="body1" paragraph>
               주요 기능:
-            </Typography>
+          </Typography>
             <ul>
               <li>권한 목록 조회</li>
               <li>권한 추가/수정/삭제</li>
@@ -1048,7 +1048,7 @@ const AuthorityManagement = (props) => {
             </ul>
             <Typography variant="body1" paragraph>
               권한 추가 시 필수 입력 항목:
-            </Typography>
+          </Typography>
             <ul>
               <li>권한 이름</li>
               <li>사이트</li>
@@ -1059,7 +1059,7 @@ const AuthorityManagement = (props) => {
           </div>
         }
       />
-    </Box>
+      </Box>
   );
 };
 

@@ -23,7 +23,7 @@ import WorkOrderPage from '../../pages/WorkOrderPage';
 import ProductionResultPage from '../../pages/ProductionResultPage';
 import ProductionResultInquiryPage from '../../pages/ProductionResultInquiryPage';
 import DefectInquiryPage from '../../pages/DefectInquiryPage';
-import NoticeBoardPage from '../../pages/NoticeBoardPage';
+import NoticeBoard from '../../pages/NoticeBoard';
 import AuthorityManagementPage from '../../pages/AuthorityManagementPage';
 import UserManagementPage from '../../pages/UserManagementPage';
 import CompanyInfoPage from '../../pages/CompanyInfoPage';
@@ -61,7 +61,7 @@ const MemoizedWorkOrder = typeof WorkOrderPage === 'function' ? memo(WorkOrderPa
 const MemoizedProductionResult = typeof ProductionResultPage === 'function' ? memo(ProductionResultPage) : ProductionResultPage;
 const MemoizedProductionResultInquiry = typeof ProductionResultInquiryPage === 'function' ? memo(ProductionResultInquiryPage) : ProductionResultInquiryPage;
 const MemoizedDefectInquiry = typeof DefectInquiryPage === 'function' ? memo(DefectInquiryPage) : DefectInquiryPage;
-const MemoizedNoticeBoard = typeof NoticeBoardPage === 'function' ? memo(NoticeBoardPage) : NoticeBoardPage;
+const MemoizedNoticeBoard = typeof NoticeBoard === 'function' ? memo(NoticeBoard) : NoticeBoard;
 const MemoizedAuthorityManagement = typeof AuthorityManagementPage === 'function' ? memo(AuthorityManagementPage) : AuthorityManagementPage;
 const MemoizedUserManagement = typeof UserManagementPage === 'function' ? memo(UserManagementPage) : UserManagementPage;
 const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(CompanyInfoPage) : CompanyInfoPage;
@@ -123,7 +123,7 @@ const getTabComponent = (tabId) => {
     case 'mm-defect':
       return <MemoizedDefectInquiry tabId={tabId} />;
     case 'sy-notice':
-      return <MemoizedNoticeBoard tabId={tabId} />;
+      return <MemoizedNoticeBoard tabId={tabId} />
     case 'sy-authority':
       return <MemoizedAuthorityManagement tabId={tabId} />;
     case 'sy-user':
