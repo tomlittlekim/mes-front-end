@@ -676,7 +676,7 @@ const CustomerManagement = (props) => {
                   rows={vendorList}
                   columns={customerColumns}
                   buttons={customerGridButtons}
-                  height={560}
+                  height={640}
                   onRowClick={handleCustomerSelect}
                   gridProps={{
                     editMode: 'cell',

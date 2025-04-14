@@ -715,7 +715,7 @@ const LineManagement = (props) => {
               rows={lineList}
               columns={lineColumns}
               buttons={lineGridButtons}
-              height={520}
+              height={590}
               onRowClick={handleLineSelect}
               gridProps={{
                 editMode: 'cell',

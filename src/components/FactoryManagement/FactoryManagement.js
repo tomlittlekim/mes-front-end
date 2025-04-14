@@ -589,7 +589,7 @@ const FactoryManagement = (props) => {
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
-              height={560}
+              height={640}
               onRowClick={handleFactorySelect}
               tabId={props.tabId + "-factories"}
               gridProps={{

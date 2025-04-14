@@ -871,7 +871,7 @@ const EquipmentManagement = (props) => {
               rows={equipmentList}
               columns={equipmentColumns}
               buttons={equipmentGridButtons}
-              height={520}
+              height={590}
               onRowClick={handleEquipmentSelect}
               gridProps={{
                 editMode: 'cell',

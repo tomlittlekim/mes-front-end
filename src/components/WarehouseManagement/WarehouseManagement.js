@@ -702,7 +702,7 @@ const WarehouseManagement = (props) => {
               rows={warehouseList}
               columns={warehouseColumns}
               buttons={warehouseGridButtons}
-              height={560}
+              height={640}
               onRowClick={handleWarehouseSelect}
               gridProps={{
                 editMode: 'cell',

@@ -800,7 +800,7 @@ const CommonCodeManagement = (props) => {
                     rows={codeGroups}
                     columns={codeGroupColumns}
                     buttons={codeGroupButtons}
-                    height={560}
+                    height={630}
                     gridProps={{
                       editMode: 'cell',
                       onProcessUpdate: codeClassRowUpdate
@@ -817,7 +817,7 @@ const CommonCodeManagement = (props) => {
                     rows={codes}
                     columns={codeColumns}
                     buttons={codeButtons}
-                    height={560}
+                    height={630}
                     gridProps={{
                       editMode: 'cell',
                       onProcessUpdate: codeRowUpdate
