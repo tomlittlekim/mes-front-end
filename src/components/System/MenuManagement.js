@@ -453,14 +453,6 @@ const MenuManagement = (props) => {
         </IconButton>
       </Box>
 
-      <Paper sx={{
-        p: 2,
-        mb: 2,
-        boxShadow: theme.shadows[2],
-        borderRadius: 1,
-        bgcolor: getBgColor(),
-        border: `1px solid ${getBorderColor()}`
-      }}>
         <SearchCondition
           title="메뉴 검색"
           onSearch={handleSearchSubmit(handleSearch)}
@@ -497,36 +489,26 @@ const MenuManagement = (props) => {
             </Grid>
           </Grid>
         </SearchCondition>
-      </Paper>
 
       {!isLoading && (
         <Grid container spacing={2}>
           {/* 메뉴 목록 그리드 */}
           <Grid item xs={12} md={8}>
-            <Paper sx={{
-              height: '600px',
-              p: 2,
-              boxShadow: theme.shadows[2],
-              borderRadius: 1,
-              bgcolor: getBgColor(),
-              border: `1px solid ${getBorderColor()}`
-            }}>
               <EnhancedDataGridWrapper
                 title="메뉴 목록"
                 rows={menuList}
                 columns={menuColumns}
                 buttons={menuGridButtons}
-                height={550}
+                height={700}
                 onRowClick={handleMenuSelect}
                 tabId={props.id + "-menus"}
               />
-            </Paper>
           </Grid>
 
           {/* 메뉴 상세 정보 */}
           <Grid item xs={12} md={4}>
             <Paper sx={{
-              height: '600px',
+              height: '700px',
               p: 2,
               boxShadow: theme.shadows[2],
               borderRadius: 1,
@@ -711,54 +693,79 @@ const MenuManagement = (props) => {
         </Grid>
       )}
 
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{
-        bgcolor: getBgColor(),
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 메뉴관리에서는 시스템의 메뉴를 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 메뉴별로 상위 메뉴를 설정하여 계층 구조를 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 구독이 필요한 메뉴는 구독 여부를 확인하여 접근을 제한합니다.
-          </Typography>
-        </Stack>
-      </Box>
-
       {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
         title="메뉴 관리 도움말"
-        content={
-          <div>
-            <Typography variant="body1" paragraph>
-              메뉴 관리 페이지에서는 시스템의 메뉴를 관리할 수 있습니다.
-            </Typography>
-            <Typography variant="body1" paragraph>
-              주요 기능:
-            </Typography>
-            <ul>
-              <li>메뉴 목록 조회</li>
-              <li>메뉴 추가/수정/삭제</li>
-              <li>메뉴 계층 구조 설정</li>
-            </ul>
-            <Typography variant="body1" paragraph>
-              메뉴 추가 시 필수 입력 항목:
-            </Typography>
-            <ul>
-              <li>메뉴 ID</li>
-              <li>메뉴 이름</li>
-              <li>정렬 순서</li>
-            </ul>
-          </div>
-        }
-      />
+      >
+        <Typography variant="body1" gutterBottom>
+          메뉴 관리 페이지 사용 방법
+        </Typography>
+
+        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+          1. 메뉴 목록 조회
+        </Typography>
+        <Typography variant="body2" paragraph>
+          - 메뉴 ID와 메뉴 이름으로 검색이 가능합니다.
+          - 메뉴 목록에서는 각 메뉴의 기본 정보를 확인할 수 있습니다.
+          - 메뉴 ID, 메뉴 이름, 상위 메뉴, 구독 필요 여부, 정렬 순서, 상태 등을 표시합니다.
+          - 목록에서 메뉴를 선택하면 우측에 상세 정보가 표시됩니다.
+        </Typography>
+
+        <Typography variant="h6" gutterBottom>
+          2. 메뉴 추가
+        </Typography>
+        <Typography variant="body2" paragraph>
+          - '메뉴 추가' 버튼을 클릭하여 새로운 메뉴를 생성할 수 있습니다.
+          - 필수 입력 항목:
+            • 메뉴 ID: 고유한 식별자
+            • 메뉴 이름: 화면에 표시될 이름
+            • 정렬 순서: 메뉴 표시 순서
+          - 선택 입력 항목:
+            • 상위 메뉴: 계층 구조 설정
+            • 구독 필요: 구독이 필요한 메뉴인지 여부
+            • 상태: 활성/비활성 여부
+        </Typography>
+
+        <Typography variant="h6" gutterBottom>
+          3. 메뉴 수정
+        </Typography>
+        <Typography variant="body2" paragraph>
+          - 메뉴 선택 후 우측 상단의 수정 아이콘을 클릭하여 수정 모드로 전환합니다.
+          - 수정 가능한 모든 항목을 변경할 수 있습니다.
+          - '저장' 버튼을 클릭하여 변경사항을 저장합니다.
+          - '취소' 버튼을 클릭하여 수정을 취소할 수 있습니다.
+        </Typography>
+
+        <Typography variant="h6" gutterBottom>
+          4. 메뉴 삭제
+        </Typography>
+        <Typography variant="body2" paragraph>
+          - 메뉴 선택 후 '메뉴 삭제' 버튼을 클릭하여 삭제할 수 있습니다.
+          - 삭제 전 확인 메시지가 표시됩니다.
+          - 주의: 하위 메뉴가 있는 경우 삭제에 제한이 있을 수 있습니다.
+        </Typography>
+
+        <Typography variant="h6" gutterBottom>
+          5. 메뉴 계층 구조
+        </Typography>
+        <Typography variant="body2" paragraph>
+          - 상위 메뉴를 설정하여 계층 구조를 만들 수 있습니다.
+          - 상위 메뉴 설정 시 순환 참조가 발생하지 않도록 주의해야 합니다.
+          - 메뉴의 깊이에 따라 화면에서의 표시 위치가 결정됩니다.
+        </Typography>
+
+        <Typography variant="h6" gutterBottom>
+          6. 주의사항
+        </Typography>
+        <Typography variant="body2" paragraph>
+          - 메뉴 ID는 중복될 수 없습니다.
+          - 정렬 순서는 같은 레벨의 메뉴들 간의 표시 순서를 결정합니다.
+          - 비활성화된 메뉴는 시스템에서 표시되지 않습니다.
+          - 구독이 필요한 메뉴는 구독 사용자만 접근할 수 있습니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };
