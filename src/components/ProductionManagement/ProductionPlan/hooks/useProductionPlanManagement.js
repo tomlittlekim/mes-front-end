@@ -12,6 +12,7 @@ import useLocalStorageVO from '../../../Common/UseLocalStorageVO';
 import CustomDateEditor from '../editors/CustomDateEditor';
 import ShiftTypeEditor from '../editors/ShiftTypeEditor';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
+import { enrichProductWithDisplayValues } from '../utils/materialTypeUtils';
 
 // GraphQL 쿼리 정의
 const PRODUCTION_PLANS_QUERY = gql`
@@ -22,6 +23,7 @@ const PRODUCTION_PLANS_QUERY = gql`
             prodPlanId
             orderId
             productId
+            productName
             shiftType
             planQty
             planStartDate
@@ -80,9 +82,14 @@ export const useProductionPlanManagement = (tabId) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
-      productName: '', // 제품명 필드 추가
+      productName: '',
+      materialCategory: '',
       shiftType: '',
-      planDateRange: {
+      planStartDateRange: {  // 이름 수정
+        startDate: null,
+        endDate: null
+      },
+      planEndDateRange: {    // 추가: 계획종료일 범위
         startDate: null,
         endDate: null
       }
@@ -104,6 +111,8 @@ export const useProductionPlanManagement = (tabId) => {
     const map = {};
     productMaterials.forEach(product => {
       if (product.systemMaterialId) {
+        // 이미 enrichProductWithDisplayValues를 통해 처리된 데이터이므로
+        // 여기서는 그대로 맵에 추가
         map[product.systemMaterialId] = product;
       }
     });
@@ -118,13 +127,19 @@ export const useProductionPlanManagement = (tabId) => {
 
       if (response?.data?.productMaterials) {
         console.log("제품 정보 로드 성공:", response.data.productMaterials.length);
-        setProductMaterials(response.data.productMaterials);
+
+        // 제품 정보에 표시값 추가
+        const enrichedProducts = response.data.productMaterials.map(
+            product => enrichProductWithDisplayValues(product)
+        );
+
+        setProductMaterials(enrichedProducts);
         setIsProductMaterialsLoaded(true);
 
         // 제품 정보 로드 후, 현재 planList에 있는 행들의 제품명 업데이트
         setPlanList(prev => {
           return prev.map(plan => {
-            const product = response.data.productMaterials.find(
+            const product = enrichedProducts.find(
                 p => p.systemMaterialId === plan.productId
             );
 
@@ -188,6 +203,7 @@ export const useProductionPlanManagement = (tabId) => {
       orderId: '',
       productId: '',
       productName: '', // 제품명 필드 추가
+      materialCategory: '', // 제품유형 필드 추가
       shiftType: 'DAY', // 기본값으로 주간(DAY) 설정
       planQty: 0,
       planStartDate: currentDate,
@@ -275,6 +291,8 @@ export const useProductionPlanManagement = (tabId) => {
         if (!formattedPlan.productName) {
           formattedPlan.productName = product.materialName || '';
         }
+        // materialCategory 설정
+        formattedPlan.materialCategory = product.materialCategory || '';
       }
 
       return formattedPlan;
@@ -289,9 +307,14 @@ export const useProductionPlanManagement = (tabId) => {
       prodPlanId: '',
       orderId: '',
       productId: '',
-      productName: '', // 제품명 필드 추가
+      productName: '',
+      materialCategory: '',
       shiftType: '',
-      planDateRange: {
+      planStartDateRange: {  // 이름 수정
+        startDate: null,
+        endDate: null
+      },
+      planEndDateRange: {    // 추가: 계획종료일 범위
         startDate: null,
         endDate: null
       }
@@ -299,58 +322,76 @@ export const useProductionPlanManagement = (tabId) => {
   }, [reset]);
 
   // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = useCallback((startDate, endDate) => {
-    setValue('planDateRange', { startDate, endDate });
+  const handleDateRangeChange = useCallback((fieldName, startDate, endDate) => {
+    setValue(fieldName, { startDate, endDate });
   }, [setValue]);
-
   // 검색 실행 함수
   const handleSearch = useCallback((data) => {
     setIsLoading(true);
     setUpdatedRows([]);
     setAddRows([]);
 
-    // 날짜 형식 변환 - null 값도 허용
+    // 필터 데이터 생성
     const filterData = { ...data };
 
-    // planDateRange 객체에서 시작일 범위를 추출하여 필터 데이터로 변환
-    if (filterData.planDateRange) {
-      if (filterData.planDateRange.startDate) {
+    // planStartDateRange 객체에서 시작일 범위를 추출하여 필터 데이터로 변환
+    if (filterData.planStartDateRange) {
+      if (filterData.planStartDateRange.startDate) {
         try {
-          filterData.planStartDateFrom = format(filterData.planDateRange.startDate, 'yyyy-MM-dd');
+          filterData.planStartDateFrom = format(filterData.planStartDateRange.startDate, 'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid startDate:", error);
           filterData.planStartDateFrom = null;
         }
       }
 
-      if (filterData.planDateRange.endDate) {
+      if (filterData.planStartDateRange.endDate) {
         try {
-          filterData.planStartDateTo = format(filterData.planDateRange.endDate, 'yyyy-MM-dd');
+          filterData.planStartDateTo = format(filterData.planStartDateRange.endDate, 'yyyy-MM-dd');
         } catch (error) {
           console.error("Invalid endDate:", error);
           filterData.planStartDateTo = null;
         }
       }
 
-      // planDateRange 객체 제거 (GraphQL에 불필요한 데이터 전송 방지)
-      delete filterData.planDateRange;
+      // planStartDateRange 객체 제거 (GraphQL에 불필요한 데이터 전송 방지)
+      delete filterData.planStartDateRange;
+    }
+
+    // planEndDateRange 객체에서 종료일 범위를 추출하여 필터 데이터로 변환 (추가)
+    if (filterData.planEndDateRange) {
+      if (filterData.planEndDateRange.startDate) {
+        try {
+          filterData.planEndDateFrom = format(filterData.planEndDateRange.startDate, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid endDateFrom:", error);
+          filterData.planEndDateFrom = null;
+        }
+      }
+
+      if (filterData.planEndDateRange.endDate) {
+        try {
+          filterData.planEndDateTo = format(filterData.planEndDateRange.endDate, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid endDateTo:", error);
+          filterData.planEndDateTo = null;
+        }
+      }
+
+      // planEndDateRange 객체 제거 (GraphQL에 불필요한 데이터 전송 방지)
+      delete filterData.planEndDateRange;
+    }
+    
+    // materialCategory 필드 처리 - 빈 문자열인 경우 제거
+    if (filterData.materialCategory === '') {
+      delete filterData.materialCategory;
     }
 
     executeQuery({ query: PRODUCTION_PLANS_QUERY, variables: { filter: filterData } })
     .then(response => {
       if (response.data) {
         const formattedData = formatGridData(response.data);
-
-        // 제품명 기준 필터링 (프론트엔드에서 처리)
-        let filteredData = formattedData;
-        if (data.productName && data.productName.trim() !== '') {
-          const searchTerm = data.productName.trim().toLowerCase();
-          filteredData = formattedData.filter(plan =>
-              plan.productName && plan.productName.toLowerCase().includes(searchTerm)
-          );
-        }
-
-        setPlanList(filteredData);
+        setPlanList(formattedData);
         setRefreshKey(prev => prev + 1);
       }
       setIsLoading(false);
@@ -389,18 +430,20 @@ export const useProductionPlanManagement = (tabId) => {
     }
 
     // 제품 정보 일관성 확인
-    // 제품ID가 변경되었을 때 제품명 자동 업데이트
+    // 제품ID가 변경되었을 때 제품명과 제품유형 자동 업데이트
     if (processedRow.productId !== oldRow.productId) {
       const product = productMaterials.find(p => p.systemMaterialId === processedRow.productId);
       if (product) {
         processedRow.productName = product.materialName || '';
+        processedRow.materialCategory = product.materialCategory || '';
       }
     }
-    // 제품명이 변경되었을 때 제품ID 자동 업데이트
+    // 제품명이 변경되었을 때 제품ID와 제품유형 자동 업데이트
     else if (processedRow.productName !== oldRow.productName) {
       const product = productMaterials.find(p => p.materialName === processedRow.productName);
       if (product) {
         processedRow.productId = product.systemMaterialId || '';
+        processedRow.materialCategory = product.materialCategory || '';
       }
     }
     // 그리드 상태 업데이트
