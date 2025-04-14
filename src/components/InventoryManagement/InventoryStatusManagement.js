@@ -3,33 +3,19 @@ import './ReceivingManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
   TextField, 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
-  Select,
   Grid, 
   Box, 
   Typography, 
   useTheme,
-  Stack,
   IconButton,
   alpha
 } from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import AddIcon from '@mui/icons-material/Add';
-import SaveIcon from '@mui/icons-material/Save';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
-import DateRangePicker from '../Common/DateRangePicker';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
-import Message from '../../utils/message/Message';
-import ko from "date-fns/locale/ko";
-
 
 const InventoryStatusManagement = (props) => {
   // 현재 테마 가져오기
@@ -122,6 +108,50 @@ const InventoryStatusManagement = (props) => {
     }
   `
 
+  function fetchGridWarehouse() {
+    const query = `
+    query getGridWarehouse {
+      getGridWarehouse {
+        warehouseId
+        warehouseName
+        warehouseType
+      }
+    }
+  `;
+
+  return new Promise((resolve, reject) => {
+    fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 쿠키 자동 전송 설정
+      body: JSON.stringify({
+        query
+      })
+    }).then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        }).then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+            reject(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.data.getGridWarehouse.map((row) => ({
+              value: row.warehouseId,
+              label: row.warehouseName
+            }));
+            setWarehouseTypeOptions(options);
+            resolve(options);
+          }
+        }).catch((err) => {
+          console.error(err);
+          reject(err);
+        });
+    });
+  }
+
   // 검색 실행 함수
   const handleSearch = useCallback(async (data) => {
     setUpdatedDetailRows([]);
@@ -208,11 +238,13 @@ const InventoryStatusManagement = (props) => {
     }
   }, []);
 
+
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
       handleSearch({});
+      fetchGridWarehouse();
       setIsLoading(false);
     }, 100);
     
@@ -222,11 +254,12 @@ const InventoryStatusManagement = (props) => {
   // 재고 목록 그리드 컬럼 정의
   const receivingColumns = [
     { field: 'warehouseName', 
-      headerName: '창고이름', 
+      headerName: '창고', 
       width: 100,
       headerAlign: 'center',
       align: 'center',
       editable: false,
+      valueOptions: warehouseTypeOptions,
       flex: 1,
      }, 
     { field: 'supplierName', 
@@ -402,7 +435,7 @@ const InventoryStatusManagement = (props) => {
               rows={receivingList}
               columns={receivingColumns}
               buttons={receivingGridButtons}
-              height={450}
+              height={710}
               // onRowClick={handleReceivingSelect}
               tabId={props.tabId + "-factories"}
               gridProps={{
