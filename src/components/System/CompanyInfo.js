@@ -16,7 +16,6 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import { Controller, useForm } from 'react-hook-form';
 import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -27,9 +26,8 @@ import HelpModal from '../Common/HelpModal';
 import { DOMAINS, useDomain } from '../../contexts/DomainContext';
 import useLocalStorageVO from '../Common/UseLocalStorageVO';
 import { getCompanies, getCompanyDetails, upsertCompany, deleteCompany } from '../../api/companyApi';
-import { getSite } from '../../api/utilApi';
-import { getUserSummery } from '../../api/userApi';
 import Swal from 'sweetalert2';
+import useSystemStatusManager from "../../hook/UseSystemStatusManager";
 
 const CompanyInfo = (props) => {
   const theme = useTheme();
@@ -37,6 +35,7 @@ const CompanyInfo = (props) => {
   const isDarkMode = theme.palette.mode === 'dark';
   const { loginUser } = useLocalStorageVO();
   const isDeveloper = loginUser.priorityLevel === 5;
+  const { userGroup, userRoleGroup, compCdGroup, siteGroup, commonData } = useSystemStatusManager()
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +43,6 @@ const CompanyInfo = (props) => {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [siteOptions, setSiteOptions] = useState([]);
   const [searchCondition, setSearchCondition] = useState({
     companyName: null,
     site: null
@@ -79,9 +77,6 @@ const CompanyInfo = (props) => {
   // 초기 데이터 로드 함수를 컴포넌트 레벨로 이동
   const loadInitialData = async () => {
     try {
-      const siteData = await getSite();
-      setSiteOptions(siteData || []);
-
       if (isDeveloper) {
         // 검색 조건 정제
         const refinedSearchCondition = {
@@ -99,9 +94,9 @@ const CompanyInfo = (props) => {
         const response = await getCompanyDetails();
         const companyDetails = response.getCompanyDetails;
 
-        // 회사 대표 정보 조회
+        // 회사 대표 정보 조회x
         if (companyDetails.loginId) {
-          const userData = await getUserSummery(companyDetails.loginId);
+          const userData = userGroup.find(u => u.loginId === companyDetails.loginId);
 
           setDetailInfo({
             ...companyDetails,
@@ -348,7 +343,7 @@ const CompanyInfo = (props) => {
       headerName: '지역',
       flex: 1,
       renderCell: (params) => {
-        const site = (siteOptions || []).find(s => s.codeId === params.value);
+        const site = (siteGroup || []).find(s => s.codeId === params.value);
         return site ? site.codeName : '-';
       }
     },
@@ -479,7 +474,7 @@ const CompanyInfo = (props) => {
                           onChange={(e) => handleSearchChange('site', e.target.value)}
                         >
                           <MenuItem value="">전체</MenuItem>
-                          {(siteOptions || []).map((option) => (
+                          {(siteGroup || []).map((option) => (
                             <MenuItem key={option.codeId} value={option.codeId}>
                               {option.codeName}
                             </MenuItem>
@@ -539,7 +534,7 @@ const CompanyInfo = (props) => {
                       detailInfo={detailInfo}
                       isEditMode={isEditMode}
                       handleDetailChange={handleDetailChange}
-                      siteOptions={siteOptions}
+                      siteOptions={siteGroup}
                       getTextColor={getTextColor}
                     />
                   </Box>
@@ -748,7 +743,7 @@ const CompanyInfo = (props) => {
                                 disabled={!isEditMode}
                                 required
                               >
-                                {(siteOptions || []).map((option) => (
+                                {(siteGroup || []).map((option) => (
                                   <MenuItem key={option.codeId} value={option.codeId}>
                                     {option.codeName}
                                   </MenuItem>

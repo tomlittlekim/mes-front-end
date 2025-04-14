@@ -22,16 +22,16 @@ const initialCodeQuery = `
 // site, compCd === 'default' 인 즉 공통으로 사용되는 code를 가져오기 위함
 export const getInitialCodes = async (data) => graphFetch(initialCodeQuery, {codeClassId: data});
 
-const CompanyQuery = `
+// 개발자 권한만 이용할 수 있는 회사 select 조회
+export const getCompanySelect = async () => {
+  const CompanyQuery = `
     query getCompaniesForSelect {
       getCompaniesForSelect {
         compCd
         companyName
       }
-    }
-  `;
-// 개발자 권한만 이용할 수 있는 회사 select 조회
-export const getCompanySelect = async () => {
+    }`;
+
   const result = await graphFetch(CompanyQuery)
   const dataList = result.getCompaniesForSelect ?? [];
   return [
