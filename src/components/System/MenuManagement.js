@@ -434,8 +434,13 @@ const MenuManagement = (props) => {
   };
 
   return (
-    <div className="menu-management-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Box sx={{ p: 0, minHeight: '100vh' }}>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        mb: 2
+      }}>
         <Typography variant="h5" sx={{ color: getTextColor() }}>
           메뉴 관리
         </Typography>
@@ -458,38 +463,34 @@ const MenuManagement = (props) => {
       }}>
         <SearchCondition
           title="메뉴 검색"
-          onSubmit={handleSearchSubmit(handleSearch)}
+          onSearch={handleSearchSubmit(handleSearch)}
           onReset={onReset}
         >
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={4}>
               <Controller
                 name="menuId"
                 control={searchControl}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="메뉴 ID"
-                    variant="outlined"
-                    size="small"
                     fullWidth
-                    value={field.value || ''}
+                    label="메뉴 ID"
+                    size="small"
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={4}>
               <Controller
                 name="menuName"
                 control={searchControl}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="메뉴 이름"
-                    variant="outlined"
-                    size="small"
                     fullWidth
-                    value={field.value || ''}
+                    label="메뉴 이름"
+                    size="small"
                   />
                 )}
               />
@@ -501,35 +502,39 @@ const MenuManagement = (props) => {
       {!isLoading && (
         <Grid container spacing={2}>
           {/* 메뉴 목록 그리드 */}
-          <Grid item xs={12} md={6}>
-            <EnhancedDataGridWrapper
-              title="메뉴 목록"
-              rows={menuList}
-              columns={menuColumns}
-              buttons={menuGridButtons}
-              height={450}
-              onRowClick={handleMenuSelect}
-              tabId={props.id + "-menus"}
-              gridProps={{
-                pagination: true,
-                pageSize: 10,
-                rowsPerPageOptions: [10, 20, 30, 50],
-                disableSelectionOnClick: true
-              }}
-            />
+          <Grid item xs={12} md={8}>
+            <Paper sx={{
+              height: '600px',
+              p: 2,
+              boxShadow: theme.shadows[2],
+              borderRadius: 1,
+              bgcolor: getBgColor(),
+              border: `1px solid ${getBorderColor()}`
+            }}>
+              <EnhancedDataGridWrapper
+                title="메뉴 목록"
+                rows={menuList}
+                columns={menuColumns}
+                buttons={menuGridButtons}
+                height={550}
+                onRowClick={handleMenuSelect}
+                tabId={props.id + "-menus"}
+              />
+            </Paper>
           </Grid>
 
-          {/* 메뉴 상세 정보 영역 */}
-          <Grid item xs={12} md={6}>
+          {/* 메뉴 상세 정보 */}
+          <Grid item xs={12} md={4}>
             <Paper sx={{
-              height: '100%',
+              height: '600px',
               p: 2,
               boxShadow: theme.shadows[2],
               borderRadius: 1,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              bgcolor: getBgColor()
+              bgcolor: getBgColor(),
+              border: `1px solid ${getBorderColor()}`
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: getTextColor() }}>
@@ -547,256 +552,158 @@ const MenuManagement = (props) => {
               </Box>
 
               <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="메뉴 ID"
-                      value={detailInfo.menuId || ''}
-                      onChange={(e) => handleDetailChange('menuId', e.target.value)}
-                      disabled={!isEditMode}
-                      sx={{
-                        bgcolor: !isEditMode && detailInfo.menuId ? alpha('#fff', 0.1) : 'transparent',
-                        '& .MuiInputBase-input.Mui-disabled': {
-                          WebkitTextFillColor: !isEditMode && detailInfo.menuId ? getTextColor() : '#666',
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="메뉴 이름"
-                      value={detailInfo.menuName || ''}
-                      onChange={(e) => handleDetailChange('menuName', e.target.value)}
-                      disabled={!isEditMode}
-                      sx={{
-                        bgcolor: !isEditMode && detailInfo.menuName ? alpha('#fff', 0.1) : 'transparent',
-                        '& .MuiInputBase-input.Mui-disabled': {
-                          WebkitTextFillColor: !isEditMode && detailInfo.menuName ? getTextColor() : '#666',
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>상위 메뉴</InputLabel>
-                      <Select
-                        value={detailInfo.upMenuId ?? ''}
-                        onChange={(e) => handleDetailChange('upMenuId', e.target.value)}
-                        disabled={!isEditMode}
-                        label="상위 메뉴"
-                        sx={{
-                          bgcolor: !isEditMode && detailInfo.upMenuId ? alpha('#fff', 0.1) : 'transparent',
-                          '& .MuiInputBase-input.Mui-disabled': {
-                            WebkitTextFillColor: !isEditMode && detailInfo.upMenuId ? getTextColor() : '#666',
-                          }
-                        }}
-                      >
-                        <MenuItem value="">
-                          <em>없음</em>
-                        </MenuItem>
-                        {getParentMenuOptions().map((menu) => (
-                          <MenuItem key={menu.menuId} value={menu.menuId}>
-                            {menu.menuName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="정렬 순서"
-                      value={detailInfo.sequence || ''}
-                      onChange={(e) => handleDetailChange('sequence', parseInt(e.target.value))}
-                      disabled={!isEditMode}
-                      sx={{
-                        bgcolor: !isEditMode && detailInfo.sequence ? alpha('#fff', 0.1) : 'transparent',
-                        '& .MuiInputBase-input.Mui-disabled': {
-                          WebkitTextFillColor: !isEditMode && detailInfo.sequence ? getTextColor() : '#666',
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>구독 필요</InputLabel>
-                      <Select
-                        value={detailInfo.flagSubscribe ?? ''}
-                        onChange={(e) => handleDetailChange('flagSubscribe', e.target.value)}
-                        disabled={!isEditMode}
-                        label="구독 필요"
-                        sx={{
-                          bgcolor: !isEditMode && detailInfo.flagSubscribe !== null ? alpha('#fff', 0.1) : 'transparent',
-                          '& .MuiInputBase-input.Mui-disabled': {
-                            WebkitTextFillColor: !isEditMode && detailInfo.flagSubscribe !== null ? getTextColor() : '#666',
-                          }
-                        }}
-                      >
-                        <MenuItem value={true}>예</MenuItem>
-                        <MenuItem value={false}>아니오</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>상태</InputLabel>
-                      <Select
-                        value={detailInfo.flagActive ?? ''}
-                        onChange={(e) => handleDetailChange('flagActive', e.target.value)}
-                        disabled={!isEditMode}
-                        label="상태"
-                        sx={{
-                          bgcolor: !isEditMode && detailInfo.flagActive !== null ? alpha('#fff', 0.1) : 'transparent',
-                          '& .MuiInputBase-input.Mui-disabled': {
-                            WebkitTextFillColor: !isEditMode && detailInfo.flagActive !== null ? getTextColor() : '#666',
-                          }
-                        }}
-                      >
-                        <MenuItem value={true}>활성</MenuItem>
-                        <MenuItem value={false}>비활성</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  {/* 권한 설정 섹션 - 새로 생성할 때만 표시 */}
-                  {isEditMode && !selectedMenu && (
+                {(selectedMenu || isEditMode) ? (
+                  <Grid container spacing={2}>
                     <Grid item xs={12}>
-                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, color: getTextColor() }}>
-                        권한 설정
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>조회</InputLabel>
-                            <Select
-                              value={detailInfo.isOpen ?? ''}
-                              onChange={(e) => handleDetailChange('isOpen', e.target.value)}
-                              label="조회"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>삭제</InputLabel>
-                            <Select
-                              value={detailInfo.isDelete ?? ''}
-                              onChange={(e) => handleDetailChange('isDelete', e.target.value)}
-                              label="삭제"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>등록</InputLabel>
-                            <Select
-                              value={detailInfo.isInsert ?? ''}
-                              onChange={(e) => handleDetailChange('isInsert', e.target.value)}
-                              label="등록"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>추가</InputLabel>
-                            <Select
-                              value={detailInfo.isAdd ?? ''}
-                              onChange={(e) => handleDetailChange('isAdd', e.target.value)}
-                              label="추가"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>팝업</InputLabel>
-                            <Select
-                              value={detailInfo.isPopup ?? ''}
-                              onChange={(e) => handleDetailChange('isPopup', e.target.value)}
-                              label="팝업"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>인쇄</InputLabel>
-                            <Select
-                              value={detailInfo.isPrint ?? ''}
-                              onChange={(e) => handleDetailChange('isPrint', e.target.value)}
-                              label="인쇄"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>선택</InputLabel>
-                            <Select
-                              value={detailInfo.isSelect ?? ''}
-                              onChange={(e) => handleDetailChange('isSelect', e.target.value)}
-                              label="선택"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel>수정</InputLabel>
-                            <Select
-                              value={detailInfo.isUpdate ?? ''}
-                              onChange={(e) => handleDetailChange('isUpdate', e.target.value)}
-                              label="수정"
-                            >
-                              <MenuItem value={true}>허용</MenuItem>
-                              <MenuItem value={false}>거부</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                      </Grid>
+                      <TextField
+                        fullWidth
+                        label="메뉴 ID"
+                        value={detailInfo.menuId || ''}
+                        onChange={(e) => handleDetailChange('menuId', e.target.value)}
+                        disabled={!isEditMode}
+                        required
+                        size="small"
+                        sx={{
+                          bgcolor: !isEditMode && detailInfo.menuId ? alpha('#fff', 0.1) : 'transparent',
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            WebkitTextFillColor: !isEditMode && detailInfo.menuId ? getTextColor() : '#666',
+                          }
+                        }}
+                      />
                     </Grid>
-                  )}
-                </Grid>
-              </Box>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="메뉴 이름"
+                        value={detailInfo.menuName || ''}
+                        onChange={(e) => handleDetailChange('menuName', e.target.value)}
+                        disabled={!isEditMode}
+                        required
+                        size="small"
+                        sx={{
+                          bgcolor: !isEditMode && detailInfo.menuName ? alpha('#fff', 0.1) : 'transparent',
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            WebkitTextFillColor: !isEditMode && detailInfo.menuName ? getTextColor() : '#666',
+                          }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>상위 메뉴</InputLabel>
+                        <Select
+                          label="상위 메뉴"
+                          value={detailInfo.upMenuId || ''}
+                          onChange={(e) => handleDetailChange('upMenuId', e.target.value)}
+                          disabled={!isEditMode}
+                          sx={{
+                            bgcolor: !isEditMode && detailInfo.upMenuId ? alpha('#fff', 0.1) : 'transparent',
+                            '& .MuiInputBase-input.Mui-disabled': {
+                              WebkitTextFillColor: !isEditMode && detailInfo.upMenuId ? getTextColor() : '#666',
+                            }
+                          }}
+                        >
+                          <MenuItem value="">없음</MenuItem>
+                          {menuList.map((menu) => (
+                            <MenuItem key={menu.menuId} value={menu.menuId}>
+                              {menu.menuName}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="정렬 순서"
+                        value={detailInfo.sequence || ''}
+                        onChange={(e) => handleDetailChange('sequence', parseInt(e.target.value))}
+                        disabled={!isEditMode}
+                        required
+                        size="small"
+                        sx={{
+                          bgcolor: !isEditMode && detailInfo.sequence ? alpha('#fff', 0.1) : 'transparent',
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            WebkitTextFillColor: !isEditMode && detailInfo.sequence ? getTextColor() : '#666',
+                          }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>구독 필요</InputLabel>
+                        <Select
+                          label="구독 필요"
+                          value={detailInfo.flagSubscribe}
+                          onChange={(e) => handleDetailChange('flagSubscribe', e.target.value)}
+                          disabled={!isEditMode}
+                          sx={{
+                            bgcolor: !isEditMode && detailInfo.flagSubscribe !== null ? alpha('#fff', 0.1) : 'transparent',
+                            '& .MuiInputBase-input.Mui-disabled': {
+                              WebkitTextFillColor: !isEditMode && detailInfo.flagSubscribe !== null ? getTextColor() : '#666',
+                            }
+                          }}
+                        >
+                          <MenuItem value={true}>예</MenuItem>
+                          <MenuItem value={false}>아니오</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>상태</InputLabel>
+                        <Select
+                          label="상태"
+                          value={detailInfo.flagActive}
+                          onChange={(e) => handleDetailChange('flagActive', e.target.value)}
+                          disabled={!isEditMode}
+                          sx={{
+                            bgcolor: !isEditMode && detailInfo.flagActive !== null ? alpha('#fff', 0.1) : 'transparent',
+                            '& .MuiInputBase-input.Mui-disabled': {
+                              WebkitTextFillColor: !isEditMode && detailInfo.flagActive !== null ? getTextColor() : '#666',
+                            }
+                          }}
+                        >
+                          <MenuItem value={true}>활성</MenuItem>
+                          <MenuItem value={false}>비활성</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
 
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                {isEditMode && (
-                  <>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={handleCancel}
-                    >
-                      취소
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<SaveIcon />}
-                      onClick={handleSave}
-                    >
-                      저장
-                    </Button>
-                  </>
+                    {isEditMode && (
+                      <Grid item xs={12} display="flex" justifyContent="flex-end" mt={2}>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={handleCancel}
+                          sx={{ mr: 1 }}
+                        >
+                          취소
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<SaveIcon />}
+                          onClick={handleSave}
+                        >
+                          저장
+                        </Button>
+                      </Grid>
+                    )}
+                  </Grid>
+                ) : (
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    height="100%"
+                  >
+                    <Typography variant="body1" color="text.secondary">
+                      메뉴를 선택하면 상세 정보가 표시됩니다.
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             </Paper>
@@ -804,6 +711,26 @@ const MenuManagement = (props) => {
         </Grid>
       )}
 
+      {/* 하단 정보 영역 */}
+      <Box mt={2} p={2} sx={{
+        bgcolor: getBgColor(),
+        borderRadius: 1,
+        border: `1px solid ${getBorderColor()}`
+      }}>
+        <Stack spacing={1}>
+          <Typography variant="body2" color={getTextColor()}>
+            • 메뉴관리에서는 시스템의 메뉴를 관리할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 메뉴별로 상위 메뉴를 설정하여 계층 구조를 관리할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 구독이 필요한 메뉴는 구독 여부를 확인하여 접근을 제한합니다.
+          </Typography>
+        </Stack>
+      </Box>
+
+      {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
@@ -819,7 +746,7 @@ const MenuManagement = (props) => {
             <ul>
               <li>메뉴 목록 조회</li>
               <li>메뉴 추가/수정/삭제</li>
-              <li>메뉴별 권한 설정</li>
+              <li>메뉴 계층 구조 설정</li>
             </ul>
             <Typography variant="body1" paragraph>
               메뉴 추가 시 필수 입력 항목:
@@ -827,14 +754,12 @@ const MenuManagement = (props) => {
             <ul>
               <li>메뉴 ID</li>
               <li>메뉴 이름</li>
-              <li>상위 메뉴</li>
-              <li>구독 필요 여부</li>
               <li>정렬 순서</li>
             </ul>
           </div>
         }
       />
-    </div>
+    </Box>
   );
 };
 

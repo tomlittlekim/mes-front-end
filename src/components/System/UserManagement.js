@@ -31,6 +31,7 @@ import HelpModal from '../Common/HelpModal';
 import {deleteUser, getRoleGroup, getUserGroup, isExistsUserId, resetPwd, upsertUser} from "../../api/userApi";
 import {getCodes, getCompanySelect, getInitialCodes} from "../../api/utilApi";
 import useLocalStorageVO from "../Common/UseLocalStorageVO";
+import {getRolesForSelect} from "../../api/userRoleApi";
 
 const UserManagement = (props) => {
   // 현재 테마 가져오기
@@ -253,8 +254,8 @@ const UserManagement = (props) => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const roleData = await getRoleGroup();
-        setAuthorityOptions(roleData.getRoles ?? []);
+        const roleData = await getRolesForSelect();
+        setAuthorityOptions(roleData.getRolesForSelect ?? []);
 
         const deptData = await getInitialCodes('DEPARTMENT');
         setDepartmentOptions(deptData.getInitialCodes ?? []);
@@ -669,7 +670,7 @@ const UserManagement = (props) => {
                 rows={userList}
                 columns={userColumns}
                 buttons={userGridButtons}
-                height={450}
+                height={550}
                 onRowClick={handleUserSelect}
                 tabId={props.id + "-users"}
                 gridProps={{

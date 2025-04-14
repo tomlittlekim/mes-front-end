@@ -27,6 +27,7 @@ export const BOM_DETAIL_QUERY = `
             bomDetailId
             bomLevel
             materialType
+            materialCategory
             systemMaterialId
             userMaterialId
             materialName

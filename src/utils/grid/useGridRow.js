@@ -10,8 +10,8 @@ export const useGridRow = ({
     formatExistingRow
 }) => {
     const [selectedRows, setSelectedRows] = useState([]);
-    const [addRows, setAddRows] = useState([]);
-    const [updatedRows, setUpdatedRows] = useState([]);
+    const [addRows = [], setAddRows] = useState([]);
+    const [updatedRows = [], setUpdatedRows] = useState([]);
 
     /**
      * 행 선택 핸들러
@@ -26,28 +26,22 @@ export const useGridRow = ({
      * 행 업데이트 핸들러
      */
     const handleRowUpdate = useCallback((newRow, oldRow, setDataList) => {
-        setDataList(prev => prev.map(row => row.id === oldRow.id ? newRow : row));
-        
+        setDataList(prev => prev?.map(row => row.id === oldRow.id ? newRow : row));
+
         const isNewRow = oldRow.id.startsWith('NEW_');
         if (isNewRow) {
             setAddRows(prev => {
-                const existingIndex = prev.findIndex(row => row.id === oldRow.id);
-                if (existingIndex >= 0) {
-                    const updated = [...prev];
-                    updated[existingIndex] = newRow;
-                    return updated;
-                }
-                return [...prev, newRow];
+                const existingIndex = prev?.findIndex(row => row.id === oldRow.id) ?? -1 ;
+                return existingIndex >= 0
+                    ? prev?.map((row, i) => i === existingIndex ? newRow : row)
+                    : [newRow, ...(prev || [])];
             });
         } else {
             setUpdatedRows(prev => {
-                const existingIndex = prev.findIndex(row => row.id === oldRow.id);
-                if (existingIndex >= 0) {
-                    const updated = [...prev];
-                    updated[existingIndex] = newRow;
-                    return updated;
-                }
-                return [...prev, newRow];
+                const existingIndex = prev?.findIndex(row => row.id === oldRow.id) ?? -1;
+                return existingIndex >= 0
+                    ? prev?.map((row, i) => i === existingIndex ? newRow : row)
+                    : [newRow, ...(prev || [])];
             });
         }
         return newRow;
@@ -72,8 +66,8 @@ export const useGridRow = ({
      * 저장 데이터 포맷터
      */
     const formatSaveData = useCallback((addRows, updatedRows) => ({
-        createdRows: addRows.map(row => formatNewRow(row)),
-        updatedRows: updatedRows.map(row => formatUpdatedRow(row))
+        createdRows: (addRows || []).map(row => formatNewRow(row)),
+        updatedRows: (updatedRows || []).map(row => formatUpdatedRow(row))
     }), [formatNewRow, formatUpdatedRow]);
 
     /**
@@ -98,4 +92,4 @@ export const useGridRow = ({
         formatSaveData,
         formatDeleteData
     };
-}; 
+};

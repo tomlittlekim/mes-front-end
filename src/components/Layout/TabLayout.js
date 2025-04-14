@@ -23,12 +23,19 @@ import WorkOrderPage from '../../pages/WorkOrderPage';
 import ProductionResultPage from '../../pages/ProductionResultPage';
 import ProductionResultInquiryPage from '../../pages/ProductionResultInquiryPage';
 import DefectInquiryPage from '../../pages/DefectInquiryPage';
-import NoticeBoardPage from '../../pages/NoticeBoardPage';
+import NoticeBoard from '../../pages/NoticeBoard';
 import AuthorityManagementPage from '../../pages/AuthorityManagementPage';
 import UserManagementPage from '../../pages/UserManagementPage';
 import CompanyInfoPage from '../../pages/CompanyInfoPage';
 import MenuManagement from '../System/MenuManagement';
+import PlanVsActualPage from '../../pages/Report/PlanVsActualPage';
+import PeriodicProductionPage from '../../pages/Report/PeriodicProductionPage';
+import DailyYieldPage from '../../pages/Report/DailyYieldPage';
+import InventoryMovementPage from '../../pages/Report/InventoryMovementPage';
+import DailyProductionPage from '../../pages/Report/DailyProductionPage';
 import './TabLayout.css';
+import IntegratedMonitoringPage from "../../pages/Monitoring/IntegratedMonitoringPage";
+import KPIMonitoringPage from "../../pages/Monitoring/KPIMonitoringPage";
 
 // 각 페이지가 유효한 컴포넌트인지 확인
 // React 19에서는 memo 함수에 전달되는 인자가 컴포넌트인지 더 엄격하게 검사합니다.
@@ -54,11 +61,18 @@ const MemoizedWorkOrder = typeof WorkOrderPage === 'function' ? memo(WorkOrderPa
 const MemoizedProductionResult = typeof ProductionResultPage === 'function' ? memo(ProductionResultPage) : ProductionResultPage;
 const MemoizedProductionResultInquiry = typeof ProductionResultInquiryPage === 'function' ? memo(ProductionResultInquiryPage) : ProductionResultInquiryPage;
 const MemoizedDefectInquiry = typeof DefectInquiryPage === 'function' ? memo(DefectInquiryPage) : DefectInquiryPage;
-const MemoizedNoticeBoard = typeof NoticeBoardPage === 'function' ? memo(NoticeBoardPage) : NoticeBoardPage;
+const MemoizedNoticeBoard = typeof NoticeBoard === 'function' ? memo(NoticeBoard) : NoticeBoard;
 const MemoizedAuthorityManagement = typeof AuthorityManagementPage === 'function' ? memo(AuthorityManagementPage) : AuthorityManagementPage;
 const MemoizedUserManagement = typeof UserManagementPage === 'function' ? memo(UserManagementPage) : UserManagementPage;
 const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(CompanyInfoPage) : CompanyInfoPage;
 const MemoizedMenuManagement = typeof MenuManagement === 'function' ? memo(MenuManagement) : MenuManagement;
+const MemoizedPlanVsActual = typeof PlanVsActualPage === 'function' ? memo(PlanVsActualPage) : PlanVsActualPage;
+const MemoizedPeriodicProduction = typeof PeriodicProductionPage === 'function' ? memo(PeriodicProductionPage) : PeriodicProductionPage;
+const MemoizedDailyYield = typeof DailyYieldPage === 'function' ? memo(DailyYieldPage) : DailyYieldPage;
+const MemoizedInventoryMovement = typeof InventoryMovementPage === 'function' ? memo(InventoryMovementPage) : InventoryMovementPage;
+const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo(DailyProductionPage) : DailyProductionPage;
+const MemoizedIntegratedMonitoring = typeof IntegratedMonitoringPage === 'function' ? memo(IntegratedMonitoringPage) : IntegratedMonitoringPage;
+const MemoizedKPIMonitoring = typeof KPIMonitoringPage === 'function' ? memo(KPIMonitoringPage) : KPIMonitoringPage;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -109,7 +123,7 @@ const getTabComponent = (tabId) => {
     case 'mm-defect':
       return <MemoizedDefectInquiry tabId={tabId} />;
     case 'sy-notice':
-      return <MemoizedNoticeBoard tabId={tabId} />;
+      return <MemoizedNoticeBoard tabId={tabId} />
     case 'sy-authority':
       return <MemoizedAuthorityManagement tabId={tabId} />;
     case 'sy-user':
@@ -118,9 +132,24 @@ const getTabComponent = (tabId) => {
       return <MemoizedCompanyInfo tabId={tabId} />;
     case 'sy-menu':
       return <MemoizedMenuManagement tabId={tabId} />;
+    case 'rp-mpv':
+      return <MemoizedPlanVsActual tabId={tabId} />;
+    case 'rp-ppr':
+      return <MemoizedPeriodicProduction tabId={tabId} />;
+    case 'rp-dpr':
+      return <MemoizedDailyYield tabId={tabId} />;
+    case 'rp-imr':
+      return <MemoizedInventoryMovement tabId={tabId} />;
+    case 'rp-dr':
+      return <MemoizedDailyProduction tabId={tabId} />;
+    case 'mo-integrated':
+      return <MemoizedIntegratedMonitoring tabId={tabId} />;
+    case 'mo-kpi':
+      return <MemoizedKPIMonitoring tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
-      return <div>탭 컨텐츠를 찾을 수 없습니다</div>;
+      console.warn(`No component found for tab ID: ${tabId}`);
+      return <div>탭 컨텐츠를 찾을 수 없습니다 ({tabId})</div>;
   }
 };
 

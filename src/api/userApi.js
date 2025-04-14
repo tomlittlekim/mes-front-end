@@ -92,3 +92,23 @@ const resetPwdQuery = `
     }
 `
 export const resetPwd = (id) => graphFetch(resetPwdQuery, {id:id})
+
+export const getUserSummery = async (loginId) => {
+    const userSummeryQuery = `
+    query getUserSummery($loginId: String!) {
+        getUserSummery(loginId: $loginId) {
+            id
+            loginId
+            userName
+            departmentId
+            positionId
+            roleId
+            imagePath
+            userEmail
+            phoneNum
+            flagActive
+        }
+    }`
+    const result = await graphFetch(userSummeryQuery, {loginId: loginId})
+    return result.getUserSummery
+}
