@@ -3,7 +3,6 @@ import useLocalStorageVO from "../components/Common/UseLocalStorageVO";
 import {getCompanySelect, getSite} from "../api/utilApi";
 import {getRolesForSelect} from "../api/userRoleApi";
 import {getUserGroup} from "../api/userApi";
-import Swal from "sweetalert2";
 
 function useSystemStatusManager() {
     const { loginUser } = useLocalStorageVO();
@@ -34,10 +33,6 @@ function useSystemStatusManager() {
         compCd: null,
         companyName: null
     }]);
-    const [systemStatus, setSystemStatus] = useState({
-        icon: null,
-        text: null
-    })
 
     useEffect(() => {
         if (loginUser.id > 0) {
@@ -49,17 +44,6 @@ function useSystemStatusManager() {
             // return () => clearInterval(interval);
         }
     }, [loginUser])
-
-    useEffect(() => {
-        if (systemStatus.icon !== null) {
-            Swal.fire({
-                icon: systemStatus.icon,
-                title: systemStatus.icon === 'success' ? "성공" : systemStatus.icon === 'loading' ? '' : "오류",
-                text: systemStatus.text,
-                confirmButtonText: '확인'
-            })
-        }
-    }, [systemStatus]);
 
     const initialSetting = async () => {
         const compCdData = await getCompanySelect();
@@ -79,7 +63,7 @@ function useSystemStatusManager() {
         return await list.filter(data => data?.compCd === 'default');
     }
 
-    return { userRoleGroup, userGroup, siteGroup, compCdGroup, setSystemStatus, commonData };
+    return { userRoleGroup, userGroup, siteGroup, compCdGroup, commonData };
 }
 
 export default useSystemStatusManager;

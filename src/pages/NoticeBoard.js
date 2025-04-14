@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllNotice, upReadCountForNotice, deleteNotice, upsertNotice } from '../api/noticeApi';
-import { 
-  Button, 
-  TextField, 
-  Box, 
-  Typography, 
-  Paper, 
-  IconButton, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
+import {
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   DialogActions,
   Grid,
   FormControl,
@@ -18,7 +18,7 @@ import {
   Select,
   MenuItem,
   Stack,
-  useTheme
+  useTheme, alpha
 } from '@mui/material';
 import { Add, Help, Edit, Delete, Upload, Download } from '@mui/icons-material';
 import { format } from 'date-fns';
@@ -28,18 +28,21 @@ import useLocalStorageVO from "../components/Common/UseLocalStorageVO";
 import { Controller, useForm } from 'react-hook-form';
 import Swal from 'sweetalert2';
 import useSystemStatusManager from '../hook/UseSystemStatusManager';
+import HelpModal from '../components/Common/HelpModal';
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 const NoticeBoard = () => {
   const theme = useTheme();
   const { loginUser } = useLocalStorageVO();
-  const { userGroup, userRoleGroup, compCdGroup, siteGroup, commonData, setSystemStatus } = useSystemStatusManager()
-  
+  const { userGroup, userRoleGroup, compCdGroup, siteGroup, commonData } = useSystemStatusManager();
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const isDarkMode = theme.palette.mode === 'dark';
+
   // 상태 관리
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [detailInfo, setDetailInfo] = useState({
     noticeId: null,
     noticeTitle: null,
@@ -168,68 +171,34 @@ const NoticeBoard = () => {
     setIsEditMode(true);
   };
 
-  // 공지사항 삭제 핸들러
-  const handleDeleteNotice = () => {
-    if (!selectedNotice) {
-      setSystemStatus('warning', '삭제할 공지사항을 선택해주세요.');
-      return;
+  // 알림 설정
+  const showMessage = (type, message) => {
+    const options = {
+      title: type === 'error' ? '오류' : type === 'warning' ? '경고' : '알림',
+      text: message,
+      icon: type,
+      confirmButtonText: '확인'
+    };
+
+    if (type === 'confirm') {
+      return Swal.fire({
+        ...options,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: '확인',
+        cancelButtonText: '취소'
+      });
     }
 
-    Swal.fire({
-      title: '삭제 확인',
-      text: `선택한 공지사항을 정말 삭제하시겠습니까?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await deleteNotice(selectedNotice.noticeId);
-          setSystemStatus('success', '삭제되었습니다.');
-          setSelectedNotice(null);
-          handleSearch(getValues());
-        } catch (error) {
-          console.error('공지사항 삭제 실패:', error);
-          setSystemStatus('error', '공지사항 삭제 중 오류가 발생했습니다.');
-        }
-      }
-    });
+    return Swal.fire(options);
   };
-
-  // 공지사항 목록 그리드 버튼 정의
-  const gridButtons = [
-    {
-      icon: <Add />,
-      label: '추가',
-      onClick: handleAddNotice,
-      variant: 'contained',
-      color: 'primary',
-      sx: { mr: 1 }
-    },
-    {
-      icon: <Delete />,
-      label: '삭제',
-      onClick: handleDeleteNotice,
-      disabled: !selectedNotice,
-      variant: 'contained',
-      color: 'error',
-      sx: { mr: 1 }
-    }
-  ];
-
-  // useMemo로 권한에 따른 버튼 필터링
-  const noticeGridButtons = useMemo(() => {
-    return loginUser?.priorityLevel === 5 ? gridButtons : [];
-  }, [loginUser?.priorityLevel, selectedNotice]);
 
   // 공지사항 목록 조회
   const handleSearch = async (data) => {
     try {
       setLoading(true);
-      
       const response = await getAllNotice(data);
       const noticesWithId = (response || []).map(notice => ({
         ...notice,
@@ -238,10 +207,9 @@ const NoticeBoard = () => {
       setNotices(noticesWithId);
       setSelectedNotice(null);
       setIsEditMode(false);
-      setSystemStatus('success');
     } catch (error) {
       console.error('공지사항 조회 실패:', error);
-      setSystemStatus('error', '공지사항 조회 중 오류가 발생했습니다.');
+      showMessage('error', '공지사항 조회 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -251,9 +219,8 @@ const NoticeBoard = () => {
     const initializeData = async () => {
       try {
         await handleSearch({});
-        setSystemStatus('success');
       } catch (error) {
-        setSystemStatus('error', '데이터 조회 중 오류가 발생했습니다.');
+        showMessage('error', '데이터 조회 중 오류가 발생했습니다.');
       }
     };
 
@@ -292,11 +259,10 @@ const NoticeBoard = () => {
           attachmentPath: notice.attachmentPath || null,
           readCount: notice.readCount || 0
         });
-        setSystemStatus('success');
       }
     } catch (error) {
       console.error('공지사항 조회 실패:', error);
-      setSystemStatus('error', '공지사항 조회 중 오류가 발생했습니다.');
+      showMessage('error', '공지사항 조회 중 오류가 발생했습니다.');
     }
   };
 
@@ -317,10 +283,6 @@ const NoticeBoard = () => {
   // 저장 핸들러 수정
   const handleSave = async () => {
     try {
-      // const formData = new FormData();
-      
-      // 기본 데이터 추가
-      debugger
       const noticeData = {
         noticeId: detailInfo.noticeId || null,
         noticeTitle: detailInfo.noticeTitle || null,
@@ -329,23 +291,65 @@ const NoticeBoard = () => {
         priorityLevel: detailInfo.priorityLevel || 1,
         noticeTtl: detailInfo.noticeTtl || null,
       };
-      
-      // formData.append('noticeData', JSON.stringify(noticeData));
-      //
-      // if (fileInput) {
-      //   formData.append('file', fileInput);
-      // }
 
       await upsertNotice(noticeData);
-      setSystemStatus('success', '저장되었습니다.');
+      showMessage('success', '저장되었습니다.');
       setIsEditMode(false);
       setFileInput(null);
       handleSearch(getValues());
     } catch (error) {
       console.error('공지사항 저장 실패:', error);
-      setSystemStatus('error', '공지사항 저장 중 오류가 발생했습니다.');
+      showMessage('error', '공지사항 저장 중 오류가 발생했습니다.');
     }
   };
+
+  // 공지사항 삭제 핸들러
+  const handleDeleteNotice = () => {
+    if (!selectedNotice) {
+      showMessage('warning', '삭제할 공지사항을 선택해주세요.');
+      return;
+    }
+
+    showMessage('confirm', '선택한 공지사항을 정말 삭제하시겠습니까?').then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteNotice(selectedNotice.noticeId);
+          showMessage('success', '삭제되었습니다.');
+          setSelectedNotice(null);
+          handleSearch(getValues());
+        } catch (error) {
+          console.error('공지사항 삭제 실패:', error);
+          showMessage('error', '공지사항 삭제 중 오류가 발생했습니다.');
+        }
+      }
+    });
+  };
+
+  // 공지사항 목록 그리드 버튼 정의
+  const gridButtons = [
+    {
+      icon: <Add />,
+      label: '추가',
+      onClick: handleAddNotice,
+      variant: 'contained',
+      color: 'primary',
+      sx: { mr: 1 }
+    },
+    {
+      icon: <Delete />,
+      label: '삭제',
+      onClick: handleDeleteNotice,
+      disabled: !selectedNotice,
+      variant: 'contained',
+      color: 'error',
+      sx: { mr: 1 }
+    }
+  ];
+
+  // useMemo로 권한에 따른 버튼 필터링
+  const noticeGridButtons = useMemo(() => {
+    return loginUser?.priorityLevel === 5 ? gridButtons : [];
+  }, [loginUser?.priorityLevel, selectedNotice]);
 
   return (
     <Box sx={{ p: 3, minHeight: '100vh' }}>
@@ -358,6 +362,20 @@ const NoticeBoard = () => {
         <Typography variant="h5" component="h1">
           공지사항
         </Typography>
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 */}
@@ -611,6 +629,43 @@ const NoticeBoard = () => {
           </Grid>
         </Grid>
       )}
+      {/* 도움말 모달 */}
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="공지사항 도움말"
+      >
+        <Typography variant="body2">
+          공지사항 페이지 사용 방법
+        </Typography>
+        <Typography paragraph>
+          1. 공지사항 목록 조회
+        </Typography>
+        <Typography variant="body2">
+          - 공지사항 목록에서 제목, 작성자, 작성일, 중요도를 확인할 수 있습니다.
+          - 중요도가 높은 공지사항은 상단에 표시됩니다.
+        </Typography>
+        <Typography paragraph>
+          2. 공지사항 상세보기
+        </Typography>
+        <Typography variant="body2">
+          - 목록에서 공지사항을 클릭하면 상세 내용을 확인할 수 있습니다.
+          - 제목, 내용, 작성자, 작성일, 중요도 등의 정보를 확인할 수 있습니다.
+        </Typography>
+        {loginUser?.priorityLevel === 5 && (
+          <>
+            <Typography paragraph>
+              3. 공지사항 관리 (관리자 전용)
+            </Typography>
+            <Typography variant="body2">
+              - 공지사항 작성: "공지사항 작성" 버튼을 클릭하여 새로운 공지사항을 등록할 수 있습니다.
+              - 공지사항 수정: 목록에서 공지사항을 선택한 후 수정 버튼을 클릭하여 내용을 수정할 수 있습니다.
+              - 공지사항 삭제: 목록에서 공지사항을 선택한 후 삭제 버튼을 클릭하여 공지사항을 삭제할 수 있습니다.
+              - 중요도 설정: 공지사항 작성/수정 시 중요도를 설정하여 상단에 고정할 수 있습니다.
+            </Typography>
+          </>
+        )}
+      </HelpModal>
     </Box>
   );
 };
