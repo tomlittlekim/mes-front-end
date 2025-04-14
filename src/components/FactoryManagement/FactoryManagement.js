@@ -589,7 +589,7 @@ const FactoryManagement = (props) => {
               rows={factoryList}
               columns={factoryColumns}
               buttons={factoryGridButtons}
-              height={450}
+              height={640}
               onRowClick={handleFactorySelect}
               tabId={props.tabId + "-factories"}
               gridProps={{
@@ -601,23 +601,23 @@ const FactoryManagement = (props) => {
       )}
       
       {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 공장관리에서는 기업의 공장 시설 정보를 등록, 수정, 삭제할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 공장 목록에서 공장을 선택하면 해당 공장의 상세 정보를 확인하고 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 공장별 위치, 면적, 가동 상태 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/*<Box mt={2} p={2} sx={{ */}
+      {/*  bgcolor: getBgColor(), */}
+      {/*  borderRadius: 1,*/}
+      {/*  border: `1px solid ${getBorderColor()}`*/}
+      {/*}}>*/}
+      {/*  <Stack spacing={1}>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 공장관리에서는 기업의 공장 시설 정보를 등록, 수정, 삭제할 수 있습니다.*/}
+      {/*    </Typography>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 공장 목록에서 공장을 선택하면 해당 공장의 상세 정보를 확인하고 관리할 수 있습니다.*/}
+      {/*    </Typography>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 공장별 위치, 면적, 가동 상태 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.*/}
+      {/*    </Typography>*/}
+      {/*  </Stack>*/}
+      {/*</Box>*/}
 
       {/* 도움말 모달 */}
       <HelpModal
@@ -629,10 +629,7 @@ const FactoryManagement = (props) => {
           • 공장관리에서는 기업의 공장 시설 정보를 등록, 수정, 삭제할 수 있습니다.
         </Typography>
         <Typography variant="body2" color={getTextColor()}>
-          • 공장 목록에서 공장을 선택하면 해당 공장의 상세 정보를 확인하고 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 공장별 위치, 면적, 가동 상태 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.
+          • 공장별 공장명, 공장코드, 주소, 전화번호, 비고 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.
         </Typography>
       </HelpModal>
     </Box>
