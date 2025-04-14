@@ -455,24 +455,8 @@ const AuthorityManagement = (props) => {
   // 메뉴 권한 저장 핸들러
   const handleMenuRoleSave = async () => {
     try {
-      // 수정된 항목만 필터링
-      const modifiedMenuRoles = menuRoleList.filter(menuRole => {
-        const original = originalMenuRoleList.find(orig => orig.menuId === menuRole.menuId);
-        return !original || JSON.stringify(menuRole) !== JSON.stringify(original);
-      });
-
-      if (modifiedMenuRoles.length === 0) {
-        Swal.fire({
-          icon: 'info',
-          title: '알림',
-          text: '수정된 메뉴 권한이 없습니다.',
-          confirmButtonText: '확인'
-        });
-        return;
-      }
-
       // id 필드 제거하고 API 요청
-      const requestData = modifiedMenuRoles.map(({ id, ...rest }) => rest);
+      const requestData = menuRoleList.map(({ id, ...rest }) => rest);
       const response = await upsertMenuRole(requestData);
 
       await Swal.fire({
@@ -679,14 +663,6 @@ const AuthorityManagement = (props) => {
           </IconButton>
         </Box>
 
-      <Paper sx={{
-        p: 2,
-        mb: 2,
-        boxShadow: theme.shadows[2],
-        borderRadius: 1,
-        bgcolor: getBgColor(),
-        border: `1px solid ${getBorderColor()}`
-      }}>
         <SearchCondition
           title="권한 검색"
           onSearch={() => {}} // 검색 버튼 클릭 시 아무 동작도 하지 않음 (자동 검색)
@@ -749,7 +725,6 @@ const AuthorityManagement = (props) => {
             </Grid>
           </Grid>
         </SearchCondition>
-      </Paper>
 
         {!isLoading && (
             <Grid container spacing={2}>
@@ -972,93 +947,86 @@ const AuthorityManagement = (props) => {
           {/* 메뉴 권한 그리드 */}
           {selectedRole && (
             <Grid item xs={12}>
-              <Paper sx={{
-                p: 2,
-                boxShadow: theme.shadows[2],
-                borderRadius: 1,
-                bgcolor: getBgColor(),
-                border: `1px solid ${getBorderColor()}`
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" sx={{ color: getTextColor() }}>
-                    메뉴 권한 설정
-                  </Typography>
-                  {isMenuRoleModified && (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<SaveIcon />}
-                      onClick={handleMenuRoleSave}
-                    >
-                      저장
-                    </Button>
-                  )}
-                </Box>
-                <MuiDataGridWrapper
+                <EnhancedDataGridWrapper
+                  title="메뉴 권한 목록"
                   rows={menuRoleList}
                   columns={menuRoleColumns}
-                  height={400}
-                  pagination={true}
-                  pageSize={10}
-                  rowsPerPageOptions={[10, 20, 30]}
-                  disableSelectionOnClick
+                  height={1000}
+                  buttons={[
+                    {
+                      label: '저장',
+                      onClick: handleMenuRoleSave,
+                      color: 'primary',
+                      startIcon: <SaveIcon />,
+                      disabled: !isMenuRoleModified
+                    }
+                  ]}
+                  tabId={props.id + "-menu-roles"}
                 />
-              </Paper>
             </Grid>
           )}
             </Grid>
         )}
-
-        {/* 하단 정보 영역 */}
-        <Box mt={2} p={2} sx={{
-          bgcolor: getBgColor(),
-          borderRadius: 1,
-          border: `1px solid ${getBorderColor()}`
-        }}>
-          <Stack spacing={1}>
-            <Typography variant="body2" color={getTextColor()}>
-            • 권한관리에서는 시스템의 권한을 관리할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-            • 권한별로 우선순위 레벨을 설정하여 권한의 중요도를 관리할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-            • 기본 권한으로 설정된 권한은 신규 사용자 등록 시 자동으로 부여됩니다.
-            </Typography>
-          </Stack>
-        </Box>
-
         {/* 도움말 모달 */}
         <HelpModal
             open={isHelpModalOpen}
             onClose={() => setIsHelpModalOpen(false)}
-        title="권한 관리 도움말"
-        content={
-          <div>
-            <Typography variant="body1" paragraph>
-              권한 관리 페이지에서는 시스템의 권한을 관리할 수 있습니다.
+            title="권한 관리 도움말"
+        >
+          <Typography variant="body1" gutterBottom>
+            권한 관리 페이지 사용 방법
           </Typography>
-            <Typography variant="body1" paragraph>
-              주요 기능:
+
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            1. 권한 목록 조회
           </Typography>
-            <ul>
-              <li>권한 목록 조회</li>
-              <li>권한 추가/수정/삭제</li>
-              <li>권한별 기본 설정</li>
-            </ul>
-            <Typography variant="body1" paragraph>
-              권한 추가 시 필수 입력 항목:
+          <Typography variant="body2" paragraph>
+            - 권한 목록에서는 각 사용자 그룹의 권한 정보를 확인할 수 있습니다.
+            - 한 페이지에 10, 20, 30개씩 데이터를 표시할 수 있습니다.
+            - 페이지 이동 버튼을 통해 다른 페이지의 데이터를 확인할 수 있습니다.
           </Typography>
-            <ul>
-              <li>권한 이름</li>
-              <li>사이트</li>
-              <li>회사 코드</li>
-              <li>권한 레벨</li>
-              <li>정렬 순서</li>
-            </ul>
-          </div>
-        }
-      />
+
+          <Typography variant="h6" gutterBottom>
+            2. 권한 검색
+          </Typography>
+          <Typography variant="body2" paragraph>
+            - 권한 레벨: 특정 권한 레벨로 필터링할 수 있습니다.
+            - 권한명: 권한명으로 검색이 가능합니다.
+            - 초기화 버튼을 클릭하면 모든 검색 조건이 초기화됩니다.
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            3. 권한 상세 정보
+          </Typography>
+          <Typography variant="body2" paragraph>
+            - 목록에서 권한을 선택하면 우측에 상세 정보가 표시됩니다.
+            - 권한 레벨, 권한명, 설명 등의 정보를 확인할 수 있습니다.
+            - 각 메뉴별 접근 권한 설정을 확인할 수 있습니다.
+          </Typography>
+
+          {loginUser?.priorityLevel === 5 && (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  4. 권한 관리 (관리자 전용)
+                </Typography>
+                <Typography variant="body2" paragraph>
+                  - 권한 추가: 새로운 권한 그룹을 생성할 수 있습니다.
+                  - 권한 수정: 기존 권한의 정보를 수정할 수 있습니다.
+                  - 권한 삭제: 불필요한 권한을 삭제할 수 있습니다.
+                  - 메뉴별 권한: 각 메뉴에 대한 접근 권한을 설정할 수 있습니다.
+                </Typography>
+
+                <Typography variant="h6" gutterBottom>
+                  5. 주의사항
+                </Typography>
+                <Typography variant="body2" paragraph>
+                  - 권한 레벨 5는 최고 관리자 권한으로, 신중하게 부여해야 합니다.
+                  - 권한을 삭제하기 전에 해당 권한을 사용 중인 사용자가 없는지 확인하세요.
+                  - 권한 변경 시 영향을 받는 사용자들에게 미리 공지하는 것이 좋습니다.
+                </Typography>
+              </>
+          )}
+        </HelpModal>
       </Box>
   );
 };
