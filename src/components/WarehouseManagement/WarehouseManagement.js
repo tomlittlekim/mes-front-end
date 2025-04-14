@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './WarehouseManagement.css';
 import { useForm, Controller } from 'react-hook-form';
-import { 
-  TextField, 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
+import {
+  TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Select,
-  Grid, 
-  Box, 
-  Typography, 
+  Grid,
+  Box,
+  Typography,
   useTheme,
-  Stack
+  Stack, alpha, IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -24,6 +24,8 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import HelpModal from "../Common/HelpModal";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -53,6 +55,7 @@ const WarehouseManagement = (props) => {
   const [factoryTypeOptions, setFactoryTypeOptions] = useState([]);
   const [factoryModel,setFactoryModel] = useState([]);
 
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -579,8 +582,22 @@ const WarehouseManagement = (props) => {
             color: getTextColor()
           }}
         >
-          창고관리
+          창고정보관리
         </Typography>
+        <IconButton
+            onClick={() => setIsHelpModalOpen(true)}
+            sx={{
+              ml: 1,
+              color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+              '&:hover': {
+                backgroundColor: isDarkMode
+                    ? alpha(theme.palette.primary.light, 0.1)
+                    : alpha(theme.palette.primary.main, 0.05)
+              }
+            }}
+        >
+          <HelpOutlineIcon />
+        </IconButton>
       </Box>
 
       {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -685,7 +702,7 @@ const WarehouseManagement = (props) => {
               rows={warehouseList}
               columns={warehouseColumns}
               buttons={warehouseGridButtons}
-              height={450}
+              height={560}
               onRowClick={handleWarehouseSelect}
               gridProps={{
                 editMode: 'cell',
@@ -697,23 +714,34 @@ const WarehouseManagement = (props) => {
       )}
       
       {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 창고관리에서는 공장 및 창고 정보를 등록, 수정, 삭제할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 창고를 선택하면 해당 창고의 상세 정보를 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 창고 등록 시 창고코드, 창고명, 위치, 관리자 등의 정보를 입력해야 합니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/*<Box mt={2} p={2} sx={{ */}
+      {/*  bgcolor: getBgColor(), */}
+      {/*  borderRadius: 1,*/}
+      {/*  border: `1px solid ${getBorderColor()}`*/}
+      {/*}}>*/}
+      {/*  <Stack spacing={1}>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 창고관리에서는 공장 및 창고 정보를 등록, 수정, 삭제할 수 있습니다.*/}
+      {/*    </Typography>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 창고 등록 시 창고코드, 창고명, 위치, 관리자 등의 정보를 입력해야 합니다.*/}
+      {/*    </Typography>*/}
+      {/*  </Stack>*/}
+      {/*</Box>*/}
+
+      {/* 도움말 모달 */}
+      <HelpModal
+          open={isHelpModalOpen}
+          onClose={() => setIsHelpModalOpen(false)}
+          title="창고정보관리 도움말"
+      >
+        <Typography variant="body2" color={getTextColor()}>
+          • 창고관리에서는 공장 및 창고 정보를 등록, 수정, 삭제할 수 있습니다.
+        </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 창고 등록 시 공장ID, 창고명, 창고유형 등의 정보를 입력해야 합니다.
+        </Typography>
+      </HelpModal>
     </Box>
   );
 };

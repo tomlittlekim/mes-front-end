@@ -11,7 +11,7 @@ import {
   Box,
   Typography,
   useTheme,
-  Stack
+  Stack, IconButton, alpha
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -21,7 +21,9 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import {GRAPHQL_URL} from "../../config";
 import Message from '../../utils/message/Message';
-import {graphFetch} from "../../api/fetchConfig"; // Message 유틸리티 클래스 임포트
+import {graphFetch} from "../../api/fetchConfig";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import HelpModal from "../Common/HelpModal"; // Message 유틸리티 클래스 임포트
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -68,10 +70,10 @@ const CustomerManagement = (props) => {
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
   const [addRows,setAddRows] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   //거래처 유형 리스트 불러오기
   const [vendorTypeOptions, setVendorTypeOptions] = useState([]);
-
 
   // 초기화 함수
   const handleReset = () => {
@@ -557,6 +559,20 @@ const CustomerManagement = (props) => {
           >
             거래처관리
           </Typography>
+          <IconButton
+              onClick={() => setIsHelpModalOpen(true)}
+              sx={{
+                ml: 1,
+                color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                '&:hover': {
+                  backgroundColor: isDarkMode
+                      ? alpha(theme.palette.primary.light, 0.1)
+                      : alpha(theme.palette.primary.main, 0.05)
+                }
+              }}
+          >
+            <HelpOutlineIcon />
+          </IconButton>
         </Box>
 
         {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
@@ -660,7 +676,7 @@ const CustomerManagement = (props) => {
                   rows={vendorList}
                   columns={customerColumns}
                   buttons={customerGridButtons}
-                  height={450}
+                  height={560}
                   onRowClick={handleCustomerSelect}
                   gridProps={{
                     editMode: 'cell',
@@ -672,23 +688,37 @@ const CustomerManagement = (props) => {
         )}
 
         {/* 하단 정보 영역 */}
-        <Box mt={2} p={2} sx={{
-          bgcolor: getBgColor(),
-          borderRadius: 1,
-          border: `1px solid ${getBorderColor()}`
-        }}>
-          <Stack spacing={1}>
-            <Typography variant="body2" color={getTextColor()}>
-              • 고객사관리에서는 거래처 및 고객사의 정보를 등록, 수정, 삭제할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 고객사를 선택하면 해당 거래처의 상세 정보를 확인하고 관리할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 고객사 등록 시 기본정보, 연락처, 주소, 담당자, 거래조건 등의 정보를 입력할 수 있습니다.
-            </Typography>
-          </Stack>
-        </Box>
+        {/*<Box mt={2} p={2} sx={{*/}
+        {/*  bgcolor: getBgColor(),*/}
+        {/*  borderRadius: 1,*/}
+        {/*  border: `1px solid ${getBorderColor()}`*/}
+        {/*}}>*/}
+        {/*  <Stack spacing={1}>*/}
+        {/*    <Typography variant="body2" color={getTextColor()}>*/}
+        {/*      • 고객사관리에서는 거래처 및 고객사의 정보를 등록, 수정, 삭제할 수 있습니다.*/}
+        {/*    </Typography>*/}
+        {/*    <Typography variant="body2" color={getTextColor()}>*/}
+        {/*      • 고객사를 선택하면 해당 거래처의 상세 정보를 확인하고 관리할 수 있습니다.*/}
+        {/*    </Typography>*/}
+        {/*    <Typography variant="body2" color={getTextColor()}>*/}
+        {/*      • 고객사 등록 시 기본정보, 연락처, 주소, 담당자, 거래조건 등의 정보를 입력할 수 있습니다.*/}
+        {/*    </Typography>*/}
+        {/*  </Stack>*/}
+        {/*</Box>*/}
+
+        {/* 도움말 모달 */}
+        <HelpModal
+            open={isHelpModalOpen}
+            onClose={() => setIsHelpModalOpen(false)}
+            title="거래처관리 도움말"
+        >
+          <Typography variant="body2" color={getTextColor()}>
+            • 거래처관리에서는 거래처 및 고객사의 정보를 등록, 수정, 삭제할 수 있습니다.
+          </Typography>
+          <Typography variant="body2" color={getTextColor()}>
+            • 거래처 등록 시 거래처명, 연락처, 주소 등의 정보를 입력할 수 있습니다.
+          </Typography>
+        </HelpModal>
       </Box>
   );
 };

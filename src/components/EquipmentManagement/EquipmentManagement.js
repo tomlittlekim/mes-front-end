@@ -681,7 +681,7 @@ const EquipmentManagement = (props) => {
             color: getTextColor()
           }}
         >
-          설비관리
+          설비정보관리
         </Typography>
         <IconButton
           onClick={() => setIsHelpModalOpen(true)}
@@ -871,7 +871,7 @@ const EquipmentManagement = (props) => {
               rows={equipmentList}
               columns={equipmentColumns}
               buttons={equipmentGridButtons}
-              height={450}
+              height={520}
               onRowClick={handleEquipmentSelect}
               gridProps={{
                 editMode: 'cell',
@@ -883,29 +883,29 @@ const EquipmentManagement = (props) => {
       )}
       
       {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 설비관리에서는 공장 내 생산에 필요한 설비 정보를 등록, 수정, 삭제할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 설비를 선택하면 해당 설비의 상세 정보를 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 설비 등록 시 설비코드, 설비명, 설치위치, 상태 등의 정보를 입력해야 합니다.
-          </Typography>
-        </Stack>
-      </Box>
+      {/*<Box mt={2} p={2} sx={{ */}
+      {/*  bgcolor: getBgColor(), */}
+      {/*  borderRadius: 1,*/}
+      {/*  border: `1px solid ${getBorderColor()}`*/}
+      {/*}}>*/}
+      {/*  <Stack spacing={1}>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 설비관리에서는 공장 내 생산에 필요한 설비 정보를 등록, 수정, 삭제할 수 있습니다.*/}
+      {/*    </Typography>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 설비를 선택하면 해당 설비의 상세 정보를 관리할 수 있습니다.*/}
+      {/*    </Typography>*/}
+      {/*    <Typography variant="body2" color={getTextColor()}>*/}
+      {/*      • 설비 등록 시 설비코드, 설비명, 설치위치, 상태 등의 정보를 입력해야 합니다.*/}
+      {/*    </Typography>*/}
+      {/*  </Stack>*/}
+      {/*</Box>*/}
 
       {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
-        title="설비관리 도움말"
+        title="설비정보관리 도움말"
       >
         <Typography variant="body2" color={getTextColor()}>
           • 설비관리에서는 생산 설비의 정보를 등록하고 관리할 수 있습니다.
