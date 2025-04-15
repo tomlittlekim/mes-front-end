@@ -96,13 +96,13 @@ const CompanyInfo = (props) => {
 
         // 회사 대표 정보 조회x
         if (companyDetails.loginId) {
-          const userData = userGroup.find(u => u.loginId === companyDetails.loginId);
+          const target = userGroup.find(u => u.loginId === companyDetails.loginId);
 
           setDetailInfo({
             ...companyDetails,
-            userName: userData.userName,
-            userEmail: userData.email,
-            userImagePath: userData.imagePath
+            userName: target?.userName,
+            userEmail: target?.email,
+            userImagePath: target?.imagePath
           });
         } else {
           setDetailInfo(companyDetails);

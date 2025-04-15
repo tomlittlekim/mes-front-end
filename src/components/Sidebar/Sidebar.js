@@ -1,14 +1,20 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import './Sidebar.css';
 import { useTabs } from '../../contexts/TabContext';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { Box, Typography, useTheme } from '@mui/material';
+import useLocalStorageVO from "../Common/UseLocalStorageVO";
+import useSystemStatusManager from "../../hook/UseSystemStatusManager";
 
 const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem }) => {
   const { activeTab } = useTabs();
   const { domain, domainName } = useDomain();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+
+  const { loginUser, logout } = useLocalStorageVO();
+  const {compCdGroup = compCdGroup, siteGroup =siteGroup } = useSystemStatusManager();
+  const [userInfo, setUserInfo] = useState(null);
 
   // expandedItems props가 없을 경우 기본값으로 ['main'] 사용
   const handleToggle = (id) => {
@@ -50,10 +56,21 @@ const Sidebar = ({ items, expandedItems = ['main'], onItemClick, onToggleItem })
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.7)';
   };
 
+  const companyName = compCdGroup.find(c=>c.compCd === loginUser.compCd)?.companyName;
+  const siteName = siteGroup.find(s=>s.codeId === loginUser.site)?.codeName
+  const username = loginUser.userNm;
+  useEffect(() => {
+    if (companyName !== null && companyName !== undefined) {
+      const siteInfo = (siteName !== null && siteName !== undefined) ? siteName+' ' : ''
+      setUserInfo(siteInfo + companyName + ' 소속 '+username);
+    }
+  }, [siteName, companyName ])
+
   return (
     <div className="sidebar">
       <div className="sidebar-title">
         <h2 className={getLogoClass()}>{domainName}</h2>
+        <Typography variant="subtitle2">{userInfo}</Typography>
       </div>
       <nav className="sidebar-nav">
         <ul className="sidebar-menu">
