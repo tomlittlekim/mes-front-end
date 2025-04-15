@@ -52,7 +52,7 @@ const SEARCH_CONDITIONS = {
   materialType: '',
   userMaterialId: '',
   materialName: '',
-  flagActive: null,
+  // flagActive: null,
   fromDate: null,
   toDate: null
 };
@@ -84,18 +84,18 @@ const COLUMNS = [
     ], editable: true },
   {field: 'baseQuantity', headerName: '기본수량', width: 80, type: 'number', editable: true },
   {field: 'materialStorage', headerName: '보관창고', width: 120},
-  {
-    field: 'flagActive',
-    headerName: '사용여부',
-    width: 100,
-    type: 'singleSelect',
-    valueOptions: [
-      { value: 'Y', label: '사용' },
-      { value: 'N', label: '미사용' }
-    ],
-    editable: true,
-    valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
-  },
+  // {
+  //   field: 'flagActive',
+  //   headerName: '사용여부',
+  //   width: 100,
+  //   type: 'singleSelect',
+  //   valueOptions: [
+  //     { value: 'Y', label: '사용' },
+  //     { value: 'N', label: '미사용' }
+  //   ],
+  //   editable: true,
+  //   valueFormatter: (params) => params.value === 'Y' ? '사용' : '미사용'
+  // },
   { field: 'createUser', headerName: '작성자', width: 100},
   { field: 'createDate', headerName: '작성일', width: 200},
   { field: 'updateUser', headerName: '수정자', width: 100},
@@ -114,7 +114,7 @@ const NEW_ROW_STRUCTURE = {
   unit: '',
   baseQuantity: 0,
   materialStorage: '',
-  flagActive: 'Y',
+  // flagActive: 'Y',
   createUser: '자동입력',
   createDate: '자동입력',
   updateUser: '자동입력',
@@ -172,7 +172,7 @@ const ProductManagement = ({tabId}) => {
     unit: row.unit || '',
     baseQuantity: row.baseQuantity || 0,
     materialStorage: row.materialStorage || '',
-    flagActive: row.flagActive || 'Y'
+    // flagActive: row.flagActive || 'Y'
   });
 
   /** Update 타입으로 변환 - 여기서는 Input + systemMaterialId */
@@ -373,28 +373,28 @@ const ProductManagement = ({tabId}) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-              name="flagActive"
-              control={control}
-              defaultValue=""
-              render={({field}) => (
-                  <FormControl variant="outlined" size="small" fullWidth>
-                    <InputLabel id="flagActive-label">사용여부</InputLabel>
-                    <Select
-                        {...field}
-                        labelId="flagActive-label"
-                        label="사용여부"
-                        value={field.value || ''}
-                    >
-                      <MenuItem value="">전체</MenuItem>
-                      <MenuItem value="Y">사용</MenuItem>
-                      <MenuItem value="N">미사용</MenuItem>
-                    </Select>
-                  </FormControl>
-              )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*      name="flagActive"*/}
+        {/*      control={control}*/}
+        {/*      defaultValue=""*/}
+        {/*      render={({field}) => (*/}
+        {/*          <FormControl variant="outlined" size="small" fullWidth>*/}
+        {/*            <InputLabel id="flagActive-label">사용여부</InputLabel>*/}
+        {/*            <Select*/}
+        {/*                {...field}*/}
+        {/*                labelId="flagActive-label"*/}
+        {/*                label="사용여부"*/}
+        {/*                value={field.value || ''}*/}
+        {/*            >*/}
+        {/*              <MenuItem value="">전체</MenuItem>*/}
+        {/*              <MenuItem value="Y">사용</MenuItem>*/}
+        {/*              <MenuItem value="N">미사용</MenuItem>*/}
+        {/*            </Select>*/}
+        {/*          </FormControl>*/}
+        {/*      )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
         <Grid item xs={12} sm={12} md={6}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
             <Controller

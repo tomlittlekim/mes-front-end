@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Typography } from '@mui/material';
+import { Typography, Tooltip } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -34,6 +34,14 @@ const PlanList = ({
   gridProps,
   productMaterials
 }) => {
+  // MaterialType 코드값을 한글 표시값으로 변환하는 맵 정의
+  const materialTypeMap = useMemo(() => ({
+    'COMPLETE_PRODUCT': '완제품',
+    'HALF_PRODUCT': '반제품',
+    'RAW_MATERIAL': '원자재',
+    'SUB_MATERIAL': '부자재'
+  }), []);
+
   // 생산계획 목록 그리드 컬럼 정의
   const planColumns = useMemo(() => ([
     {
@@ -81,9 +89,14 @@ const PlanList = ({
           const product = productMaterials.find(p => p.systemMaterialId === params.value);
           if (product) {
             return (
-                <Typography variant="body2">
-                  {product.userMaterialId || params.value}
-                </Typography>
+                <Tooltip
+                    title={`${materialTypeMap[product.materialType] || product.materialType || '기타'} > ${product.materialCategory || '일반'}`}
+                    arrow
+                >
+                  <Typography variant="body2">
+                    {product.userMaterialId || params.value}
+                  </Typography>
+                </Tooltip>
             );
           }
         }
@@ -107,22 +120,73 @@ const PlanList = ({
           <ProductMaterialSelector {...params} productMaterials={productMaterials} />
       ),
       renderCell: (params) => {
-        // params.value가 있으면 그대로 표시
+        // 제품 정보 가져오기
+        let product = null;
+        if (params.row.productId) {
+          product = productMaterials.find(p => p.systemMaterialId === params.row.productId);
+        }
+
+        // params.value가 있으면 그대로 표시하고, 툴팁에 추가 정보 제공
         if (params.value) {
-          return <Typography variant="body2">{params.value}</Typography>;
+          // 제품 정보가 있으면 툴팁에 규격 및 유형 정보 추가
+          if (product) {
+            const materialTypeText = materialTypeMap[product.materialType] || product.materialType || '기타';
+            const tooltipText = product.materialStandard
+                ? `${materialTypeText} | 규격: ${product.materialStandard}`
+                : materialTypeText;
+
+            return (
+                <Tooltip title={tooltipText} arrow>
+                  <Typography variant="body2" noWrap>{params.value}</Typography>
+                </Tooltip>
+            );
+          }
+
+          return <Typography variant="body2" noWrap>{params.value}</Typography>;
         }
 
         // params.value가 없지만 productId가 있는 경우, productId로 제품명 조회
-        if (params.row.productId) {
-          const product = productMaterials.find(p => p.systemMaterialId === params.row.productId);
-          if (product && product.materialName) {
-            // 이 경우 실제 params.value는 업데이트되지 않지만, 화면에는 제품명 표시
-            return <Typography variant="body2">{product.materialName}</Typography>;
-          }
+        if (product && product.materialName) {
+          const materialTypeText = materialTypeMap[product.materialType] || product.materialType || '기타';
+          const tooltipText = product.materialStandard
+              ? `${materialTypeText} | 규격: ${product.materialStandard}`
+              : materialTypeText;
+
+          return (
+              <Tooltip title={tooltipText} arrow>
+                <Typography variant="body2" noWrap>{product.materialName}</Typography>
+              </Tooltip>
+          );
         }
 
         // 둘 다 없는 경우 빈 문자열 표시
         return <Typography variant="body2"></Typography>;
+      }
+    },
+    {
+      field: 'materialCategory',
+      headerName: '제품유형',
+      width: 120,
+      editable: false,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        // 제품 정보 가져오기
+        let product = null;
+        let categoryText = '';
+        
+        if (params.row.productId) {
+          product = productMaterials.find(p => p.systemMaterialId === params.row.productId);
+          if (product) {
+            categoryText = product.materialCategory || '';
+          }
+        }
+        
+        return (
+          <Typography variant="body2">
+            {categoryText}
+          </Typography>
+        );
       }
     },
     {
@@ -264,7 +328,7 @@ const PlanList = ({
         }
       }
     }
-  ]), [productMaterials]);
+  ]), [productMaterials, materialTypeMap]);
 
   // 생산계획 목록 그리드 버튼
   const planGridButtons = useMemo(() => ([
