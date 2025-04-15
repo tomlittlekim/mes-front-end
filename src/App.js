@@ -15,9 +15,9 @@ import {
   Route,
   Navigate
 } from 'react-router-dom';
-import ProfilePage from "./pages/ProfilePage";
 import {ApolloProvider} from "@apollo/client";
 import { client } from './apollo/client';
+import Profile from "./components/Auth/Profile";
 
 // MUI 테마 설정 컴포넌트
 const ThemeConfigurator = ({ children }) => {
@@ -175,7 +175,7 @@ function App() {
                       !isAuthenticated ? <Login /> : <Navigate to="/" />
                     } />
                     <Route path="/profile" element={
-                      isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />
+                      isAuthenticated ? <Profile /> : <Navigate to="/login" />
                     } />
                     <Route path="/*" element={
                       isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
