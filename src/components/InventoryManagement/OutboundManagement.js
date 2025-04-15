@@ -1041,7 +1041,7 @@ const OutboundManagement = (props) => {
               rows={outboundList}
               columns={outboundColumns}
               buttons={outboundGridButtons}
-              height={450}
+              height={660}
               onRowClick={handleOutboundSelect}
               tabId={props.tabId + "-outbound"}
               gridProps={{
@@ -1059,7 +1059,7 @@ const OutboundManagement = (props) => {
               rows={outboundDetail}
               columns={detailedOutboundColumns}
               buttons={detailedOutboundGridButtons}
-              height={450}
+              height={660}
               onRowClick={handleDetailOutboundSelect}
               tabId={props.tabId + "-outbound-detail"}
               gridProps={{

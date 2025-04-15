@@ -136,6 +136,8 @@ const PopupChart = ({ open, onClose }) => {
                 <LineChartBase
                     data={data}
                     lines={lines}
+                    xAxisLabel={range === "day" ? "시간(h)" : "일자(d)"}
+                    yAxisLabel="전력 (W)"
                 />
             </DialogContent>
 

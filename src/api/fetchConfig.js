@@ -1,3 +1,5 @@
+import {handleTokenExpiration} from "../utils/auth";
+
 type FetchMethod = "GET" | "POST" | "PUT" | "DELETE";
 type FetchOptions = Omit<RequestInit, "method" | "headers" | "body">;
 
@@ -35,9 +37,10 @@ const createFetch = (withAuth = true) => {
         const fullUrl = isLocalhost ? REST_URL + relativeUrl : relativeUrl;
 
         const response = await fetch(fullUrl, fetchOptions);
-        console.log(response);
 
         if (!response.ok) {
+            const isUnAuthorized = (response?.status === 401)
+            if (isUnAuthorized) handleTokenExpiration();
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -77,7 +80,9 @@ export const graphFetch = async <T>(
     const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
-        throw new Error(`GraphQL HTTP error! status: ${response.status}`);
+        const isUnAuthorized = (response?.status === 401)
+        if (isUnAuthorized) handleTokenExpiration();
+        throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const json = await response.json();

@@ -19,6 +19,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import Swal from 'sweetalert2';
 import {signIn} from "../../api/userApi";
 import useLocalStorageVO from "../../components/Common/UseLocalStorageVO"
+import {useLocation} from "react-router-dom";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +28,7 @@ const Login = () => {
     userId: "",
     userPwd: "",
   })
+  const location = useLocation();
 
   const theme = useTheme();
   const { domain, domainName, toggleDomain, canToggleDomain } = useDomain();
@@ -40,6 +42,11 @@ const Login = () => {
 
   // 컴포넌트 마운트 시 localStorage에서 저장된 아이디 불러오기
   useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('expired') === 'true') {
+      alert('인증이 만료되었습니다. 다시 로그인해 주세요.');
+    }
+
     const isAuth = localStorage.getItem('isAuthenticated');
     if (isAuth === 'true') window.location.href = '/'
 
@@ -102,16 +109,8 @@ const Login = () => {
     try {
       const res = await signIn(req);
 
-      if (res.status !== 200) {
-        Swal.fire({
-          icon: 'error',
-          title: '로그인 실패',
-          text: res.message,
-          confirmButtonText: '확인'
-        });
-      } else {
+      if (res.status === 200) { // 명시적 상태 코드 확인
         setUserInfo(res);
-
         Swal.fire({
           icon: 'success',
           title: '성공',
@@ -120,12 +119,14 @@ const Login = () => {
         }).then(() => {
           window.location.href = '/';
         });
+      } else {
+        Swal.fire('로그인 실패', res.message, 'error');
       }
     } catch (error) {
       Swal.fire({
         icon: 'error',
         title: '에러 발생',
-        text: error.message || '알 수 없는 오류',
+        text: error.response?.message || '알 수 없는 오류',
         confirmButtonText: '확인'
       });
     }

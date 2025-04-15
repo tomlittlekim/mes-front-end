@@ -7,13 +7,13 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
-    ResponsiveContainer
+    ResponsiveContainer, Label
 } from 'recharts';
 import {DOMAINS, useDomain} from "../../contexts/DomainContext";
 import {useTheme} from "@mui/material";
 import React from "react";
 
-const LineChartBase = ({ data, lines,  disableDoubleClick = false }) => {
+const LineChartBase = ({ data, lines,  disableDoubleClick = false, xAxisLabel, yAxisLabel, }) => {
     const theme = useTheme();
     const {domain} = useDomain();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -46,11 +46,27 @@ const LineChartBase = ({ data, lines,  disableDoubleClick = false }) => {
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis
                     dataKey="timeLabel"
-                    tick={false}          // 눈금 라벨 제거
-                />
-                <YAxis
-                    tick={{ fill: getTextColor() }}
-                />
+                    tick={false}
+                >
+                    {xAxisLabel && (
+                        <Label
+                            value={xAxisLabel}
+                            position="insideBottom"
+                            style={{ fill: getTextColor(), fontSize: 12 }}
+                        />
+                    )}
+                </XAxis>
+                <YAxis>
+                    {yAxisLabel && (
+                        <Label
+                            value={yAxisLabel}
+                            angle={-90}
+                            position="insideLeft"
+                            offset={10}
+                            style={{ fill: getTextColor(), fontSize: 12 }}
+                        />
+                    )}
+                </YAxis>
                 <Tooltip
                     contentStyle={{
                         backgroundColor: getTooltipBgColor(),

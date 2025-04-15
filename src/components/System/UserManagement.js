@@ -28,16 +28,17 @@ import Swal from 'sweetalert2';
 import {DOMAINS, useDomain} from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
-import {deleteUser, getRoleGroup, getUserGroup, isExistsUserId, resetPwd, upsertUser} from "../../api/userApi";
-import {getCodes, getCompanySelect, getInitialCodes} from "../../api/utilApi";
+import {deleteUser, getUserGroup, isExistsUserId, resetPwd, upsertUser} from "../../api/userApi";
 import useLocalStorageVO from "../Common/UseLocalStorageVO";
-import {getRolesForSelect} from "../../api/userRoleApi";
+import useSystemStatusManager from '../../hook/UseSystemStatusManager'
+import {getInitialCodes} from "../../api/utilApi";
 
 const UserManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
+  const {_, userRoleGroup, compCdGroup, siteGroup } = useSystemStatusManager();
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -67,11 +68,8 @@ const UserManagement = (props) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [authorityOptions, setAuthorityOptions] = useState([]);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [positionOptions, setPositionOptions] = useState([]);
-  const [companyOptions, setCompanyOptions] = useState([]);
-  const [siteOptions, setSiteOptions] = useState([]);
   const [isExists, setIsExists] = useState(false);
   const { loginUser } = useLocalStorageVO();
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
@@ -180,7 +178,7 @@ const UserManagement = (props) => {
       flex: 1,
       renderCell: (params) => {
         if (!params.row.roleId) return '-';
-        const role = authorityOptions.find(r => r.roleId === params.row.roleId);
+        const role = userRoleGroup.find(r => r.roleId === params.row.roleId);
         return role.roleName || '-';
       }
     },
@@ -216,7 +214,7 @@ const UserManagement = (props) => {
     setIsLoading(true);
 
     getUserGroup(data).then((res) => {
-      const userGroup = (res.getUserGroup ?? []).map(user => ({
+      const userGroup = (res ?? []).map(user => ({
         ...user,
         flagActive: user.flagActive === true ? 'Y' : 'N'
       }));
@@ -237,26 +235,10 @@ const UserManagement = (props) => {
     });
   };
 
-  useEffect(() => {
-    if (loginUser.priorityLevel === 5) {
-      const devInitialData = async () => {
-        const companyData = await getCompanySelect();
-        setCompanyOptions(companyData.getCompanies ?? []);
-
-        const siteData = await getInitialCodes('ADDRESS');
-        setSiteOptions(siteData.getInitialCodes ?? []);
-      }
-      devInitialData();
-    }
-  }, [loginUser]);
-
   // 초기 데이터 로드
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const roleData = await getRolesForSelect();
-        setAuthorityOptions(roleData.getRolesForSelect ?? []);
-
         const deptData = await getInitialCodes('DEPARTMENT');
         setDepartmentOptions(deptData.getInitialCodes ?? []);
 
@@ -272,13 +254,13 @@ const UserManagement = (props) => {
 
   useEffect(() => {
     if (
-        authorityOptions.length > 0 &&
+        userRoleGroup.length > 0 &&
         departmentOptions.length > 0 &&
         positionOptions.length > 0
     ) {
       handleSearch({});
     }
-  }, [authorityOptions, departmentOptions, positionOptions]);
+  }, [userRoleGroup, departmentOptions, positionOptions]);
 
   useEffect(() => {if (isExists) setIsExists(false)}, [detailInfo.loginId])
 
@@ -396,7 +378,7 @@ const UserManagement = (props) => {
 
   // 저장 핸들러
   const handleSave = async () => {
-    const roleBySelectUser = authorityOptions.find(r => r.roleId === detailInfo.roleId)
+    const roleBySelectUser = userRoleGroup.find(r => r.roleId === detailInfo.roleId)
     if (roleBySelectUser.roleId > loginUser.priorityLevel) {
       Swal.fire({
         icon: 'error',
@@ -648,7 +630,7 @@ const UserManagement = (props) => {
                       <MenuItem value="">
                         <em>선택</em>
                       </MenuItem>
-                      {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
+                      {Array.isArray(userRoleGroup) && userRoleGroup.map((item) => (
                           <MenuItem key={item.roleId} value={item.roleId}>
                             {item.roleName}
                           </MenuItem>
@@ -670,7 +652,7 @@ const UserManagement = (props) => {
                 rows={userList}
                 columns={userColumns}
                 buttons={userGridButtons}
-                height={550}
+                height={700}
                 onRowClick={handleUserSelect}
                 tabId={props.id + "-users"}
                 gridProps={{
@@ -748,7 +730,7 @@ const UserManagement = (props) => {
                                 <MenuItem value="">
                                   <em>선택</em>
                                 </MenuItem>
-                                {Array.isArray(siteOptions) && siteOptions.map((item) => (
+                                {Array.isArray(siteGroup) && siteGroup.map((item) => (
                                   <MenuItem key={item.codeId} value={item.codeId}>
                                     {item.codeName}
                                   </MenuItem>
@@ -769,7 +751,7 @@ const UserManagement = (props) => {
                                 <MenuItem value="">
                                   <em>선택</em>
                                 </MenuItem>
-                                {Array.isArray(companyOptions) && companyOptions.map((item) => (
+                                {Array.isArray(compCdGroup) && compCdGroup.map((item) => (
                                   <MenuItem key={item.compCd} value={item.compCd}>
                                     {item.companyName}
                                   </MenuItem>
@@ -951,7 +933,7 @@ const UserManagement = (props) => {
                             <MenuItem value="">
                               <em>선택</em>
                             </MenuItem>
-                            {Array.isArray(authorityOptions) && authorityOptions.map((item) => (
+                            {Array.isArray(userRoleGroup) && userRoleGroup.map((item) => (
                               <MenuItem key={item.roleId} value={item.roleId}>
                                 {item.roleName}
                               </MenuItem>
@@ -1016,27 +998,6 @@ const UserManagement = (props) => {
           </Grid>
         </Grid>
       )}
-
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{
-        bgcolor: getBgColor(),
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 사용자관리에서는 시스템 사용자 정보를 등록하고 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 사용자별로 권한 그룹을 설정할 수 있으며, 권한은 '권한관리' 메뉴에서 상세 설정이 가능합니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 비밀번호 초기화 시 기본 비밀번호로 변경되며, 사용자는 첫 로그인 시 비밀번호를 변경해야 합니다.
-          </Typography>
-        </Stack>
-      </Box>
-
-      {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}

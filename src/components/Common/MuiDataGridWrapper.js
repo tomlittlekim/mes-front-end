@@ -268,7 +268,7 @@ const MuiDataGridWrapper = ({
           <DataGrid
             columns={columns || defaultColumns}
             rows={rows || []}
-            pageSizeOptions={[5, 10, 25, 50, 100]}
+            pageSizeOptions={[25, 50, 100]}
             pagination={true}
             paginationModel={{
               pageSize: 10,

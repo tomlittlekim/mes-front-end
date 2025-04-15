@@ -123,7 +123,11 @@ const ProductionPlanManagement = (props) => {
   }
 
   // SearchForm 컴포넌트에서 반환하는 검색 요소들
-  const searchFormItems = SearchForm({ control, handleDateRangeChange });
+  const searchFormItems = SearchForm({ 
+    control, 
+    handleDateRangeChange,
+    onSearch: handleSubmit(handleSearch)
+  });
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -199,7 +203,7 @@ const ProductionPlanManagement = (props) => {
               • 생산계획관리 화면에서는 제품별 생산계획을 효율적으로 관리할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 계획번호, 제품 정보, 주/야간 유형, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
+              • 계획번호, 제품 정보, 제품유형, 주/야간 유형, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
               • 계획을 등록하고 작업지시를 생성하여 공정별 생산 일정을 관리할 수 있습니다.
@@ -217,7 +221,7 @@ const ProductionPlanManagement = (props) => {
             • 생산계획관리에서는 생산 계획 정보를 등록하고 관리할 수 있습니다.
           </Typography>
           <Typography component="div" color={getTextColor()} paragraph>
-            • 계획번호, 제품 정보, 주/야간 유형, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
+            • 계획번호, 제품 정보, 제품유형, 주/야간 유형, 계획수량, 계획일자 등을 관리하여 생산 계획을 체계적으로 관리할 수 있습니다.
           </Typography>
           <Typography component="div" color={getTextColor()} paragraph>
             • 생산 계획 정보는 작업 지시, 생산 실적 관리 등에서 활용됩니다.

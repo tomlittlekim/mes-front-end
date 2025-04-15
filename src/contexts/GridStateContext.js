@@ -16,7 +16,7 @@ export const GridStateProvider = ({ children, tabId }) => {
   // 그리드 페이징, 정렬, 필터링 상태
   const [gridState, setGridState] = useState({
     page: 0,
-    pageSize: 10,
+    pageSize: 25,
     sortModel: [],
     filterModel: { items: [] },
     loading: false
@@ -46,7 +46,7 @@ export const GridStateProvider = ({ children, tabId }) => {
     setSelectedRows([]);
     setGridState({
       page: 0,
-      pageSize: 10,
+      pageSize: 25,
       sortModel: [],
       filterModel: { items: [] },
       loading: false

@@ -1,5 +1,5 @@
-// ProductMaterialSelector.js 수정 - useEffect 위치 조정
-import React, { useEffect, useState } from 'react';
+// ProductMaterialSelector.js 수정 - MaterialType 한글 표시 추가
+import React, { useEffect, useState, useMemo } from 'react';
 import { Autocomplete, TextField, Box } from '@mui/material';
 
 /**
@@ -14,18 +14,29 @@ const ProductMaterialSelector = (props) => {
   const { id, field, value, api, productMaterials = [] } = props;
   const [inputValue, setInputValue] = useState('');
 
+  // MaterialType 코드값을 한글 표시값으로 변환하는 맵 정의
+  const materialTypeMap = useMemo(() => ({
+    'COMPLETE_PRODUCT': '완제품',
+    'HALF_PRODUCT': '반제품',
+    'RAW_MATERIAL': '원자재',
+    'SUB_MATERIAL': '부자재'
+  }), []);
+
   // 제품 정보를 변환하여 옵션 목록 생성
-  const options = productMaterials && productMaterials.length > 0
-      ? productMaterials.map(product => ({
-        id: product.systemMaterialId,
-        userMaterialId: product.userMaterialId || '',
-        materialName: product.materialName || '',
-        materialCategory: product.materialCategory || '',
-        materialType: product.materialType || '',
-        materialStandard: product.materialStandard || '',
-        unit: product.unit || ''
-      }))
-      : [];
+  const options = useMemo(() => {
+    if (!productMaterials || productMaterials.length === 0) return [];
+
+    return productMaterials.map(product => ({
+      id: product.systemMaterialId,
+      userMaterialId: product.userMaterialId || '',
+      materialName: product.materialName || '',
+      materialCategory: product.materialCategory || '',
+      materialType: product.materialType || '',
+      materialTypeDisplay: materialTypeMap[product.materialType] || product.materialType || '기타', // 한글 표시값 추가
+      materialStandard: product.materialStandard || '',
+      unit: product.unit || ''
+    }));
+  }, [productMaterials, materialTypeMap]);
 
   // 현재 선택된 옵션 찾기 (field에 따라 다른 방식으로 찾기)
   const selectedOption = field === 'productId'
@@ -72,6 +83,7 @@ const ProductMaterialSelector = (props) => {
         ...rowModel,
         productId: newValue.id,  // systemMaterialId 저장 (백엔드 처리용)
         productName: newValue.materialName,
+        materialCategory: newValue.materialCategory || '', // 제품유형 필드 업데이트
         // 여기서는 userMaterialId는 표시용으로만 사용하고, 실제 저장되는 값은 systemMaterialId
       };
 
@@ -152,7 +164,12 @@ const ProductMaterialSelector = (props) => {
                 </Box>
               </li>
           )}
-          groupBy={(option) => `${option.materialType || '기타'} > ${option.materialCategory || '일반'}`}
+          groupBy={(option) => {
+            // materialType을 한글명으로 표시
+            const typeDisplay = option.materialTypeDisplay || '기타';
+            const categoryDisplay = option.materialCategory || '일반';
+            return `${typeDisplay} > ${categoryDisplay}`;
+          }}
           disableClearable
           fullWidth
           autoHighlight

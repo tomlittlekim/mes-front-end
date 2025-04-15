@@ -21,24 +21,27 @@ export const signIn = async (req: any): Promise<UserOutPut> => {
     }
 }
 
-const userGroupQuery =`
-  query getUserGroup($req: UserGroupRequest!) {
-    getUserGroup(req: $req) {
-      site
-      compCd
-      id
-      loginId
-      userName
-      departmentId
-      positionId
-      roleId
-      userEmail
-      phoneNum
-      flagActive
-    }
-  }
-`
-export const getUserGroup = (req) => graphFetch(userGroupQuery, {req: req})
+export const getUserGroup = async (req) => {
+    const userGroupQuery =`
+      query getUserGroup($req: UserGroupRequest) {
+        getUserGroup(req: $req) {
+          site
+          compCd
+          id
+          loginId
+          userName
+          departmentId
+          positionId
+          roleId
+          userEmail
+          phoneNum
+          flagActive
+        }
+      }`;
+
+    const data = await graphFetch(userGroupQuery, {req: req})
+    return data.getUserGroup
+}
 
 const rolesQuery = `
     query {

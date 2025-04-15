@@ -85,7 +85,11 @@ const IOTChart = () => {
                }
     >
         <div onDoubleClick={handleDoubleClick}>
-            <LineChartBase data={data} lines={lines}/>
+            <LineChartBase data={data}
+                           lines={lines}
+                           xAxisLabel="시간(30s)"
+                           yAxisLabel="전력 (W)"
+            />
         </div>
 
         <PopupChart

@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllNotice, upReadCountForNotice, deleteNotice, upsertNotice } from '../api/noticeApi';
-import { 
-  Button, 
-  TextField, 
-  Box, 
-  Typography, 
-  Paper, 
-  IconButton, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
+import {
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   DialogActions,
   Grid,
   FormControl,
@@ -18,27 +18,31 @@ import {
   Select,
   MenuItem,
   Stack,
-  useTheme
+  useTheme, alpha
 } from '@mui/material';
-import { Add, Help, Edit, Delete } from '@mui/icons-material';
+import { Add, Help, Edit, Delete, Upload, Download } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { EnhancedDataGridWrapper, SearchCondition } from '../components/Common';
 import useLocalStorageVO from "../components/Common/UseLocalStorageVO";
 import { Controller, useForm } from 'react-hook-form';
 import Swal from 'sweetalert2';
+import useSystemStatusManager from '../hook/UseSystemStatusManager';
+import HelpModal from '../components/Common/HelpModal';
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 const NoticeBoard = () => {
-  const navigate = useNavigate();
   const theme = useTheme();
-  const { userRoleLevel } = useLocalStorageVO();
-  
+  const { loginUser } = useLocalStorageVO();
+  const { userGroup, userRoleGroup, compCdGroup, siteGroup, commonData } = useSystemStatusManager();
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const isDarkMode = theme.palette.mode === 'dark';
+
   // 상태 관리
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [detailInfo, setDetailInfo] = useState({
     noticeId: null,
     noticeTitle: null,
@@ -49,6 +53,8 @@ const NoticeBoard = () => {
     attachmentPath: null,
     readCount: 0
   });
+  const [roles, setRoles] = useState([]);
+  const [fileInput, setFileInput] = useState(null);
 
   // React Hook Form 설정 - 검색
   const { control, handleSubmit, reset, getValues } = useForm({
@@ -100,16 +106,28 @@ const NoticeBoard = () => {
 
   // 컬럼 정의
   const columns = [
-    { field: 'noticeId', headerName: '번호', width: 80 },
     { field: 'noticeTitle', headerName: '제목', width: 300 },
-    { field: 'noticeWriter', headerName: '작성자', width: 120 },
+    {
+      field: 'noticeWriter',
+      headerName: '작성자',
+      width: 120,
+      renderCell: (params) => {
+        if (!params.value) return '-';
+        const user = userGroup.find(u => u.loginId === params.value);
+        return user?.userName || params.value;
+      }
+    },
     { 
       field: 'createDate', 
       headerName: '작성일', 
       width: 150,
-      valueFormatter: (params) => {
-        if (!params.value) return '';
-        return format(new Date(params.value), 'yyyy-MM-dd HH:mm', { locale: ko });
+      renderCell: (params) => {
+        try {
+          if (!params?.value) return '';
+          return format(new Date(params.value), 'yyyy-MM-dd HH:mm', { locale: ko });
+        } catch (error) {
+          return '';
+        }
       }
     },
     { field: 'readCount', headerName: '조회수', width: 100 },
@@ -117,38 +135,65 @@ const NoticeBoard = () => {
       field: 'priorityLevel', 
       headerName: '우선순위', 
       width: 100,
-      valueFormatter: (params) => {
-        const levels = ['일반', '중요', '긴급'];
-        return levels[params.value - 1] || '일반';
+      renderCell: (params) => {
+        if (!params?.value) return '-';
+        return userRoleGroup.find(r=>r.priorityLevel === params.value)?.roleName || '일반';
       }
     },
     { 
       field: 'noticeTtl', 
       headerName: '만료일', 
       width: 150,
-      valueFormatter: (params) => {
-        if (!params.value) return '';
-        return format(new Date(params.value), 'yyyy-MM-dd', { locale: ko });
+      renderCell: (params) => {
+        try {
+          if (!params?.value) return '';
+          return format(new Date(params.value), 'yyyy-MM-dd', { locale: ko });
+        } catch (error) {
+          return '';
+        }
       }
     }
   ];
 
-  // 공지사항 목록 그리드 버튼
-  const noticeGridButtons = [
-    {
-      icon: <Add />,
-      label: '공지사항 추가',
-      onClick: () => handleAddNotice(),
-      show: userRoleLevel === 5
-    },
-    {
-      icon: <Delete />,
-      label: '공지사항 삭제',
-      onClick: () => handleDeleteNotice(),
-      disabled: !selectedNotice,
-      show: userRoleLevel === 5
+  // 공지사항 추가 핸들러
+  const handleAddNotice = () => {
+    setDetailInfo({
+      noticeId: null,
+      noticeTitle: null,
+      noticeContents: null,
+      noticeWriter: null,
+      priorityLevel: 1,
+      noticeTtl: null,
+      attachmentPath: null,
+      readCount: 0
+    });
+    setSelectedNotice(null);
+    setIsEditMode(true);
+  };
+
+  // 알림 설정
+  const showMessage = (type, message) => {
+    const options = {
+      title: type === 'error' ? '오류' : type === 'warning' ? '경고' : '알림',
+      text: message,
+      icon: type,
+      confirmButtonText: '확인'
+    };
+
+    if (type === 'confirm') {
+      return Swal.fire({
+        ...options,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: '확인',
+        cancelButtonText: '취소'
+      });
     }
-  ];
+
+    return Swal.fire(options);
+  };
 
   // 공지사항 목록 조회
   const handleSearch = async (data) => {
@@ -164,24 +209,41 @@ const NoticeBoard = () => {
       setIsEditMode(false);
     } catch (error) {
       console.error('공지사항 조회 실패:', error);
-      Swal.fire({
-        icon: 'error',
-        title: '오류',
-        text: '서버 통신 중 오류가 발생했습니다.',
-        confirmButtonText: '확인'
-      });
+      showMessage('error', '공지사항 조회 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    handleSearch({});
+    const initializeData = async () => {
+      try {
+        await handleSearch({});
+      } catch (error) {
+        showMessage('error', '데이터 조회 중 오류가 발생했습니다.');
+      }
+    };
+
+    initializeData();
   }, []);
+
+  useEffect(() => {
+    const initializeData = async () => {
+      if (userRoleGroup.length>0 && userRoleGroup[0].roleId !== null) {
+        const roleData = await userRoleGroup
+        const initialRoles = await commonData(roleData)
+        setRoles(initialRoles);
+      }
+    }
+
+    initializeData();
+  }, [userRoleGroup])
 
   // 공지사항 선택 핸들러
   const handleNoticeSelect = async (params) => {
     try {
+      if (!params?.id) return;
+      
       const notice = notices.find(n => n.id === params.id);
       if (notice) {
         await upReadCountForNotice(notice.noticeId);
@@ -200,75 +262,8 @@ const NoticeBoard = () => {
       }
     } catch (error) {
       console.error('공지사항 조회 실패:', error);
-      Swal.fire({
-        icon: 'error',
-        title: '오류',
-        text: '공지사항 조회 중 오류가 발생했습니다.',
-        confirmButtonText: '확인'
-      });
+      showMessage('error', '공지사항 조회 중 오류가 발생했습니다.');
     }
-  };
-
-  // 공지사항 추가 핸들러
-  const handleAddNotice = () => {
-    setDetailInfo({
-      noticeId: null,
-      noticeTitle: null,
-      noticeContents: null,
-      noticeWriter: null,
-      priorityLevel: 1,
-      noticeTtl: null,
-      attachmentPath: null,
-      readCount: 0
-    });
-    setSelectedNotice(null);
-    setIsEditMode(true);
-  };
-
-  // 공지사항 삭제 핸들러
-  const handleDeleteNotice = () => {
-    if (!selectedNotice) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 공지사항을 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: '삭제 확인',
-      text: `선택한 공지사항을 정말 삭제하시겠습니까?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await deleteNotice(selectedNotice.noticeId);
-          Swal.fire({
-            icon: 'success',
-            title: '성공',
-            text: '삭제되었습니다.',
-            confirmButtonText: '확인'
-          });
-          setSelectedNotice(null);
-          handleSearch(getValues());
-        } catch (error) {
-          console.error('공지사항 삭제 실패:', error);
-          Swal.fire({
-            icon: 'error',
-            title: '오류',
-            text: '공지사항 삭제 중 오류가 발생했습니다.',
-            confirmButtonText: '확인'
-          });
-        }
-      }
-    });
   };
 
   // 수정 모드 전환
@@ -276,28 +271,85 @@ const NoticeBoard = () => {
     setIsEditMode(true);
   };
 
-  // 저장 핸들러
+  // 파일 변경 핸들러
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setFileInput(file);
+      handleDetailChange('attachmentPath', file.name);
+    }
+  };
+
+  // 저장 핸들러 수정
   const handleSave = async () => {
     try {
-      await upsertNotice(detailInfo);
-      Swal.fire({
-        icon: 'success',
-        title: '성공',
-        text: '저장되었습니다.',
-        confirmButtonText: '확인'
-      });
+      const noticeData = {
+        noticeId: detailInfo.noticeId || null,
+        noticeTitle: detailInfo.noticeTitle || null,
+        noticeContents: detailInfo.noticeContents || null,
+        noticeWriter: loginUser.userName,
+        priorityLevel: detailInfo.priorityLevel || 1,
+        noticeTtl: detailInfo.noticeTtl || null,
+      };
+
+      await upsertNotice(noticeData);
+      showMessage('success', '저장되었습니다.');
       setIsEditMode(false);
+      setFileInput(null);
       handleSearch(getValues());
     } catch (error) {
       console.error('공지사항 저장 실패:', error);
-      Swal.fire({
-        icon: 'error',
-        title: '오류',
-        text: '공지사항 저장 중 오류가 발생했습니다.',
-        confirmButtonText: '확인'
-      });
+      showMessage('error', '공지사항 저장 중 오류가 발생했습니다.');
     }
   };
+
+  // 공지사항 삭제 핸들러
+  const handleDeleteNotice = () => {
+    if (!selectedNotice) {
+      showMessage('warning', '삭제할 공지사항을 선택해주세요.');
+      return;
+    }
+
+    showMessage('confirm', '선택한 공지사항을 정말 삭제하시겠습니까?').then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteNotice(selectedNotice.noticeId);
+          showMessage('success', '삭제되었습니다.');
+          setSelectedNotice(null);
+          handleSearch(getValues());
+        } catch (error) {
+          console.error('공지사항 삭제 실패:', error);
+          showMessage('error', '공지사항 삭제 중 오류가 발생했습니다.');
+        }
+      }
+    });
+  };
+
+  // 공지사항 목록 그리드 버튼 정의
+  const gridButtons = [
+    {
+      icon: <Add />,
+      label: '추가',
+      onClick: handleAddNotice,
+      variant: 'contained',
+      color: 'primary',
+      sx: { mr: 1 }
+    },
+    {
+      icon: <Delete />,
+      label: '삭제',
+      onClick: handleDeleteNotice,
+      disabled: !selectedNotice,
+      variant: 'contained',
+      color: 'error',
+      sx: { mr: 1 }
+    }
+  ];
+
+  // useMemo로 권한에 따른 버튼 필터링
+  const noticeGridButtons = useMemo(() => {
+    return loginUser?.priorityLevel === 5 ? gridButtons : [];
+  }, [loginUser?.priorityLevel, selectedNotice]);
 
   return (
     <Box sx={{ p: 3, minHeight: '100vh' }}>
@@ -310,8 +362,19 @@ const NoticeBoard = () => {
         <Typography variant="h5" component="h1">
           공지사항
         </Typography>
-        <IconButton onClick={() => setHelpDialogOpen(true)} color="primary">
-          <Help />
+        <IconButton
+          onClick={() => setIsHelpModalOpen(true)}
+          sx={{
+            ml: 1,
+            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: isDarkMode
+                ? alpha(theme.palette.primary.light, 0.1)
+                : alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
+        >
+          <HelpOutlineIcon />
         </IconButton>
       </Box>
 
@@ -321,7 +384,7 @@ const NoticeBoard = () => {
         onReset={onReset}
       >
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={6}>
             <Controller
               name="fromDate"
               control={control}
@@ -339,7 +402,7 @@ const NoticeBoard = () => {
               )}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={6}>
             <Controller
               name="toDate"
               control={control}
@@ -369,8 +432,8 @@ const NoticeBoard = () => {
               title="공지사항 목록"
               rows={notices}
               columns={columns}
-              buttons={noticeGridButtons.filter(btn => btn.show)}
-              height={600}
+              buttons={noticeGridButtons}
+              height={700}
               onRowClick={handleNoticeSelect}
               pagination={true}
               pageSize={10}
@@ -382,7 +445,7 @@ const NoticeBoard = () => {
           {/* 공지사항 상세 정보 영역 */}
           <Grid item xs={12} md={6}>
             <Paper sx={{
-              height: '600px',
+              height: '700px',
               p: 2,
               boxShadow: theme.shadows[2],
               borderRadius: 1,
@@ -394,7 +457,7 @@ const NoticeBoard = () => {
                 <Typography variant="h6">
                   공지사항 상세 정보
                 </Typography>
-                {selectedNotice && !isEditMode && userRoleLevel === 5 && (
+                {selectedNotice && !isEditMode && loginUser?.priorityLevel === 5 && (
                   <IconButton
                     color="primary"
                     onClick={handleEdit}
@@ -427,40 +490,56 @@ const NoticeBoard = () => {
                         variant="outlined"
                         size="small"
                         fullWidth
-                        disabled={!isEditMode}
+                        disabled={true}
                         required
                         value={detailInfo.noticeWriter || ''}
-                        onChange={(e) => handleDetailChange('noticeWriter', e.target.value)}
+                        sx={{
+                          "& .MuiInputBase-input.Mui-disabled": {
+                            WebkitTextFillColor: "#666",
+                          }
+                        }}
                       />
                     </Grid>
 
                     <Grid item xs={12} sm={6}>
                       <FormControl variant="outlined" size="small" fullWidth disabled={!isEditMode}>
-                        <InputLabel>우선순위</InputLabel>
+                        <InputLabel>권한 레벨</InputLabel>
                         <Select
-                          label="우선순위"
+                          label="권한 레벨"
                           value={detailInfo.priorityLevel || 1}
                           onChange={(e) => handleDetailChange('priorityLevel', e.target.value)}
                         >
-                          <MenuItem value={1}>일반</MenuItem>
-                          <MenuItem value={2}>중요</MenuItem>
-                          <MenuItem value={3}>긴급</MenuItem>
+                          {roles.map((role) => (
+                            <MenuItem key={role.priorityLevel} value={role.priorityLevel}>
+                              {role.roleName}
+                            </MenuItem>
+                          ))}
                         </Select>
                       </FormControl>
                     </Grid>
 
                     <Grid item xs={12}>
-                      <TextField
-                        label="만료일"
-                        type="date"
-                        variant="outlined"
-                        size="small"
-                        fullWidth
-                        disabled={!isEditMode}
-                        InputLabelProps={{ shrink: true }}
-                        value={detailInfo.noticeTtl || ''}
-                        onChange={(e) => handleDetailChange('noticeTtl', e.target.value)}
-                      />
+                      {isEditMode ? (
+                        <TextField
+                          label="만료일"
+                          type="date"
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          InputLabelProps={{ shrink: true }}
+                          value={detailInfo.noticeTtl || ''}
+                          onChange={(e) => handleDetailChange('noticeTtl', e.target.value)}
+                        />
+                      ) : (
+                        <TextField
+                          label="생성일"
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          disabled
+                          value={selectedNotice ? format(new Date(selectedNotice.createDate), 'yyyy-MM-dd', { locale: ko }) : ''}
+                        />
+                      )}
                     </Grid>
 
                     <Grid item xs={12}>
@@ -479,15 +558,37 @@ const NoticeBoard = () => {
                     </Grid>
 
                     <Grid item xs={12}>
-                      <TextField
-                        label="첨부파일"
-                        variant="outlined"
-                        size="small"
-                        fullWidth
-                        disabled={!isEditMode}
-                        value={detailInfo.attachmentPath || ''}
-                        onChange={(e) => handleDetailChange('attachmentPath', e.target.value)}
-                      />
+                      {isEditMode ? (
+                        <input
+                          type="file"
+                          onChange={handleFileChange}
+                          style={{ display: 'none' }}
+                          id="notice-file-input"
+                        />
+                      ) : null}
+                      {isEditMode ? (
+                        <label htmlFor="notice-file-input">
+                          <Button
+                            variant="outlined"
+                            component="span"
+                            fullWidth
+                            startIcon={<Upload />}
+                          >
+                            {fileInput ? fileInput.name : '파일 선택'}
+                          </Button>
+                        </label>
+                      ) : (
+                        detailInfo.attachmentPath && (
+                          <Button
+                            variant="text"
+                            fullWidth
+                            startIcon={<Download />}
+                            // onClick={() => handleFileDownload(detailInfo.attachmentPath)}
+                          >
+                            {detailInfo.attachmentPath}
+                          </Button>
+                        )
+                      )}
                     </Grid>
 
                     {isEditMode && (
@@ -528,69 +629,43 @@ const NoticeBoard = () => {
           </Grid>
         </Grid>
       )}
-
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{
-        bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-        borderRadius: 1,
-        border: `1px solid ${theme.palette.divider}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2">
-            • 공지사항은 전체 사용자에게 공지되는 중요한 정보를 관리합니다.
-          </Typography>
-          <Typography variant="body2">
-            • 우선순위에 따라 일반, 중요, 긴급으로 구분하여 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2">
-            • 만료일이 지난 공지사항은 자동으로 비활성화됩니다.
-          </Typography>
-        </Stack>
-      </Box>
-
       {/* 도움말 모달 */}
-      <Dialog
-        open={helpDialogOpen}
-        onClose={() => setHelpDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
+      <HelpModal
+        open={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="공지사항 도움말"
       >
-        <DialogTitle>공지사항 관리 도움말</DialogTitle>
-        <DialogContent>
-          <Typography variant="subtitle1" gutterBottom>
-            공지사항 관리 페이지 사용 방법
-          </Typography>
-          <Typography paragraph>
-            1. 공지사항 목록 조회
-          </Typography>
-          <Typography variant="body2" paragraph>
-            - 시작일과 종료일을 선택하여 해당 기간의 공지사항을 조회할 수 있습니다.
-            - 공지사항을 클릭하면 상세 내용을 확인할 수 있습니다.
-          </Typography>
-          <Typography paragraph>
-            2. 공지사항 상세보기
-          </Typography>
-          <Typography variant="body2" paragraph>
-            - 공지사항의 제목, 작성자, 작성일, 조회수, 첨부파일, 내용을 확인할 수 있습니다.
-            - 우측 상단의 뒤로가기 버튼을 클릭하면 목록으로 돌아갈 수 있습니다.
-          </Typography>
-          {userRoleLevel === 5 && (
-            <>
-              <Typography paragraph>
-                3. 공지사항 관리 (관리자 전용)
-              </Typography>
-              <Typography variant="body2" paragraph>
-                - 공지사항 등록: 우측 상단의 "공지사항 등록" 버튼을 클릭하여 새로운 공지사항을 등록할 수 있습니다.
-                - 공지사항 수정: 목록에서 공지사항을 클릭하여 상세 내용을 확인한 후 수정할 수 있습니다.
-                - 공지사항 삭제: 목록에서 공지사항을 클릭하여 상세 내용을 확인한 후 삭제할 수 있습니다.
-              </Typography>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHelpDialogOpen(false)}>닫기</Button>
-        </DialogActions>
-      </Dialog>
+        <Typography variant="body2">
+          공지사항 페이지 사용 방법
+        </Typography>
+        <Typography paragraph>
+          1. 공지사항 목록 조회
+        </Typography>
+        <Typography variant="body2">
+          - 공지사항 목록에서 제목, 작성자, 작성일, 중요도를 확인할 수 있습니다.
+          - 중요도가 높은 공지사항은 상단에 표시됩니다.
+        </Typography>
+        <Typography paragraph>
+          2. 공지사항 상세보기
+        </Typography>
+        <Typography variant="body2">
+          - 목록에서 공지사항을 클릭하면 상세 내용을 확인할 수 있습니다.
+          - 제목, 내용, 작성자, 작성일, 중요도 등의 정보를 확인할 수 있습니다.
+        </Typography>
+        {loginUser?.priorityLevel === 5 && (
+          <>
+            <Typography paragraph>
+              3. 공지사항 관리 (관리자 전용)
+            </Typography>
+            <Typography variant="body2">
+              - 공지사항 작성: "공지사항 작성" 버튼을 클릭하여 새로운 공지사항을 등록할 수 있습니다.
+              - 공지사항 수정: 목록에서 공지사항을 선택한 후 수정 버튼을 클릭하여 내용을 수정할 수 있습니다.
+              - 공지사항 삭제: 목록에서 공지사항을 선택한 후 삭제 버튼을 클릭하여 공지사항을 삭제할 수 있습니다.
+              - 중요도 설정: 공지사항 작성/수정 시 중요도를 설정하여 상단에 고정할 수 있습니다.
+            </Typography>
+          </>
+        )}
+      </HelpModal>
     </Box>
   );
 };

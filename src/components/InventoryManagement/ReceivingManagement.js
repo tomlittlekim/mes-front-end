@@ -1284,6 +1284,7 @@ const ReceivingManagement = (props) => {
       width: 70,
       headerAlign: 'center',
       align: 'center',
+      type: 'number',
       editable: false,
      },
     { field: 'hasInvoice', 
@@ -1618,7 +1619,7 @@ const ReceivingManagement = (props) => {
               rows={receivingList}
               columns={receivingColumns}
               buttons={receivingGridButtons}
-              height={450}
+              height={660}
               onRowClick={handleReceivingSelect}
               tabId={props.tabId + "-factories"}
               gridProps={{
@@ -1639,7 +1640,7 @@ const ReceivingManagement = (props) => {
               rows={receivingDetail}
               columns={detailedReceivingColumns.filter(col => col.field !== 'inInventoryId')}
               buttons={detailedReceivingGridButtons}
-              height={450}
+              height={660}
               onRowClick={handleDetailReceivingSelect}
               tabId={props.tabId + "-factories"}
               gridProps={{
