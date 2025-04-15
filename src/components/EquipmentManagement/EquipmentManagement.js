@@ -936,6 +936,9 @@ const EquipmentManagement = (props) => {
         <Typography variant="body2" color={getTextColor()}>
           • 설비 정보는 생산 계획, 작업 지시, 생산 실적 관리 등에서 활용됩니다.
         </Typography>
+        <Typography variant="body2" color={getTextColor()}>
+          • 설비 구입일은 입력값이 8자리숫자(YYYYMMDD)의 형식과 일치해야 합니다.
+        </Typography>
       </HelpModal>
     </Box>
   );
