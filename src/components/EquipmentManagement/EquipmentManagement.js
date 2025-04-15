@@ -44,7 +44,6 @@ const EquipmentManagement = (props) => {
       equipmentName: '',
       equipmentSn: '',
       equipmentType: '',
-      // flagActive: null
     }
   });
 
@@ -96,12 +95,19 @@ const EquipmentManagement = (props) => {
       equipmentName: '',
       equipmentSn: '',
       equipmentType: '',
-      // flagActive: null
     });
   };
 
   function handleProcessRowUpdate(newRow, oldRow) {
     const isNewRow = oldRow.id.startsWith('NEW_');
+
+    if (newRow.equipmentBuyDate && /^\d{8}$/.test(newRow.equipmentBuyDate)) {
+      const raw = newRow.equipmentBuyDate;
+      newRow.equipmentBuyDate = `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`;
+    } else if (newRow.equipmentBuyDate && newRow.equipmentBuyDate !== oldRow.equipmentBuyDate) {
+      Message.showError({ message: `입력형식을 일치해주세요 (YYYYMMDD)` });
+      return oldRow; // rollback
+    }
 
     if (newRow.factoryId !== oldRow.factoryId) {
       const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
@@ -185,6 +191,7 @@ const EquipmentManagement = (props) => {
           equipmentType
           equipmentName
           equipmentStatus
+          remark
           createUser
           createDate
           updateUser
@@ -230,7 +237,7 @@ const EquipmentManagement = (props) => {
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
     equipmentStatus: row.equipmentStatus,
-    // flagActive: row.flagActive
+    remark: row.remark
   });
 
   const transformRowForUpdate = (row) => ({
@@ -243,7 +250,7 @@ const EquipmentManagement = (props) => {
     equipmentType: row.equipmentType,
     equipmentName: row.equipmentName,
     equipmentStatus: row.equipmentStatus,
-    // flagActive: row.flagActive
+    remark: row.remark
   });
 
   // 저장 버튼 클릭 핸들러
@@ -413,7 +420,7 @@ const EquipmentManagement = (props) => {
       equipmentType: '',
       equipmentName: '',
       equipmentStatus: '',
-      // flagActive: null,
+      remark: '',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -442,6 +449,7 @@ const EquipmentManagement = (props) => {
           equipmentType
           equipmentName
           equipmentStatus
+          remark
           createUser
           createDate
           updateUser
@@ -575,7 +583,30 @@ const EquipmentManagement = (props) => {
     },
     { field: 'lineName', headerName: '라인 명', width: 90 },
     { field: 'equipmentId', headerName: '설비 ID', width: 140 },
-    { field: 'equipmentBuyDate', headerName: '설비 구입일', width: 120, editable: true },
+    {
+      field: 'equipmentBuyDate',
+      headerName: '설비 구입일',
+      width: 130,
+      editable: true,
+      renderEditCell: (params) => {
+        const rawValue = params.value ? params.value.replace(/\D/g, '') : '';
+
+        return (
+            <TextField
+                value={rawValue}
+                onChange={(e) => {
+                  params.api.setEditCellValue({
+                    id: params.id,
+                    field: params.field,
+                    value: e.target.value
+                  });
+                }}
+                placeholder="YYYYMMDD"
+                size="small"
+            />
+        );
+      }
+    },
     { field: 'equipmentBuyVendor', headerName: '설비 구입처', width: 120, editable: true },
     { field: 'equipmentSn', headerName: '설비 S/N', width: 100 , editable: true },
     {
@@ -610,19 +641,8 @@ const EquipmentManagement = (props) => {
       editable: true,
       type: 'singleSelect',
       valueOptions: equipmentStatusOptions,
-      flex:1
     },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 90,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //     { value: 'Y', label: '사용' },
-    //     { value: 'N', label: '미사용' }
-    //   ]
-    // },
+    { field: 'remark', headerName: '비고', width: 100, editable: true},
     { field: 'createUser', headerName: '등록자', width: 90 },
     { field: 'createDate', headerName: '등록일', width: 130 },
     { field: 'updateUser', headerName: '수정자', width: 90 },
