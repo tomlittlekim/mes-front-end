@@ -28,6 +28,7 @@ import useLocalStorageVO from '../Common/UseLocalStorageVO';
 import { getCompanies, getCompanyDetails, upsertCompany, deleteCompany } from '../../api/companyApi';
 import Swal from 'sweetalert2';
 import useSystemStatusManager from "../../hook/UseSystemStatusManager";
+import {getUserGroup} from "../../api/userApi";
 
 const CompanyInfo = (props) => {
   const theme = useTheme();
@@ -35,7 +36,7 @@ const CompanyInfo = (props) => {
   const isDarkMode = theme.palette.mode === 'dark';
   const { loginUser } = useLocalStorageVO();
   const isDeveloper = loginUser.priorityLevel === 5;
-  const { userGroup, userRoleGroup, compCdGroup, siteGroup, commonData } = useSystemStatusManager()
+  const { siteGroup =  siteGroup } = useSystemStatusManager()
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +48,7 @@ const CompanyInfo = (props) => {
     companyName: null,
     site: null
   });
+  const [owner, setOwner] = useState(null);
 
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
   const [addRows,setAddRows] = useState([]);
@@ -96,14 +98,25 @@ const CompanyInfo = (props) => {
 
         // 회사 대표 정보 조회x
         if (companyDetails.loginId) {
-          const target = userGroup.find(u => u.loginId === companyDetails.loginId);
+          if (owner === null) {
+            const userData = await getUserGroup();
+            const owner = userData.find(u => u.loginId === companyDetails.loginId);
+            setOwner(owner);
 
-          setDetailInfo({
-            ...companyDetails,
-            userName: target?.userName,
-            userEmail: target?.email,
-            userImagePath: target?.imagePath
-          });
+            setDetailInfo({
+              ...companyDetails,
+              userName: owner?.userName,
+              userEmail: owner?.email,
+              userImagePath: owner?.imagePath
+            });
+          } else {
+            setDetailInfo({
+              ...companyDetails,
+              userName: owner?.userName,
+              userEmail: owner?.email,
+              userImagePath: owner?.imagePath
+            });
+          }
         } else {
           setDetailInfo(companyDetails);
         }
