@@ -37,7 +37,7 @@ const ProfileContainer = () => {
     compCd: '',
     userName: loginUser.userNm || '유저 이름이 없습니다',
     loginId: loginUser.loginId || '',
-    imagePath: '#1976d2',
+    imagePath: loginUser.imagePath || '#1976d2',
     roleId: 0,
     roleName: '',
     userEmail: '',

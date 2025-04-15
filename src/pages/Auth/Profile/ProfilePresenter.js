@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -50,6 +50,10 @@ const ProfilePresenter = ({
 }) => {
   const [colorAnchorEl, setColorAnchorEl] = useState(null);
   const [selectedColor, setSelectedColor] = useState(profile.imagePath || '#1976d2');
+
+  useEffect(() => {
+    setSelectedColor(profile.imagePath || '#1976d2');
+  }, [profile.imagePath]);
 
   const handleColorClick = (event) => {
     setColorAnchorEl(event.currentTarget);
