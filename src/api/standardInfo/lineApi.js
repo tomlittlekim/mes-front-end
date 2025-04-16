@@ -17,6 +17,16 @@ const getLinesQuery = `
       }
     `;
 
+const getLineOptionQuery = `
+    query getLineOptions {
+      getLineOptions {
+        factoryId
+        lineId
+        lineName
+      }
+    }
+  `;
+
 const saveLineMutation = `
       mutation saveLine($createdRows: [LineInput], $updatedRows: [LineUpdate]) {
         saveLine(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -35,7 +45,7 @@ export const getLines = async (filter = {}) => {
 }
 
 export const getLineOptions = async () => {
-    const response = await graphFetch();
+    const response = await graphFetch(getLineOptionQuery);
     return response.getLineOptions
 }
 

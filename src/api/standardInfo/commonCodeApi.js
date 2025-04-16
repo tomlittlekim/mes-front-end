@@ -32,6 +32,15 @@ const getCodesQuery = `
       }
     `;
 
+const getGridCodeQuery = `
+    query getGridCodes($codeClassId: String!) {
+      getGridCodes(codeClassId: $codeClassId) {
+        codeId
+        codeName
+      }
+    }
+  `;
+
 const saveCodeMutation = `
       mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
         saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -53,6 +62,17 @@ export const getCodeList = async (codeClassId) => {
     const response = await graphFetch(getCodesQuery, codeClassId);
     return response.getCodes
 }
+
+export const getGridCodes = async (codeClassId) => {
+    const response = await graphFetch(getGridCodeQuery, {codeClassId});
+
+    return response.getGridCodes.map(row => ({
+        value: row.codeId,
+        label: row.codeName,
+    }));
+}
+
+
 
 export const saveCodeClass = (req) =>  graphFetch(saveCodeClassMutation,req)
 

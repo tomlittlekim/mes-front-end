@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import {getGridCodes} from "../../api/standardInfo/commonCodeApi";
 
 /**
  * 그리드 행 관련 커스텀 훅
@@ -93,3 +94,16 @@ export const useGridRow = ({
         formatDeleteData
     };
 };
+
+
+export function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
+    getGridCodes(codeClassId)
+        .then((options) => {
+            if (options.errors) {
+                console.error(options.errors);
+            } else {
+                setOptions(options);
+            }
+        })
+        .catch((err) => console.error(err));
+}
