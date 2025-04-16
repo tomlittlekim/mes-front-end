@@ -1,20 +1,12 @@
 import React, {useState, useEffect, useCallback} from 'react';
-import { GRAPHQL_URL } from '../../config';
 import './FactoryManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import { 
   TextField, 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
-  Select,
-  Grid, 
+  Grid,
   Box, 
   Typography, 
   useTheme,
-  Stack,
-  Button,
-  FormHelperText,
   IconButton,
   alpha
 } from '@mui/material';
@@ -28,6 +20,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
+import {deleteFactory, getFactory, saveFactory} from "../../api/standardInfo/factoryApi";
 
 const FactoryManagement = (props) => {
   // 현재 테마 가져오기
@@ -62,30 +55,12 @@ const FactoryManagement = (props) => {
     setUpdatedRows([]);
     setAddRows([]);
 
-    const query = `
-      query getFactories($filter: FactoryFilter) {
-        factories(filter: $filter) {
-          factoryId
-          factoryName
-          factoryCode
-          address
-          telNo
-          remark
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
 
-    graphFetch(
-        query,
-        { filter: data }
-    ).then((data) => {
+    getFactory(data)
+        .then((data) => {
           if (data.errors) {
           } else {
-            const rowsWithId = data.factories.map((row, index) => ({
+            const rowsWithId = data.map((row, index) => ({
               ...row,
               id: row.factoryId  // 또는 row.factoryId || index + 1
             }));
@@ -220,18 +195,11 @@ const FactoryManagement = (props) => {
       return;
     }
 
-    const createFactoryMutation = `
-      mutation SaveFactory($createdRows: [FactoryInput], $updatedRows: [FactoryUpdate]) {
-        saveFactory(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     const createdFactoryInputs = addRows.map(transformRowForMutation);
     const updatedFactoryInputs = updatedRows.map(transformRowForUpdate);
 
 
-    graphFetch(
-        createFactoryMutation,
+    saveFactory(
         {
           createdRows: createdFactoryInputs,
           updatedRows: updatedFactoryInputs,
@@ -286,12 +254,6 @@ const FactoryManagement = (props) => {
       return;
     }
 
-    const deleteFactoryMutation = `
-      mutation DeleteFactory($factoryId: String!) {
-        deleteFactory(factoryId: $factoryId)
-      }
-    `;
-
     const isDeleteAddRows = addRows.find(f => f.id === selectedFactory.id)
     const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedFactory.id)
 
@@ -318,8 +280,7 @@ const FactoryManagement = (props) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
 
-        graphFetch(
-            deleteFactoryMutation,
+        deleteFactory(
             {factoryId: selectedFactory.factoryId}
         ).then((data) => {
               if (data.errors) {
@@ -357,31 +318,12 @@ const FactoryManagement = (props) => {
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getFactories($filter: FactoryFilter) {
-        factories(filter: $filter) {
-          factoryId
-          factoryName
-          factoryCode
-          address
-          telNo
-          remark
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-
-      graphFetch(
-          query,
-          { filter:  getValues() }
+      getFactory(
+          getValues()
       ).then((data) => {
             if (data.errors) {
             } else {
-              const rowsWithId = data.factories.map((row, index) => ({
+              const rowsWithId = data.map((row, index) => ({
                 ...row,
                 id: row.factoryId  // 또는 row.factoryId || index + 1
               }));

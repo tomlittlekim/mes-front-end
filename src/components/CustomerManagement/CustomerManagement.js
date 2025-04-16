@@ -3,10 +3,6 @@ import './CustomerManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
@@ -16,14 +12,15 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
+import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
 import Message from '../../utils/message/Message';
 import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
-import HelpModal from "../Common/HelpModal"; // Message 유틸리티 클래스 임포트
+import HelpModal from "../Common/HelpModal";
+import {deleteVendor, getVendors, saveVendor} from "../../api/standardInfo/customerApi";
+import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow"; // Message 유틸리티 클래스 임포트
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -139,33 +136,12 @@ const CustomerManagement = (props) => {
     setUpdatedRows([]);
     setAddRows([]);
 
-    const query = `
-      query getVendors($filter: VendorFilter) {
-        getVendors(filter: $filter) {
-          vendorId
-          vendorName
-          vendorType
-          businessRegNo
-          ceoName
-          businessType
-          address
-          telNo
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-
-    graphFetch(
-        query,
-        {filter:data}
+    getVendors(
+        data
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.getVendors.map((row, index) => ({
+        const rowsWithId = data.map((row, index) => ({
           ...row,
           id: row.vendorId  // 또는 row.factoryId || index + 1
         }));
@@ -222,12 +198,6 @@ const CustomerManagement = (props) => {
       return;
     }
 
-    const createVendorMutation = `
-      mutation SaveVendor($createdRows: [VendorInput], $updatedRows: [VendorUpdate]) {
-        saveVendor(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     // 필수 필드 검증 함수
     const validateRequiredFields = (rows, fieldMapping) => {
       for (const row of rows) {
@@ -256,8 +226,7 @@ const CustomerManagement = (props) => {
     const updatedVendorInputs = updatedRows.map(transformRowForUpdate);
 
 
-    graphFetch(
-        createVendorMutation,
+    saveVendor(
         {
           createdRows: createdVendorInputs,
           updatedRows: updatedVendorInputs,
@@ -292,12 +261,6 @@ const CustomerManagement = (props) => {
       return;
     }
 
-    const deleteVendorMutation = `
-      mutation DeleteVendor($vendorId: String!) {
-        deleteVendor(vendorId: $vendorId)
-      }
-    `;
-
     const isDeleteAddRows = addRows.find(f => f.id === selectedVendor.id)
     const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedVendor.id)
 
@@ -324,8 +287,7 @@ const CustomerManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        graphFetch(
-            deleteVendorMutation,
+        deleteVendor(
             {vendorId: selectedVendor.vendorId}
         ).then((data) => {
               if (data.errors) {
@@ -385,68 +347,20 @@ const CustomerManagement = (props) => {
 
 
   useEffect(() => {
-    const query = `
-      query getGridCodes($codeClassId: String!) {
-        getGridCodes(codeClassId: $codeClassId) {
-          codeId
-          codeName
-        }
-      }
-    `;
-
-    // filter 객체에 vendor type 코드 그룹을 지정합니다.
-    const variables = {
-      codeClassId: "CD20250331110039125"
-    };
-
-    graphFetch(
-        query,
-        variables
-    ).then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-          } else {
-            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getGridCodes.map((row) => ({
-              value: row.codeId,
-              label: row.codeName
-            }));
-            setVendorTypeOptions(options);
-          }
-        })
-        .catch((err) => console.error(err));
+    fetchGridCodesByCodeClassId("CD20250331110039125",setVendorTypeOptions)
   }, []);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getVendors($filter: VendorFilter) {
-        getVendors(filter: $filter) {
-          vendorId
-          vendorName
-          vendorType
-          businessRegNo
-          ceoName
-          businessType
-          address
-          telNo
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
 
-      graphFetch(
-          query,
-          {filter: getValues()}
+      getVendors(
+          getValues()
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.getVendors.map((row, index) => ({
+          const rowsWithId = data.map((row, index) => ({
             ...row,
             id: row.vendorId  // 또는 row.factoryId || index + 1
           }));

@@ -32,6 +32,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import {useNavigate} from "react-router-dom";
 import useLocalStorageVO from "./UseLocalStorageVO";
 import { alpha } from '@mui/material/styles';
+import useSystemStatusManager from '../../hook/UseSystemStatusManager'
 
 // 탭 레이블 컴포넌트를 memo로 최적화
 const TabLabel = memo(({ tabId, tabName, onClose, isActive }) => {
@@ -83,13 +84,11 @@ const AppHeader = (props) => {
   const { domain, toggleDomain, nginxEnv, domainName } = useDomain();
   const muiTheme = useMuiTheme();
   const { logout } = useLocalStorageVO();
-  
+
   // 사용자 메뉴 상태
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const userMenuOpen = Boolean(userMenuAnchor);
 
-  // 현재 로그인한 사용자 정보
-  const username = localStorage.getItem('username') || '사용자';
 
   // 탭 컨테이너 ref
   const tabsContainerRef = useRef(null);
@@ -374,8 +373,7 @@ const AppHeader = (props) => {
               {theme === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
             </IconButton>
           </Tooltip>
-          
-          <Tooltip title={`${username} 계정`}>
+
             <IconButton
               onClick={handleUserMenuOpen}
               size="small"
@@ -387,7 +385,6 @@ const AppHeader = (props) => {
             >
               <AccountCircleIcon fontSize="small" />
             </IconButton>
-          </Tooltip>
 
           {/* 사용자 메뉴 */}
           <Menu
@@ -410,13 +407,6 @@ const AppHeader = (props) => {
               },
             }}
           >
-            <Box sx={{ px: 2, py: 1.5 }}>
-              <Typography variant="subtitle1">{username}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {domain === DOMAINS.PEMS ? 'PEMS 도메인' : 'iMOS 도메인'}
-              </Typography>
-            </Box>
-
             <Divider />
 
             <MenuItem onClick={handleProfileClick}>

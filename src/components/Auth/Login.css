@@ -79,4 +79,40 @@ body.dark .login-card {
   .login-form {
     padding: 16px 24px;
   }
+}
+
+/* 모바일 최적화 스타일 */
+.mobile-view .login-container {
+  align-items: flex-start;
+  padding: 0;
+}
+
+.mobile-view .login-card {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  margin-top: 40px;
+}
+
+.mobile-view .login-header {
+  padding: 32px 24px;
+}
+
+.mobile-view .login-form {
+  padding: 24px;
+}
+
+.mobile-view .system-name {
+  font-size: 32px;
+}
+
+.mobile-view .login-action-wrapper {
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-view .login-button {
+  height: 48px;
+  font-size: 16px;
 } 

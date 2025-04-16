@@ -21,11 +21,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
+import {deleteCode, getCodeClass, getCodeList, saveCode, saveCodeClass} from "../../api/standardInfo/commonCodeApi";
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -66,33 +66,22 @@ const CommonCodeManagement = (props) => {
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getCodeClass($filter: CodeClassFilter) {
-        getCodeClass(filter: $filter) {
-          codeClassId
-          codeClassName
-          codeClassDesc
-        }
-      }
-    `;
 
-      graphFetch(
-          query,
-          { filter: getValues() }
+      getCodeClass(
+          getValues()
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.getCodeClass.map((row, index) => ({
+          const rowsWithId = data.map((row, index) => ({
             ...row,
             id: row.codeClassId  // 또는 row.factoryId || index + 1
           }));
           setCodeGroups(rowsWithId)
         }
         setIsLoading(false);
-      })
-          .catch((err) => {
+      }).catch((err) => {
             setIsLoading(false);
-          });
+      });
     }, 100);
 
     return () => clearTimeout(timer);
@@ -105,31 +94,19 @@ const CommonCodeManagement = (props) => {
     setAddCodeClassRows([]);
     setAddCodeRows([]);
 
-    const query = `
-      query getCodeClass($filter: CodeClassFilter) {
-        getCodeClass(filter: $filter) {
-          codeClassId
-          codeClassName
-          codeClassDesc
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        { filter: data }
+    getCodeClass(
+        data
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.getCodeClass.map((row, index) => ({
+        const rowsWithId = data.map((row, index) => ({
           ...row,
           id: row.codeClassId  // 또는 row.factoryId || index + 1
         }));
         setCodeGroups(rowsWithId)
       }
       setIsLoading(false);
-    })
-        .catch((err) => {
+    }).catch((err) => {
           setIsLoading(false);
         });
   };
@@ -237,12 +214,6 @@ const CommonCodeManagement = (props) => {
 
   // 코드 그룹 저장 핸들러
   const handleSaveCodeGroup = () => {
-    const creatCodeClassMutation = `
-      mutation saveCodeClass($createdRows: [CodeClassInput], $updatedRows: [CodeClassUpdate]) {
-        saveCodeClass(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     // 필수 필드 검증 함수
     const validateRequiredFields = (rows, fieldMapping) => {
       for (const row of rows) {
@@ -282,9 +253,7 @@ const CommonCodeManagement = (props) => {
       return;
     }
 
-
-    graphFetch(
-        creatCodeClassMutation,
+    saveCodeClass(
         {
           createdRows: createdCodeClassInputs,
           updatedRows: updatedCodeClassInputs,
@@ -315,31 +284,13 @@ const CommonCodeManagement = (props) => {
     setAddCodeRows([]);
     setUpdatedCodeRows([]);
 
-    const query = `
-      query getCodes($codeClassId: String!) {
-        getCodes(codeClassId: $codeClassId) {
-          codeClassId
-          codeId
-          codeName
-          codeDesc
-          sortOrder
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
+    getCodeList(
         { codeClassId: codeGroup.codeClassId }
     ).then((data) => {
           if (data.errors) {
             console.error("GraphQL Errors:", data.errors);
           } else {
-            console.log(data);
-            const rowsWithId = data.getCodes.map((row) => ({
+            const rowsWithId = data.map((row) => ({
               ...row,
               id: row.codeId
             }));
@@ -352,7 +303,6 @@ const CommonCodeManagement = (props) => {
           setIsLoading(false);
         });
   };
-
 
   //코드 선택 핸들러
   const handleCodeSelect = (params) => {
@@ -428,17 +378,10 @@ const CommonCodeManagement = (props) => {
       return;
     }
 
-    const createCodeMutation = `
-      mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
-        saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     const createdCodeInputs = addCodeRows.map(transformCodeRowForMutation);
     const updatedCodeInputs = updatedCodeRows.map(transformCodeRowForUpdate);
 
-    graphFetch(
-        createCodeMutation,
+    saveCode(
         {
           createdRows: createdCodeInputs,
           updatedRows: updatedCodeInputs,
@@ -474,12 +417,6 @@ const CommonCodeManagement = (props) => {
       return;
     }
 
-    const deleteCodeMutation = `
-      mutation DeleteCode($codeId: String!) {
-        deleteCode(codeId: $codeId)
-      }
-    `;
-
     const isDeleteAddRows = addCodeRows.find(f => f.id === selectedCode.id)
     const isDeleteUpdateRows = updatedCodeRows.find(f => f.id === selectedCode.id)
 
@@ -505,8 +442,7 @@ const CommonCodeManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-        graphFetch(
-            deleteCodeMutation,
+        deleteCode(
             { codeId: selectedCode.codeId }
         ).then((data) => {
               if (data.errors) {
