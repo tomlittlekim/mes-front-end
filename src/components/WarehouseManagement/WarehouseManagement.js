@@ -3,29 +3,25 @@ import './WarehouseManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
   useTheme,
-  Stack, alpha, IconButton
+  alpha, IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
 import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
+import {deleteWarehouse, getWarehouse, saveWarehouse} from "../../api/standardInfo/wareHouseApi";
+import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
+import {getGridFactory} from "../../api/standardInfo/factoryApi";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -152,41 +148,22 @@ const WarehouseManagement = (props) => {
     setUpdatedRows([]);
     setAddRows([]);
 
-    const query = `
-      query getWarehouse($filter: WarehouseFilter) {
-        getWarehouse(filter: $filter) {
-          factoryId
-          factoryName
-          warehouseId
-          warehouseName
-          warehouseType
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        {filter: data}
-    ).then((data) => {
-      if (data.errors) {
-      } else {
-        const rowsWithId = data.getWarehouse.map((row, index) => ({
-          ...row,
-          id: row.warehouseId ,
-          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
-          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
-        }));
-        setWarehouseList(rowsWithId);
-        // setRefreshKey(prev => prev + 1);
-      }
-      setIsLoading(false);
-    }).catch((err) => {
-      setIsLoading(false);
-    });
+    getWarehouse(data)
+        .then((res) => {
+          const rowsWithId = res.map((row) => ({
+            ...row,
+            id: row.warehouseId,
+            createDate: row.createDate?.replace("T", " ") || "",
+            updateDate: row.updateDate?.replace("T", " ") || ""
+          }));
+          setWarehouseList(rowsWithId);
+        })
+        .catch((err) => {
+          console.error("창고 목록 불러오기 실패", err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
   };
 
   // 창고 선택 핸들러
@@ -269,19 +246,10 @@ const WarehouseManagement = (props) => {
       return;
     }
 
-
-
-    const createWarehouseMutation = `
-      mutation saveWarehouse($createdRows: [WarehouseInput], $updatedRows: [WarehouseUpdate]) {
-        saveWarehouse(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     const createdWarehouseInputs = addRows.map(transformRowForMutation);
     const updatedWarehouseInputs = updatedRows.map(transformRowForUpdate);
 
-    graphFetch(
-        createWarehouseMutation,
+    saveWarehouse(
         {
           createdRows: createdWarehouseInputs,
           updatedRows: updatedWarehouseInputs,
@@ -329,12 +297,6 @@ const WarehouseManagement = (props) => {
       setUpdatedRows(updatedRowsLit)
     }
 
-    const deleteWarehouseMutation = `
-      mutation deleteWarehouse($warehouseId: String!) {
-        deleteWarehouse(warehouseId: $warehouseId)
-      }
-    `;
-
     Swal.fire({
       title: '삭제 확인',
       text: '정말 삭제하시겠습니까?',
@@ -347,10 +309,7 @@ const WarehouseManagement = (props) => {
     }).then((result) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
-
-
-        graphFetch(
-            deleteWarehouseMutation,
+        deleteWarehouse(
             {warehouseId: selectedWarehouse.warehouseId}
         ).then((data) => {
               if (data.errors) {
@@ -389,104 +348,48 @@ const WarehouseManagement = (props) => {
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getWarehouse($filter: WarehouseFilter) {
-        getWarehouse(filter: $filter) {
-          factoryId
-          factoryName
-          warehouseId
-          warehouseName
-          warehouseType
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
 
-      graphFetch(
-          query,
-          {filter: getValues() }
-      ).then((data) => {
-        if (data.errors) {
+      getWarehouse(
+          getValues()
+      ).then((res) => {
+        if (res.errors) {
         } else {
-          const rowsWithId = data.getWarehouse.map((row, index) => ({
+          const rowsWithId = res.map((row) => ({
             ...row,
-            id: row.warehouseId ,
-            createDate: row.createDate ? row.createDate.replace("T", " ") : "",
-            updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
+            id: row.warehouseId,
+            createDate: row.createDate?.replace("T", " ") || "",
+            updateDate: row.updateDate?.replace("T", " ") || ""
           }));
           setWarehouseList(rowsWithId);
         }
         setIsLoading(false);
-      })
-          .catch((err) => {
+      }).catch((err) => {
             setIsLoading(false);
-          });
+      });
     }, 100);
 
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    const query = `
-      query getGridCodes($codeClassId: String!) {
-        getGridCodes(codeClassId: $codeClassId) {
-          codeId
-          codeName
-        }
-      }
-    `;
-
-    // filter 객체에 vendor type 코드 그룹을 지정합니다.
-    const variables = {
-      codeClassId: "CD20250401114109083"
-    };
-
-    graphFetch(
-        query,
-        variables
-    ).then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-          } else {
-            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getGridCodes.map((row) => ({
-              value: row.codeId,
-              label: row.codeName
-            }));
-            setWarehouseTypeOptions(options);
-          }
-        })
-        .catch((err) => console.error(err));
+    fetchGridCodesByCodeClassId("CD20250401114109083",setWarehouseTypeOptions)
   }, []);
 
   useEffect(() => {
-    const query = `
-      query getGridFactory {
-        getGridFactory {
-          factoryId
-          factoryName
-          factoryCode
-        }
-      }
-    `;
 
-    graphFetch(
-        query,
-    ).then((data) => {
+    getGridFactory()
+        .then((data) => {
       if (data.errors) {
         console.error(data.errors);
       } else {
         // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.getGridFactory.map((row) => ({
+        const options = data.map((row) => ({
           value: row.factoryId,
           label: row.factoryId
         }));
         setFactoryTypeOptions(options);
 
-        const models = data.getGridFactory.map((row) => ({
+        const models = data.map((row) => ({
           factoryId: row.factoryId,
           factoryName: row.factoryName,
           factoryCode: row.factoryCode
