@@ -53,16 +53,28 @@ const deleteCodeMutation = `
       }
     `;
 
+/**
+* 코드 클레스 리스트 가져오는 메소드
+* */
 export const getCodeClass = async (filter = {}) => {
     const response = await graphFetch(getCodeClassQuery, {filter});
     return response.getCodeClass
 }
 
+
+/**
+ * 코드 리스트 가져오는 메소드
+ * ex) codeClassId = { codeClassId: codeGroup.codeClassId }
+ * */
 export const getCodeList = async (codeClassId) => {
     const response = await graphFetch(getCodesQuery, codeClassId);
     return response.getCodes
 }
 
+/**
+*  그리드나 드롭다운에 들어갈 공통코드 리스트 불러오는 메소드
+ *  리턴값은 label , value 객체로 응답
+* */
 export const getGridCodes = async (codeClassId) => {
     const response = await graphFetch(getGridCodeQuery, {codeClassId});
 
@@ -71,8 +83,6 @@ export const getGridCodes = async (codeClassId) => {
         label: row.codeName,
     }));
 }
-
-
 
 export const saveCodeClass = (req) =>  graphFetch(saveCodeClassMutation,req)
 

@@ -35,6 +35,9 @@ const deleteEquipmentMutation = `
       }
     `;
 
+/**
+ * 장비리스트 불러오는 메소드
+ * */
 export const getEquipments = async (filter = {}) => {
     const response = await graphFetch(getEquipmentQuery, {filter});
     return response.getEquipments
