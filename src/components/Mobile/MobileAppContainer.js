@@ -72,9 +72,9 @@ const MobileAppContainer = () => {
                         }
                       }
                     }}
-                    onClick={() => openTab({ id: 'mm-result-in', name: '생산실적등록', group: 'pm' })}
+                    onClick={() => openTab({ id: 'mm-result-in', name: '생산실적', group: 'pm' })}
                 >
-                  생산실적등록
+                  생산실적
                 </Button>
               </Grid>
             </Grid>
@@ -87,7 +87,7 @@ const MobileAppContainer = () => {
               공지사항
             </Typography>
             <Typography variant="body2">
-              모바일 버전에서는 <strong>제품 관리</strong>와 <strong>생산실적등록</strong> 기능만 이용 가능합니다.
+              모바일 버전에서는 <strong>제품 관리</strong>와 <strong>생산실적</strong> 기능만 이용 가능합니다.
               <br />
               <br />
               더 많은 기능을 이용하시려면 PC 버전을 이용해주세요.
