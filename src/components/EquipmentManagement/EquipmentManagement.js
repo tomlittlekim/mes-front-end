@@ -26,6 +26,10 @@ import HelpModal from '../Common/HelpModal';
 import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
+import {deleteEquipment, getEquipments, saveEquipment} from "../../api/standardInfo/equipmentApi";
+import {getGridFactory} from "../../api/standardInfo/factoryApi";
+import {getLineOptions} from "../../api/standardInfo/lineApi";
+import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
 
 const EquipmentManagement = (props) => {
   // 현재 테마 가져오기
@@ -177,36 +181,12 @@ const EquipmentManagement = (props) => {
     setUpdatedRows([]);
     setAddRows([]);
 
-    const query = `
-      query getEquipments($filter: EquipmentFilter) {
-        getEquipments(filter: $filter) {
-          factoryId
-          factoryName
-          lineId
-          lineName
-          equipmentId
-          equipmentBuyDate
-          equipmentBuyVendor
-          equipmentSn
-          equipmentType
-          equipmentName
-          equipmentStatus
-          remark
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        {filter: data}
+    getEquipments(
+        data
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.getEquipments.map((row, index) => ({
+        const rowsWithId = data.map((row, index) => ({
           ...row,
           id: row.equipmentId,
           createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -268,12 +248,6 @@ const EquipmentManagement = (props) => {
       return;
     }
 
-    const createEquipmentMutation = `
-      mutation saveEquipment($createdRows: [EquipmentInput], $updatedRows: [EquipmentUpdate]) {
-        saveEquipment(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     // 필수 필드 검증 함수
     const validateRequiredFields = (rows, fieldMapping) => {
       for (const row of rows) {
@@ -301,8 +275,7 @@ const EquipmentManagement = (props) => {
     const createdEquipmentInputs = addRows.map(transformRowForMutation);
     const updatedEquipmentInputs = updatedRows.map(transformRowForUpdate);
 
-    graphFetch(
-        createEquipmentMutation,
+    saveEquipment(
         {
           createdRows: createdEquipmentInputs,
           updatedRows: updatedEquipmentInputs,
@@ -337,12 +310,6 @@ const EquipmentManagement = (props) => {
       return;
     }
 
-    const deleteEquipmentMutation = `
-      mutation deleteEquipment($equipmentId: String!) {
-        deleteEquipment(equipmentId: $equipmentId)
-      }
-    `;
-
     const isDeleteAddRows = addRows.find(f => f.id === selectedEquipment.id)
     const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedEquipment.id)
 
@@ -369,8 +336,7 @@ const EquipmentManagement = (props) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
 
-        graphFetch(
-            deleteEquipmentMutation,
+        deleteEquipment(
             {equipmentId: selectedEquipment.equipmentId}
         ).then((data) => {
               if (data.errors) {
@@ -435,37 +401,13 @@ const EquipmentManagement = (props) => {
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getEquipments($filter: EquipmentFilter) {
-        getEquipments(filter: $filter) {
-          factoryId
-          factoryName
-          lineId
-          lineName
-          equipmentId
-          equipmentBuyDate
-          equipmentBuyVendor
-          equipmentSn
-          equipmentType
-          equipmentName
-          equipmentStatus
-          remark
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
 
-
-      graphFetch(
-          query,
-          {filter: getValues()}
+      getEquipments(
+          getValues()
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.getEquipments.map((row, index) => ({
+          const rowsWithId = data.map((row, index) => ({
             ...row,
             id: row.equipmentId,
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -485,30 +427,20 @@ const EquipmentManagement = (props) => {
 
   //공장 정보 불러오기
   useEffect(() => {
-    const query = `
-      query getGridFactory {
-        getGridFactory {
-          factoryId
-          factoryName
-          factoryCode
-        }
-      }
-    `;
 
-    graphFetch(
-        query,
-    ).then((data) => {
+    getGridFactory()
+        .then((data) => {
       if (data.errors) {
         console.error(data.errors);
       } else {
         // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.getGridFactory.map((row) => ({
+        const options = data.map((row) => ({
           value: row.factoryId,
           label: row.factoryId
         }));
         setFactoryTypeOptions(options);
 
-        const models = data.getGridFactory.map((row) => ({
+        const models = data.map((row) => ({
           factoryId: row.factoryId,
           factoryName: row.factoryName,
           factoryCode: row.factoryCode
@@ -520,21 +452,10 @@ const EquipmentManagement = (props) => {
   }, []);
 
   useEffect(() => {
-    const query = `
-    query getLineOptions {
-      getLineOptions {
-        factoryId
-        lineId
-        lineName
-      }
-    }
-  `;
-
-    graphFetch(
-        query,
-    ).then((data) => {
+    getLineOptions()
+        .then((data) => {
           if (!data.errors) {
-            setLineOptions(data.getLineOptions);
+            setLineOptions(data);
           }
         })
         .catch((err) => console.error(err));
@@ -544,17 +465,6 @@ const EquipmentManagement = (props) => {
     fetchGridCodesByCodeClassId("CD20250402135319458", setEquipmentStatusOptions);
     fetchGridCodesByCodeClassId("CD20250402135319708", setEquipmentTypeOptions);
   }, []);
-
-
-  useEffect(()=>{
-    console.log("addRows: ", addRows )
-  },[addRows])
-
-
-  useEffect(()=>{
-    console.log("updatedRows: ", updatedRows )
-  },[updatedRows])
-
 
   // 설비 목록 그리드 컬럼 정의
   const equipmentColumns = [
@@ -655,34 +565,6 @@ const EquipmentManagement = (props) => {
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
-
-  function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
-    const query = `
-    query getGridCodes($codeClassId: String!) {
-      getGridCodes(codeClassId: $codeClassId) {
-        codeId
-        codeName
-      }
-    }
-  `;
-
-    graphFetch(
-        query,
-        {codeClassId:codeClassId}
-    ).then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-          } else {
-            const options = data.getGridCodes.map((row) => ({
-              value: row.codeId,
-              label: row.codeName,
-            }));
-            setOptions(options);
-          }
-        })
-        .catch((err) => console.error(err));
-  }
-
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>

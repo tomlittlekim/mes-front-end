@@ -41,12 +41,17 @@ const deleteFactoryMutation = `
       }
     `;
 
-
+/**
+ * 공장 리스트 불러오는 메소드
+ * */
 export const getFactory = async (filter = {}) => {
     const response = await graphFetch(getFactoryQuery, {filter});
     return response.factories
 }
 
+/**
+ * 로그인한 site, compCd 에 존재하는 공장 리스트를 불러오는 메소드
+ * */
 export const getGridFactory = async () => {
     const response = await graphFetch(getGridFactoryQuery);
     return response.getGridFactory
