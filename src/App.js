@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { TabProvider } from './contexts/TabContext';
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext';
 import { DomainProvider } from './contexts/DomainContext';
 import AppLayout from './components/Layout/AppLayout';
 import Login from './components/Auth/Login';
+import MobileAppContainer from './components/Mobile/MobileAppContainer';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
+import { CssBaseline, useMediaQuery } from '@mui/material';
 import { useTheme } from './contexts/ThemeContext';
 import { useDomain, DOMAINS } from './contexts/DomainContext';
 import { 
@@ -131,57 +132,87 @@ const ThemeConfigurator = ({ children }) => {
   );
 };
 
-// function App() {
-//   // localStorage에서 인증 상태 확인
-//   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-//
-//   return (
-//     <DomainProvider>
-//       <CustomThemeProvider>
-//         <ThemeConfigurator>
-//           <TabProvider>
-//             <BrowserRouter>
-//               <Routes>
-//                 <Route path="/login" element={
-//                   !isAuthenticated ? <Login /> : <Navigate to="/" />
-//                 } />
-//                 <Route path="/profile" element={
-//                   isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />
-//                 } />
-//                 <Route path="/*" element={
-//                   isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
-//                 } />
-//               </Routes>
-//             </BrowserRouter>
-//           </TabProvider>
-//         </ThemeConfigurator>
-//       </CustomThemeProvider>
-//     </DomainProvider>
-//   );
-// }
+// 모바일 기기 감지 컴포넌트
+const DeviceDetector = ({ children }) => {
+  // 테마 객체 생성 (미디어 쿼리 사용을 위함)
+  const defaultTheme = createTheme();
 
-function App() {
+  // 미디어 쿼리로 모바일/태블릿 감지
+  const isMobile = useMediaQuery(defaultTheme.breakpoints.down('sm')); // 600px 이하
+  const isTablet = useMediaQuery(defaultTheme.breakpoints.between('sm', 'md')); // 600px ~ 960px
+
+  // 모바일 또는 태블릿이면 true
+  const isMobileOrTablet = isMobile || isTablet;
+
+  // URL에서 강제 뷰 모드 체크 (개발용)
+  const [forceMode, setForceMode] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewMode = params.get('view');
+
+    if (viewMode === 'mobile') {
+      setForceMode('mobile');
+    } else if (viewMode === 'desktop') {
+      setForceMode('desktop');
+    } else {
+      setForceMode(null);
+    }
+  }, []);
+
+  // 최종 디바이스 결정 (URL 파라미터 우선)
+  const finalIsMobile = forceMode === 'mobile' || (forceMode !== 'desktop' && isMobileOrTablet);
+
+  // 클래스로 바디에 모바일 여부 표시
+  useEffect(() => {
+    if (finalIsMobile) {
+      document.body.classList.add('mobile-view');
+    } else {
+      document.body.classList.remove('mobile-view');
+    }
+
+    return () => {
+      document.body.classList.remove('mobile-view');
+    };
+  }, [finalIsMobile]);
+
+  // children에 isMobile 속성 추가하여 전달
+  return React.cloneElement(children, { isMobile: finalIsMobile });
+};
+
+// 앱 레이아웃 선택 컴포넌트
+const AppContainer = ({ isMobile }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
+  return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={
+            !isAuthenticated ? <Login /> : <Navigate to="/" />
+          } />
+          <Route path="/profile" element={
+            isAuthenticated ? <Profile /> : <Navigate to="/login" />
+          } />
+          <Route path="/*" element={
+            isAuthenticated
+                ? (isMobile ? <MobileAppContainer /> : <AppLayout />)
+                : <Navigate to="/login" />
+          } />
+        </Routes>
+      </BrowserRouter>
+  );
+};
+
+function App() {
   return (
       <ApolloProvider client={client}>
         <DomainProvider>
           <CustomThemeProvider>
             <ThemeConfigurator>
               <TabProvider>
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/login" element={
-                      !isAuthenticated ? <Login /> : <Navigate to="/" />
-                    } />
-                    <Route path="/profile" element={
-                      isAuthenticated ? <Profile /> : <Navigate to="/login" />
-                    } />
-                    <Route path="/*" element={
-                      isAuthenticated ? <AppLayout /> : <Navigate to="/login" />
-                    } />
-                  </Routes>
-                </BrowserRouter>
+                <DeviceDetector>
+                  <AppContainer />
+                </DeviceDetector>
               </TabProvider>
             </ThemeConfigurator>
           </CustomThemeProvider>
@@ -189,4 +220,5 @@ function App() {
       </ApolloProvider>
   );
 }
+
 export default App;
