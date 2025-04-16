@@ -3,10 +3,6 @@ import './LineManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
@@ -19,11 +15,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
 import HelpModal from "../Common/HelpModal";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import {deleteLine, getLines, saveLine} from "../../api/standardInfo/lineApi";
+import {getGridFactory} from "../../api/standardInfo/factoryApi";
 
 const LineManagement = (props) => {
   // 현재 테마 가져오기
@@ -149,30 +146,12 @@ const LineManagement = (props) => {
     setUpdatedRows([]);
     setAddRows([]);
 
-    const query = `
-      query getLines($filter: LineFilter) {
-        getLines(filter: $filter) {
-          factoryId
-          factoryName
-          factoryCode
-          lineId
-          lineName
-          lineDesc
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        {filter: data}
+    getLines(
+        data
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.getLines.map((row, index) => ({
+        const rowsWithId = data.map((row, index) => ({
           ...row,
           id: row.lineId ,
           createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -268,18 +247,10 @@ const LineManagement = (props) => {
       return;
     }
 
-
-    const createLineMutation = `
-      mutation saveLine($createdRows: [LineInput], $updatedRows: [LineUpdate]) {
-        saveLine(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
     const createdLineInputs = addRows.map(transformRowForMutation);
     const updatedLineInputs = updatedRows.map(transformRowForUpdate);
 
-    graphFetch(
-        createLineMutation,
+    saveLine(
         {
           createdRows: createdLineInputs,
           updatedRows: updatedLineInputs,
@@ -314,12 +285,6 @@ const LineManagement = (props) => {
       return;
     }
 
-    const deleteLineMutation = `
-      mutation DeleteLine($lineId: String!) {
-        deleteLine(lineId: $lineId)
-      }
-    `;
-
     const isDeleteAddRows = addRows.find(f => f.id === selectedLine.id)
     const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedLine.id)
 
@@ -347,10 +312,7 @@ const LineManagement = (props) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
 
-
-
-        graphFetch(
-            deleteLineMutation,
+        deleteLine(
             { lineId: selectedLine.lineId }
         ).then((data) => {
               if (data.errors) {
@@ -386,31 +348,20 @@ const LineManagement = (props) => {
   };
 
   useEffect(() => {
-    const query = `
-      query getGridFactory {
-        getGridFactory {
-          factoryId
-          factoryName
-          factoryCode
-        }
-      }
-    `;
 
-
-    graphFetch(
-        query
-    ).then((data) => {
+    getGridFactory()
+        .then((data) => {
           if (data.errors) {
             console.error(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getGridFactory.map((row) => ({
+            const options = data.map((row) => ({
               value: row.factoryId,
               label: row.factoryId
             }));
             setFactoryTypeOptions(options);
 
-            const models = data.getGridFactory.map((row) => ({
+            const models = data.map((row) => ({
               factoryId: row.factoryId,
               factoryName: row.factoryName,
               factoryCode: row.factoryCode
@@ -426,30 +377,13 @@ const LineManagement = (props) => {
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getLines($filter: LineFilter) {
-        getLines(filter: $filter) {
-          factoryId
-          factoryName
-          factoryCode
-          lineId
-          lineName
-          lineDesc
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
 
-      graphFetch(
-          query,
-          {filter: getValues()}
+      getLines(
+          getValues()
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.getLines.map((row, index) => ({
+          const rowsWithId = data.map((row, index) => ({
             ...row,
             id: row.lineId,  // 또는 row.factoryId || index + 1
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
