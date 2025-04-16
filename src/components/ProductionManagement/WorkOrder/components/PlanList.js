@@ -11,9 +11,10 @@ import { EnhancedDataGridWrapper } from '../../../Common';
  * @param {number} props.refreshKey - 새로고침 키
  * @param {Function} props.onRowClick - 행 클릭 핸들러
  * @param {string} props.tabId - 탭 ID
+ * @param {Array} props.productMaterials - 제품 정보 목록
  * @returns {JSX.Element}
  */
-const PlanList = ({ planList, refreshKey, onRowClick, tabId }) => {
+const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = [] }) => {
   // 생산계획 목록 그리드 컬럼 정의
   const planColumns = useMemo(() => ([
     {
@@ -28,7 +29,54 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId }) => {
       headerName: '제품ID',
       width: 150,
       headerAlign: 'center',
-      align: 'center'
+      align: 'center',
+      renderCell: (params) => {
+        // productId(systemMaterialId)에 해당하는 userMaterialId 찾기
+        const material = productMaterials.find(m => m.systemMaterialId === params.value);
+        const displayValue = material ? material.userMaterialId : params.value;
+
+        return (
+            <Typography variant="body2">
+              {displayValue || ''}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'productName',
+      headerName: '제품명',
+      width: 180,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        // productId를 이용해 제품명 찾기
+        const material = productMaterials.find(m => m.systemMaterialId === params.row.productId);
+        const displayValue = material ? material.materialName : '';
+
+        return (
+            <Typography variant="body2">
+              {displayValue}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'materialCategory',
+      headerName: '제품유형',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        // productId를 이용해 제품유형 찾기
+        const material = productMaterials.find(m => m.systemMaterialId === params.row.productId);
+        const displayValue = material ? material.materialCategory : '';
+
+        return (
+            <Typography variant="body2">
+              {displayValue}
+            </Typography>
+        );
+      }
     },
     {
       field: 'planQty',
@@ -45,7 +93,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId }) => {
     {
       field: 'planStartDate',
       headerName: '계획시작일시',
-      width: 180,
+      width: 150,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -69,7 +117,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId }) => {
     {
       field: 'planEndDate',
       headerName: '계획종료일시',
-      width: 180,
+      width: 150,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -93,7 +141,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId }) => {
     {
       field: 'createUser',
       headerName: '등록자',
-      width: 120,
+      width: 100,
       headerAlign: 'center',
       align: 'center'
     },
@@ -117,7 +165,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId }) => {
         }
       }
     }
-  ]), []);
+  ]), [productMaterials]);
 
   // 빈 버튼 배열 - 생산계획 그리드는 버튼이 없음
   const planGridButtons = useMemo(() => ([]), []);

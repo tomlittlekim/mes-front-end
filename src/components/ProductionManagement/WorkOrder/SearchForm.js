@@ -36,9 +36,15 @@ const SearchForm = ({ onSearch, onReset }) => {
     defaultValues: {
       prodPlanId: '',
       productId: '',
+      productName: '',
+      materialCategory: '',
       workOrderId: '',
       state: '',
-      dateRange: {
+      planStartDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      planEndDateRange: {
         startDate: null,
         endDate: null
       }
@@ -46,8 +52,16 @@ const SearchForm = ({ onSearch, onReset }) => {
   });
 
   // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = (startDate, endDate) => {
-    setValue('dateRange', { startDate, endDate });
+  const handleDateRangeChange = (fieldName, startDate, endDate) => {
+    setValue(fieldName, { startDate, endDate });
+  };
+
+  // 엔터키 핸들러
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleSubmit(onSearch)();
+    }
   };
 
   return (
@@ -67,6 +81,7 @@ const SearchForm = ({ onSearch, onReset }) => {
                       size="small"
                       fullWidth
                       placeholder="생산계획ID를 입력하세요"
+                      onKeyDown={handleKeyDown}
                   />
               )}
           />
@@ -83,6 +98,41 @@ const SearchForm = ({ onSearch, onReset }) => {
                       size="small"
                       fullWidth
                       placeholder="제품ID를 입력하세요"
+                      onKeyDown={handleKeyDown}
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="productName"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="제품명"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="제품명을 입력하세요"
+                      onKeyDown={handleKeyDown}
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="materialCategory"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="제품유형"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="제품유형을 입력하세요"
+                      onKeyDown={handleKeyDown}
                   />
               )}
           />
@@ -99,6 +149,7 @@ const SearchForm = ({ onSearch, onReset }) => {
                       size="small"
                       fullWidth
                       placeholder="작업지시ID를 입력하세요"
+                      onKeyDown={handleKeyDown}
                   />
               )}
           />
@@ -114,6 +165,7 @@ const SearchForm = ({ onSearch, onReset }) => {
                         {...field}
                         labelId="state-select-label"
                         label="상태"
+                        onKeyDown={handleKeyDown}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {stateOptions.map(option => (
@@ -126,20 +178,41 @@ const SearchForm = ({ onSearch, onReset }) => {
               )}
           />
         </Grid>
-        <Grid item xs={12} sm={12} md={6}>
+        <Grid item xs={12} sm={6} md={3}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
             <Controller
-                name="dateRange"
+                name="planStartDateRange"
                 control={control}
                 render={({ field }) => (
                     <DateRangePicker
                         startDate={field.value.startDate}
                         endDate={field.value.endDate}
-                        onRangeChange={handleDateRangeChange}
+                        onRangeChange={(startDate, endDate) => handleDateRangeChange('planStartDateRange', startDate, endDate)}
                         startLabel="시작일"
                         endLabel="종료일"
                         label="계획시작일"
                         size="small"
+                        onKeyDown={handleKeyDown}
+                    />
+                )}
+            />
+          </LocalizationProvider>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+            <Controller
+                name="planEndDateRange"
+                control={control}
+                render={({ field }) => (
+                    <DateRangePicker
+                        startDate={field.value.startDate}
+                        endDate={field.value.endDate}
+                        onRangeChange={(startDate, endDate) => handleDateRangeChange('planEndDateRange', startDate, endDate)}
+                        startLabel="시작일"
+                        endLabel="종료일"
+                        label="계획종료일"
+                        size="small"
+                        onKeyDown={handleKeyDown}
                     />
                 )}
             />
