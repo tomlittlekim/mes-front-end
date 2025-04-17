@@ -3,17 +3,11 @@ import './CommonCodeManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
   useTheme,
-  Stack,
-  Button,
-  FormHelperText, alpha, IconButton
+  alpha, IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -22,7 +16,6 @@ import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import Message from "../../utils/message/Message";
-import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
 import {deleteCode, getCodeClass, getCodeList, saveCode, saveCodeClass} from "../../api/standardInfo/commonCodeApi";
@@ -62,6 +55,63 @@ const CommonCodeManagement = (props) => {
 
   const [addCodeRows,setAddCodeRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
   const [updatedCodeRows, setUpdatedCodeRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
+
+  // 코드 그룹 DataGrid 컬럼 정의
+  const codeGroupColumns = [
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
+    {
+      field: 'codeClassName',
+      headerName: '코드그룹명',
+      width: 130,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
+  ];
+
+  // 코드 DataGrid 컬럼 정의
+  const codeColumns = [
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
+    { field: 'codeId', headerName: '코드ID', width: 150 },
+    {
+      field: 'codeName',
+      headerName: '코드명',
+      width: 80,
+      editable: true
+      ,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
+    { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
+    { field: 'createUser', headerName: '작성자', width: 90},
+    { field: 'createDate', headerName: '작성일', width: 135},
+    { field: 'updateUser', headerName: '수정자', width: 90},
+    { field: 'updateDate', headerName: '수정일', width: 135}
+  ];
 
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
@@ -118,99 +168,6 @@ const CommonCodeManagement = (props) => {
       codeClassName: '',
     });
   };
-
-  //코드 클레스 행 변화 (추가, 수정)
-  function codeClassRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    setCodeGroups((prev)=>{
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddCodeClassRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedCodeClassRows(prevUpdatedRows => {
-        // 같은 factoryId를 가진 기존 행이 있는지 확인
-        const existingIndex = prevUpdatedRows.findIndex(row => row.codeClassId === newRow.codeClassId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
-    return { ...oldRow, ...newRow };
-  }
-
-  //코드 행 변화 (추가, 수정)
-  function codeRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    setCodes((prev)=>{
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddCodeRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedCodeRows(prevUpdatedRows => {
-        // 같은 factoryId를 가진 기존 행이 있는지 확인
-        const existingIndex = prevUpdatedRows.findIndex(row => row.codeId === newRow.codeId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
-    return { ...oldRow, ...newRow };
-  }
-
 
   // 코드 그룹 저장 핸들러
   const handleSaveCodeGroup = () => {
@@ -489,84 +446,6 @@ const CommonCodeManagement = (props) => {
     setCodeGroups([newCodeGroup,...codeGroups]);
   };
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 코드 그룹 DataGrid 컬럼 정의
-  const codeGroupColumns = [
-    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
-    {
-      field: 'codeClassName',
-      headerName: '코드그룹명',
-      width: 130,
-      editable: true,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
-  ];
-
-  // 코드 DataGrid 컬럼 정의
-  const codeColumns = [
-    { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
-    { field: 'codeId', headerName: '코드ID', width: 150 },
-    {
-      field: 'codeName',
-      headerName: '코드명',
-      width: 80,
-      editable: true
-      ,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 85,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //     { value: 'Y', label: '사용' },
-    //     { value: 'N', label: '미사용' }
-    //   ]
-    // },
-    { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
-    { field: 'createUser', headerName: '작성자', width: 90},
-    { field: 'createDate', headerName: '작성일', width: 135},
-    { field: 'updateUser', headerName: '수정자', width: 90},
-    { field: 'updateDate', headerName: '수정일', width: 135}
-  ];
-
   // 코드 그룹 그리드 버튼
   const codeGroupButtons = [
     { label: '등록', onClick: handleAddCodeGroup, icon: <AddIcon /> },
@@ -588,20 +467,12 @@ const CommonCodeManagement = (props) => {
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
 
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
     }
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
-
 
   const transformRowForMutation = (row) => ({
     codeClassName: row.codeClassName,
@@ -628,8 +499,102 @@ const CommonCodeManagement = (props) => {
     codeName: row.codeName,
     codeDesc: row.codeDesc,
     sortOrder: row.sortOrder,
-    // flagActive: row.flagActive
   });
+
+  //코드 클레스 행 변화 (추가, 수정)
+  function codeClassRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setCodeGroups((prev)=>{
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddCodeClassRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedCodeClassRows(prevUpdatedRows => {
+        // 같은 factoryId를 가진 기존 행이 있는지 확인
+        const existingIndex = prevUpdatedRows.findIndex(row => row.codeClassId === newRow.codeClassId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
+
+  //코드 행 변화 (추가, 수정)
+  function codeRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setCodes((prev)=>{
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddCodeRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedCodeRows(prevUpdatedRows => {
+        // 같은 factoryId를 가진 기존 행이 있는지 확인
+        const existingIndex = prevUpdatedRows.findIndex(row => row.codeId === newRow.codeId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
+
+
+
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -703,26 +668,6 @@ const CommonCodeManagement = (props) => {
                     />
                 )}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            {/*<Controller*/}
-            {/*  name="useYn"*/}
-            {/*  control={control}*/}
-            {/*  render={({ field }) => (*/}
-            {/*    <FormControl variant="outlined" size="small" fullWidth>*/}
-            {/*      <InputLabel id="useYn-label">사용여부</InputLabel>*/}
-            {/*      <Select*/}
-            {/*        {...field}*/}
-            {/*        labelId="useYn-label"*/}
-            {/*        label="사용여부"*/}
-            {/*      >*/}
-            {/*        <MenuItem value="all">전체</MenuItem>*/}
-            {/*        <MenuItem value="Y">사용</MenuItem>*/}
-            {/*        <MenuItem value="N">미사용</MenuItem>*/}
-            {/*      </Select>*/}
-            {/*    </FormControl>*/}
-            {/*  )}*/}
-            {/*/>*/}
           </Grid>
         </SearchCondition>
 
