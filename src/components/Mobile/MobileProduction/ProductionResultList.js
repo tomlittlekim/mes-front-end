@@ -34,12 +34,13 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
 
     return (
         <Chip
-            icon={isDay ? <WbSunnyIcon fontSize="small" /> : <NightsStayIcon fontSize="small" />}
+            icon={isDay ? <WbSunnyIcon sx={{ fontSize: '1rem' }} /> : <NightsStayIcon sx={{ fontSize: '1rem' }} />}
             label={isDay ? "주간" : "야간"}
             size="small"
             variant="outlined"
             sx={{
               fontWeight: 500,
+              fontSize: '0.85rem',
               bgcolor: isDay
                   ? (isDarkMode ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 193, 7, 0.1)')
                   : (isDarkMode ? 'rgba(66, 165, 245, 0.2)' : 'rgba(66, 165, 245, 0.1)'),
@@ -54,7 +55,8 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                     ? (isDarkMode ? '#ffc107' : '#ff8f00')
                     : (isDarkMode ? '#42a5f5' : '#1976d2')
               },
-              minWidth: '80px',
+              minWidth: '70px',
+              height: '28px',
               justifyContent: 'center'
             }}
         />
@@ -63,21 +65,28 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
 
   if (loading) {
     return (
-        <Box sx={{ p: 4, textAlign: 'center' }}>
-          <Typography>데이터를 불러오는 중...</Typography>
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h6">데이터를 불러오는 중...</Typography>
         </Box>
     );
   }
 
   if (productionList.length === 0) {
     return (
-        <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.paper', borderRadius: 1 }}>
-          <Typography>등록된 생산실적이 없습니다.</Typography>
+        <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper', borderRadius: 1 }}>
+          <Typography variant="h6">등록된 생산실적이 없습니다.</Typography>
           <Button
               variant="contained"
-              startIcon={<AddIcon />}
+              startIcon={<AddIcon sx={{ fontSize: '1.3rem' }} />}
               onClick={onAddNew}
-              sx={{ mt: 2, bgcolor: getAccentColor() }}
+              sx={{ 
+                mt: 2, 
+                bgcolor: getAccentColor(),
+                fontSize: '1.1rem',
+                py: 1.2,
+                px: 2.5
+              }}
+              size="large"
           >
             생산실적 등록하기
           </Button>
@@ -98,16 +107,18 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                   className="mobile-card mobile-touch-item"
                   sx={{
                     width: '100%',
-                    borderColor: getBorderColor()
+                    borderColor: getBorderColor(),
+                    borderRadius: 1.5,
+                    boxShadow: '0 1px 5px rgba(0,0,0,0.08)'
                   }}
               >
-                <CardContent>
+                <CardContent sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Avatar sx={{ bgcolor: getAccentColor(), mr: 1, width: 28, height: 28 }}>
                         <FactoryIcon sx={{ fontSize: 16 }} />
                       </Avatar>
-                      <Typography variant="subtitle1" fontWeight="bold">
+                      <Typography variant="subtitle1" fontWeight="bold" fontSize="1.1rem">
                         {production.equipmentName || production.equipmentId}
                       </Typography>
                     </Box>
@@ -117,7 +128,8 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                         display: 'flex',
                         alignItems: 'center',
                         color: 'text.secondary',
-                        ml: 1
+                        ml: 1,
+                        fontSize: '0.9rem'
                       }}>
                         <CalendarTodayIcon sx={{ fontSize: 14, mr: 0.5 }} />
                         {production.productionDate}
@@ -125,28 +137,29 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                     </Box>
                   </Box>
 
-                  <Typography variant="body1" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1rem' }}>
                     {production.productName || production.productId}
                   </Typography>
 
                   <Grid container spacing={1} sx={{ mb: 1 }}>
                     <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">양품</Typography>
-                      <Typography variant="body2">
+                      <Typography variant="body2" color="text.secondary" fontSize="0.9rem">양품</Typography>
+                      <Typography variant="body1" fontSize="1rem">
                         {production.actualQuantity ? Number(production.actualQuantity).toLocaleString() : '0'}
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">불량</Typography>
-                      <Typography variant="body2" sx={{
-                        color: production.defectQuantity > 0 ? 'error.main' : 'text.primary'
+                      <Typography variant="body2" color="text.secondary" fontSize="0.9rem">불량</Typography>
+                      <Typography variant="body1" sx={{
+                        color: production.defectQuantity > 0 ? 'error.main' : 'text.primary',
+                        fontSize: '1rem'
                       }}>
                         {production.defectQuantity ? Number(production.defectQuantity).toLocaleString() : '0'}
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">작업자</Typography>
-                      <Typography variant="body2">{production.worker || '-'}</Typography>
+                      <Typography variant="body2" color="text.secondary" fontSize="0.9rem">작업자</Typography>
+                      <Typography variant="body1" fontSize="1rem">{production.worker || '-'}</Typography>
                     </Grid>
                   </Grid>
 
@@ -157,7 +170,8 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                         sx={{
                           bgcolor: theme.palette.success.light,
                           color: theme.palette.success.contrastText,
-                          fontSize: '0.75rem'
+                          fontSize: '0.85rem',
+                          height: '24px'
                         }}
                     />
                     {Number(production.defectRate) > 0 && (
@@ -167,17 +181,19 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                             sx={{
                               bgcolor: theme.palette.error.light,
                               color: theme.palette.error.contrastText,
-                              fontSize: '0.75rem'
+                              fontSize: '0.85rem',
+                              height: '24px'
                             }}
                         />
                     )}
                   </Box>
 
                   {production.workOrderId && (
-                      <Typography variant="caption" sx={{
+                      <Typography variant="body2" sx={{
                         display: 'block',
                         mt: 1,
-                        color: 'text.secondary'
+                        color: 'text.secondary',
+                        fontSize: '0.9rem'
                       }}>
                         작업지시: {production.workOrderId}
                       </Typography>
@@ -189,7 +205,8 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                           size="small"
                           sx={{
                             mt: 1,
-                            fontSize: '0.7rem',
+                            fontSize: '0.85rem',
+                            height: '24px',
                             bgcolor: production.status === 'COMPLETED'
                                 ? theme.palette.success.light
                                 : production.status === 'IN_PROGRESS'
@@ -205,24 +222,36 @@ const ProductionResultList = ({ productionList, loading, onEdit, onDelete, onAdd
                   )}
                 </CardContent>
                 <Divider />
-                <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
+                <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1 }}>
+                  <Typography variant="body2" color="text.secondary" fontSize="0.9rem">
                     {production.createDate ? `등록: ${production.createDate.split('T')[0]}` : ''}
                   </Typography>
                   <Box>
                     <IconButton
-                        size="small"
+                        size="large"
                         onClick={() => onEdit(production)}
-                        sx={{ color: getAccentColor() }}
+                        sx={{ 
+                          color: getAccentColor(), 
+                          mx: 0.5,
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px'
+                        }}
                     >
-                      <EditIcon fontSize="small" />
+                      <EditIcon sx={{ fontSize: '1.6rem' }} />
                     </IconButton>
                     <IconButton
-                        size="small"
+                        size="large"
                         onClick={() => onDelete(production.prodResultId)}
-                        sx={{ color: theme.palette.error.main }}
+                        sx={{ 
+                          color: theme.palette.error.main, 
+                          mx: 0.5,
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px'
+                        }}
                     >
-                      <DeleteIcon fontSize="small" />
+                      <DeleteIcon sx={{ fontSize: '1.6rem' }} />
                     </IconButton>
                   </Box>
                 </CardActions>

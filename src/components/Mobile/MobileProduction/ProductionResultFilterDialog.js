@@ -11,20 +11,18 @@ import {
   Select,
   MenuItem,
   IconButton,
-  Typography
+  Typography,
+  Box
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import ko from "date-fns/locale/ko";
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 const ProductionResultFilterDialog = ({
   open,
   onClose,
   searchParams,
   onFilterChange,
-  onDateChange,
   onResetFilters,
   onApplyFilters,
   equipmentList,
@@ -37,37 +35,46 @@ const ProductionResultFilterDialog = ({
           onClose={onClose}
           fullWidth
           maxWidth="xs"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+            }
+          }}
       >
         <DialogTitle sx={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           bgcolor: getAccentColor(),
-          color: 'white'
+          color: 'white',
+          py: 2,
+          px: 3,
+          fontSize: '1.5rem'
         }}>
-          <Typography variant="h6">검색 필터</Typography>
+          검색 필터
           <IconButton
-              size="small"
+              size="large"
               onClick={onClose}
               sx={{ color: 'white' }}
           >
-            <CloseIcon />
+            <CloseIcon sx={{ fontSize: '1.8rem' }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 2, mt: 1 }}>
-          <Grid container spacing={2}>
+        <DialogContent sx={{ pt: 5, px: 3, mt: 2 }}>
+          <Grid container spacing={3} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>설비</InputLabel>
+              <FormControl variant="outlined" size="medium" fullWidth>
+                <InputLabel sx={{ fontSize: '1.2rem' }}>설비</InputLabel>
                 <Select
                     name="equipmentId"
                     value={searchParams.equipmentId}
                     onChange={onFilterChange}
                     label="설비"
+                    sx={{ fontSize: '1.2rem' }}
                 >
-                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="" sx={{ fontSize: '1.2rem' }}>전체</MenuItem>
                   {equipmentList.map(equipment => (
-                      <MenuItem key={equipment.id} value={equipment.id}>
+                      <MenuItem key={equipment.id} value={equipment.id} sx={{ fontSize: '1.2rem' }}>
                         {equipment.name}
                       </MenuItem>
                   ))}
@@ -75,17 +82,18 @@ const ProductionResultFilterDialog = ({
               </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>제품</InputLabel>
+              <FormControl variant="outlined" size="medium" fullWidth>
+                <InputLabel sx={{ fontSize: '1.2rem' }}>제품</InputLabel>
                 <Select
                     name="productId"
                     value={searchParams.productId}
                     onChange={onFilterChange}
                     label="제품"
+                    sx={{ fontSize: '1.2rem' }}
                 >
-                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="" sx={{ fontSize: '1.2rem' }}>전체</MenuItem>
                   {productList.map(product => (
-                      <MenuItem key={product.id} value={product.id}>
+                      <MenuItem key={product.id} value={product.id} sx={{ fontSize: '1.2rem' }}>
                         {product.name}
                       </MenuItem>
                   ))}
@@ -93,42 +101,39 @@ const ProductionResultFilterDialog = ({
               </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                <DatePicker
-                    label="시작일"
-                    value={searchParams.fromDate}
-                    onChange={(date) => onDateChange('fromDate', date)}
-                    slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                <DatePicker
-                    label="종료일"
-                    value={searchParams.toDate}
-                    onChange={(date) => onDateChange('toDate', date)}
-                    slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                />
-              </LocalizationProvider>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <Button
+                    variant="outlined"
+                    onClick={onResetFilters}
+                    startIcon={<RestartAltIcon sx={{ fontSize: '1.3rem' }} />}
+                    size="large"
+                    color="primary"
+                    sx={{ fontSize: '1.1rem', py: 1.5, px: 3, height: '48px' }}
+                >
+                  초기화
+                </Button>
+              </Box>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
+        <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
           <Button
               variant="outlined"
-              onClick={onResetFilters}
-              startIcon={<CloseIcon />}
+              onClick={onClose}
+              startIcon={<CloseIcon sx={{ fontSize: '1.5rem' }} />}
               fullWidth
+              size="large"
+              sx={{ fontSize: '1.2rem', py: 2, height: '56px' }}
           >
-            초기화
+            취소
           </Button>
           <Button
               variant="contained"
               onClick={onApplyFilters}
-              startIcon={<SearchIcon />}
-              sx={{ bgcolor: getAccentColor() }}
+              startIcon={<SearchIcon sx={{ fontSize: '1.5rem' }} />}
+              sx={{ bgcolor: getAccentColor(), fontSize: '1.2rem', py: 2, height: '56px' }}
               fullWidth
+              size="large"
           >
             검색
           </Button>

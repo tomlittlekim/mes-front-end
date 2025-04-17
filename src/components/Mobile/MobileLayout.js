@@ -67,7 +67,7 @@ const MobileLayout = ({ children }) => {
     else if (id === 'product-management') {
       openTab({ id: 'pi-product', name: '제품관리', group: 'pi' });
     }
-    // '생산실적' 메뉴 클릭 시 - 이름 변경됨
+    // '생산실적' 메뉴 클릭 시
     else if (id === 'production-result') {
       openTab({ id: 'mm-result-in', name: '생산실적', group: 'pm' });
     }
@@ -75,7 +75,7 @@ const MobileLayout = ({ children }) => {
     setDrawerOpen(false);
   };
 
-  // 로그아웃 핸들러 - AppHeader.js에서 가져온 로직 적용
+  // 로그아웃 핸들러
   const handleLogout = useCallback(() => {
     setDrawerOpen(false); // 메뉴 닫기
 
@@ -99,24 +99,28 @@ const MobileLayout = ({ children }) => {
       <Box className="mobile-layout">
         <AppBar position="static" className="mobile-app-bar" sx={{
           backgroundColor: getAccentColor(),
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          height: '64px'
         }}>
-          <Toolbar>
+          <Toolbar sx={{ height: '100%' }}>
             <IconButton
-                size="large"
+                size="medium"
                 edge="start"
                 color="inherit"
                 aria-label="menu"
-                sx={{ mr: 2 }}
+                sx={{ mr: 1.5 }}
                 onClick={handleMenuOpen}
             >
-              <MenuIcon />
+              <MenuIcon sx={{ fontSize: '1.6rem' }} />
             </IconButton>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
               {domainName}
             </Typography>
-            <IconButton color="inherit" onClick={toggleTheme}>
-              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+            <IconButton color="inherit" onClick={toggleTheme} size="medium">
+              {isDarkMode ? 
+                <Brightness7Icon sx={{ fontSize: '1.6rem' }} /> : 
+                <Brightness4Icon sx={{ fontSize: '1.6rem' }} />
+              }
             </IconButton>
           </Toolbar>
         </AppBar>
@@ -127,7 +131,7 @@ const MobileLayout = ({ children }) => {
             onClose={handleMenuClose}
             sx={{
               '& .MuiDrawer-paper': {
-                width: 250,
+                width: 260,
                 backgroundColor: theme.palette.background.default,
               },
             }}
@@ -151,44 +155,69 @@ const MobileLayout = ({ children }) => {
               <Typography variant="h6" color={getAccentColor()} fontWeight="bold">
                 {domainName}
               </Typography>
-              <IconButton onClick={handleMenuClose}>
-                <ArrowBackIcon />
+              <IconButton onClick={handleMenuClose} size="medium">
+                <ArrowBackIcon sx={{ fontSize: '1.6rem' }} />
               </IconButton>
             </Box>
 
             <List component="nav" sx={{ flex: 1 }}>
-              <ListItem button onClick={() => handleMenuItemClick('home')}>
+              <ListItem button onClick={() => handleMenuItemClick('home')} sx={{ py: 2 }}>
                 <ListItemIcon>
-                  <HomeIcon sx={{ color: getAccentColor() }} />
+                  <HomeIcon sx={{ color: getAccentColor(), fontSize: '1.6rem' }} />
                 </ListItemIcon>
-                <ListItemText primary="홈" />
+                <ListItemText 
+                  primary="홈" 
+                  primaryTypographyProps={{ 
+                    fontSize: '1.1rem',
+                    fontWeight: 500 
+                  }} 
+                />
               </ListItem>
 
               <Divider sx={{ my: 1 }} />
 
-              <ListItem button onClick={() => handleMenuItemClick('product-management')}>
+              <ListItem button onClick={() => handleMenuItemClick('product-management')} sx={{ py: 2 }}>
                 <ListItemIcon>
-                  <InventoryIcon sx={{ color: getAccentColor() }} />
+                  <InventoryIcon sx={{ color: getAccentColor(), fontSize: '1.6rem' }} />
                 </ListItemIcon>
-                <ListItemText primary="제품 관리" />
+                <ListItemText 
+                  primary="제품 관리" 
+                  primaryTypographyProps={{ 
+                    fontSize: '1.1rem',
+                    fontWeight: 500 
+                  }} 
+                />
               </ListItem>
 
-              <ListItem button onClick={() => handleMenuItemClick('production-result')}>
+              <ListItem button onClick={() => handleMenuItemClick('production-result')} sx={{ py: 2 }}>
                 <ListItemIcon>
-                  <ListAltIcon sx={{ color: getAccentColor() }} />
+                  <ListAltIcon sx={{ color: getAccentColor(), fontSize: '1.6rem' }} />
                 </ListItemIcon>
-                <ListItemText primary="생산실적" />
+                <ListItemText 
+                  primary="생산실적" 
+                  primaryTypographyProps={{ 
+                    fontSize: '1.1rem',
+                    fontWeight: 500 
+                  }} 
+                />
               </ListItem>
             </List>
 
             <Divider />
 
             <List>
-              <ListItem button onClick={handleLogout}>
+              <ListItem button onClick={handleLogout} sx={{ py: 2 }}>
                 <ListItemIcon>
-                  <ExitToAppIcon />
+                  <ExitToAppIcon sx={{ fontSize: '1.6rem', color: theme.palette.error.main }} />
                 </ListItemIcon>
-                <ListItemText primary="로그아웃" />
+                <ListItemText 
+                  primary="로그아웃" 
+                  primaryTypographyProps={{ 
+                    fontSize: '1.1rem',
+                    fontWeight: 500,
+                    color: theme.palette.error.main
+                  }} 
+                />
               </ListItem>
             </List>
           </Box>

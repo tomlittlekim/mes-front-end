@@ -6,11 +6,11 @@ import {
   Button,
   Chip,
   Snackbar,
-  Alert
+  Alert,
+  Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DOMAINS, useDomain } from '../../../contexts/DomainContext';
 import { useTheme } from '@mui/material';
 import { useGraphQL } from "../../../apollo/useGraphQL";
@@ -22,7 +22,6 @@ import { SEARCH_CONDITIONS } from './ProductConstants';
 import ProductList from './ProductList';
 import ProductFilterDialog from './ProductFilterDialog';
 import ProductEditDialog from './ProductEditDialog';
-import ProductHelpDialog from './ProductHelpDialog';
 
 const MobileProductManagement = () => {
   // Theme 및 Context 관련
@@ -31,6 +30,7 @@ const MobileProductManagement = () => {
   const isDarkMode = theme.palette.mode === 'dark';
   const { executeQuery, executeMutation } = useGraphQL();
   const { generateId, formatDateToYYYYMMDD } = useGridUtils();
+  const [isAddMode, setIsAddMode] = useState(false);
 
   // 스타일 관련 함수
   const getAccentColor = () => {
@@ -48,7 +48,6 @@ const MobileProductManagement = () => {
   const [materialList, setMaterialList] = useState([]);
   const [searchParams, setSearchParams] = useState(SEARCH_CONDITIONS);
   const [loading, setLoading] = useState(false);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
@@ -98,15 +97,14 @@ const MobileProductManagement = () => {
     materialName: row.materialName || '',
     materialStandard: row.materialStandard || '',
     unit: row.unit || '',
-    baseQuantity: Number(row.baseQuantity) || 0,
-    materialStorage: row.materialStorage || ''
+    baseQuantity: Number(row.baseQuantity) || 0
   });
 
   // API 호출 함수들
-  const handleSearch = async () => {
+  const handleSearch = async (params = searchParams) => {
     try {
       setLoading(true);
-      const formattedParams = formatSearchParams(searchParams);
+      const formattedParams = formatSearchParams(params);
 
       // filter 객체로 변수 구성
       const { data } = await executeQuery({
@@ -253,12 +251,14 @@ const MobileProductManagement = () => {
   const handleOpenNewDialog = () => {
     setSelectedMaterial(createNewMaterial());
     setEditMode(false);
+    setIsAddMode(true);
     setIsEditDialogOpen(true);
   };
 
   const handleOpenEditDialog = (material) => {
     setSelectedMaterial(material);
     setEditMode(true);
+    setIsAddMode(false);
     setIsEditDialogOpen(true);
   };
 
@@ -298,45 +298,53 @@ const MobileProductManagement = () => {
     handleSearch();
   }, []);
 
-  return (
-      <Box sx={{ width: '100%' }}>
-        {/* 상단 헤더 및 버튼 영역 */}
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-          pb: 1,
-          borderBottom: `1px solid ${getBorderColor()}`
-        }}>
-          <Typography
-              variant="h5"
-              component="h2"
-              sx={{ fontWeight: 600 }}
+  const renderHeader = () => (
+    <Box sx={{ mb: 2, pt: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Typography variant="h6" component="h1" sx={{ fontWeight: 'bold', fontSize: '1.3rem' }}>
+          제품 관리
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <IconButton
+              onClick={() => setIsFilterDialogOpen(true)}
+              sx={{ 
+                color: getAccentColor(), 
+                fontSize: '1.6rem', 
+                padding: '10px',
+                border: `1px solid ${getBorderColor()}`,
+                borderRadius: '8px',
+                minWidth: '48px',
+                minHeight: '48px'
+              }}
+              size="large"
           >
-            제품관리
-          </Typography>
-          <Box>
-            <IconButton
-                onClick={() => setIsFilterDialogOpen(true)}
-                sx={{ color: getAccentColor() }}
-            >
-              <FilterListIcon />
-            </IconButton>
-            <IconButton
-                onClick={handleOpenNewDialog}
-                sx={{ color: getAccentColor() }}
-            >
-              <AddIcon />
-            </IconButton>
-            <IconButton
-                onClick={() => setIsHelpModalOpen(true)}
-                sx={{ color: getAccentColor() }}
-            >
-              <HelpOutlineIcon />
-            </IconButton>
-          </Box>
+            <FilterListIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton
+              onClick={handleOpenNewDialog}
+              sx={{ 
+                color: getAccentColor(), 
+                fontSize: '1.6rem', 
+                padding: '10px',
+                border: `1px solid ${getBorderColor()}`,
+                borderRadius: '8px',
+                minWidth: '48px',
+                minHeight: '48px'
+              }}
+              size="large"
+          >
+            <AddIcon fontSize="inherit" />
+          </IconButton>
         </Box>
+      </Box>
+      <Divider sx={{ my: 1 }} />
+    </Box>
+  );
+
+  return (
+      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* 헤더 영역 */}
+        {renderHeader()}
 
         {/* 활성 필터 표시 영역 */}
         {(searchParams.userMaterialId || searchParams.materialName) && (
@@ -344,41 +352,66 @@ const MobileProductManagement = () => {
               {searchParams.userMaterialId && (
                   <Chip
                       label={`제품ID: ${searchParams.userMaterialId}`}
-                      onDelete={() => setSearchParams(prev => ({ ...prev, userMaterialId: '' }))}
+                      onDelete={() => {
+                        setSearchParams(prev => {
+                          const updated = { ...prev, userMaterialId: '' };
+                          // 상태 업데이트 후 바로 검색 실행
+                          setTimeout(() => handleSearch(updated), 0);
+                          return updated;
+                        });
+                      }}
                       size="small"
                       color="primary"
                       variant="outlined"
+                      sx={{ fontSize: '0.9rem', height: '32px' }}
                   />
               )}
               {searchParams.materialName && (
                   <Chip
                       label={`제품명: ${searchParams.materialName}`}
-                      onDelete={() => setSearchParams(prev => ({ ...prev, materialName: '' }))}
+                      onDelete={() => {
+                        setSearchParams(prev => {
+                          const updated = { ...prev, materialName: '' };
+                          // 상태 업데이트 후 바로 검색 실행
+                          setTimeout(() => handleSearch(updated), 0);
+                          return updated;
+                        });
+                      }}
                       size="small"
                       color="primary"
                       variant="outlined"
+                      sx={{ fontSize: '0.9rem', height: '32px' }}
                   />
               )}
               <Chip
                   label="필터 초기화"
-                  onDelete={handleResetFilters}
-                  onClick={handleResetFilters}
+                  onDelete={() => {
+                    setSearchParams(SEARCH_CONDITIONS);
+                    setTimeout(() => handleSearch(SEARCH_CONDITIONS), 0);
+                  }}
+                  onClick={() => {
+                    setSearchParams(SEARCH_CONDITIONS);
+                    setTimeout(() => handleSearch(SEARCH_CONDITIONS), 0);
+                  }}
                   size="small"
                   variant="outlined"
+                  sx={{ fontSize: '0.9rem', height: '32px' }}
               />
             </Box>
         )}
 
-        {/* 제품 목록 컴포넌트 */}
-        <ProductList
-            materialList={materialList}
-            loading={loading}
-            onEdit={handleOpenEditDialog}
-            onDelete={handleDelete}
-            onAddNew={handleOpenNewDialog}
-            getAccentColor={getAccentColor}
-            getBorderColor={getBorderColor}
-        />
+        {/* 제품 목록 컴포넌트 - 남은 공간을 모두 차지하도록 설정 */}
+        <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+          <ProductList
+              materialList={materialList}
+              loading={loading}
+              onEdit={handleOpenEditDialog}
+              onDelete={handleDelete}
+              onAddNew={handleOpenNewDialog}
+              getAccentColor={getAccentColor}
+              getBorderColor={getBorderColor}
+          />
+        </Box>
 
         {/* 필터 다이얼로그 */}
         <ProductFilterDialog
@@ -386,7 +419,6 @@ const MobileProductManagement = () => {
             onClose={() => setIsFilterDialogOpen(false)}
             searchParams={searchParams}
             onFilterChange={handleFilterChange}
-            onDateChange={handleDateChange}
             onResetFilters={handleResetFilters}
             onApplyFilters={() => {
               handleSearch();
@@ -398,18 +430,14 @@ const MobileProductManagement = () => {
         {/* 제품 추가/수정 다이얼로그 */}
         <ProductEditDialog
             open={isEditDialogOpen}
-            onClose={() => setIsEditDialogOpen(false)}
+            onClose={() => {
+              setIsEditDialogOpen(false);
+              setIsAddMode(false);
+            }}
             material={selectedMaterial}
             editMode={editMode}
             onInputChange={handleInputChange}
             onSave={handleSave}
-            getAccentColor={getAccentColor}
-        />
-
-        {/* 도움말 모달 */}
-        <ProductHelpDialog
-            open={isHelpModalOpen}
-            onClose={() => setIsHelpModalOpen(false)}
             getAccentColor={getAccentColor}
         />
 
@@ -419,11 +447,12 @@ const MobileProductManagement = () => {
             autoHideDuration={6000}
             onClose={handleCloseSnackbar}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            sx={{ mb: 2 }}
         >
           <Alert
               onClose={handleCloseSnackbar}
               severity={snackbar.severity}
-              sx={{ width: '100%' }}
+              sx={{ width: '100%', fontSize: '1rem' }}
           >
             {snackbar.message}
           </Alert>

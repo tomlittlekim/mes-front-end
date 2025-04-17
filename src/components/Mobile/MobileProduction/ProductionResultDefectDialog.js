@@ -172,16 +172,19 @@ const ProductionResultDefectDialog = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           bgcolor: getAccentColor(),
-          color: 'white'
+          color: 'white',
+          py: 2,
+          px: 3
         }}>
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" fontSize="1.5rem">
             불량정보 등록
           </Typography>
           <IconButton
               onClick={onClose}
               sx={{ color: 'white' }}
+              size="large"
           >
-            <CloseIcon />
+            <CloseIcon sx={{ fontSize: '1.8rem' }} />
           </IconButton>
         </DialogTitle>
 
@@ -221,17 +224,18 @@ const ProductionResultDefectDialog = ({
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={3}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel id="defect-type-label">불량유형</InputLabel>
+                    <FormControl fullWidth size="medium">
+                      <InputLabel id="defect-type-label" sx={{ fontSize: '1.2rem' }}>불량유형</InputLabel>
                       <Select
                           labelId="defect-type-label"
                           name="defectType"
                           value={currentDefect.defectType}
                           onChange={handleDefectInputChange}
                           label="불량유형"
+                          sx={{ fontSize: '1.2rem' }}
                       >
                         {DEFECT_TYPES.map(option => (
-                            <MenuItem key={option.value} value={option.value}>
+                            <MenuItem key={option.value} value={option.value} sx={{ fontSize: '1.2rem' }}>
                               {option.label}
                             </MenuItem>
                         ))}
@@ -246,8 +250,14 @@ const ProductionResultDefectDialog = ({
                         value={currentDefect.defectQty}
                         onChange={handleDefectInputChange}
                         fullWidth
-                        size="small"
-                        InputProps={{ inputProps: { min: 0 } }}
+                        size="medium"
+                        InputProps={{ 
+                          inputProps: { min: 0 },
+                          sx: { fontSize: '1.2rem', py: 0.5 }
+                        }}
+                        InputLabelProps={{
+                          sx: { fontSize: '1.2rem' }
+                        }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={3}>
@@ -257,7 +267,13 @@ const ProductionResultDefectDialog = ({
                         value={currentDefect.defectCause}
                         onChange={handleDefectInputChange}
                         fullWidth
-                        size="small"
+                        size="medium"
+                        InputProps={{
+                          sx: { fontSize: '1.2rem', py: 0.5 }
+                        }}
+                        InputLabelProps={{
+                          sx: { fontSize: '1.2rem' }
+                        }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={3}>
@@ -267,7 +283,13 @@ const ProductionResultDefectDialog = ({
                         value={currentDefect.resultInfo}
                         onChange={handleDefectInputChange}
                         fullWidth
-                        size="small"
+                        size="medium"
+                        InputProps={{
+                          sx: { fontSize: '1.2rem', py: 0.5 }
+                        }}
+                        InputLabelProps={{
+                          sx: { fontSize: '1.2rem' }
+                        }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={1} display="flex" alignItems="center" justifyContent="center">
@@ -275,13 +297,15 @@ const ProductionResultDefectDialog = ({
                         variant="contained"
                         color="success"
                         onClick={handleAddDefect}
-                        startIcon={<AddIcon />}
+                        startIcon={<AddIcon sx={{ fontSize: '1.5rem' }} />}
                         sx={{
-                          minWidth: '80px',
-                          height: '36px',
+                          minWidth: '90px',
+                          height: '48px',
                           fontWeight: 'medium',
-                          bgcolor: getAccentColor()
+                          bgcolor: getAccentColor(),
+                          fontSize: '1.2rem'
                         }}
+                        size="large"
                     >
                       추가
                     </Button>
@@ -303,19 +327,19 @@ const ProductionResultDefectDialog = ({
                       <TableRow sx={{
                         bgcolor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'
                       }}>
-                        <TableCell align="center" width="8%">번호</TableCell>
-                        <TableCell align="center" width="22%">불량유형</TableCell>
-                        <TableCell align="center" width="15%">불량수량</TableCell>
-                        <TableCell align="center" width="25%">불량원인</TableCell>
-                        <TableCell align="center" width="20%">상세내용</TableCell>
-                        <TableCell align="center" width="10%">관리</TableCell>
+                        <TableCell align="center" width="8%" sx={{ fontSize: '1.1rem', py: 1.5 }}>번호</TableCell>
+                        <TableCell align="center" width="22%" sx={{ fontSize: '1.1rem', py: 1.5 }}>불량유형</TableCell>
+                        <TableCell align="center" width="15%" sx={{ fontSize: '1.1rem', py: 1.5 }}>불량수량</TableCell>
+                        <TableCell align="center" width="25%" sx={{ fontSize: '1.1rem', py: 1.5 }}>불량원인</TableCell>
+                        <TableCell align="center" width="20%" sx={{ fontSize: '1.1rem', py: 1.5 }}>상세내용</TableCell>
+                        <TableCell align="center" width="10%" sx={{ fontSize: '1.1rem', py: 1.5 }}>관리</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {defectInfos.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} align="center">
-                              <Typography variant="body2" sx={{ py: 2, color: 'text.secondary' }}>
+                              <Typography variant="body1" sx={{ py: 2, color: 'text.secondary', fontSize: '1.2rem' }}>
                                 등록된 불량정보가 없습니다. 불량정보를 추가해주세요.
                               </Typography>
                             </TableCell>
@@ -327,6 +351,10 @@ const ProductionResultDefectDialog = ({
                                 <TableRow key={index} sx={{
                                   '&:nth-of-type(odd)': {
                                     bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
+                                  },
+                                  '& .MuiTableCell-root': {
+                                    fontSize: '1.1rem',
+                                    py: 1.5
                                   }
                                 }}>
                                   <TableCell align="center">{index + 1}</TableCell>
@@ -336,11 +364,11 @@ const ProductionResultDefectDialog = ({
                                   <TableCell>{defect.resultInfo || '-'}</TableCell>
                                   <TableCell align="center">
                                     <IconButton
-                                        size="small"
+                                        size="large"
                                         color="error"
                                         onClick={() => handleDeleteDefect(index)}
                                     >
-                                      <DeleteIcon fontSize="small" />
+                                      <DeleteIcon sx={{ fontSize: '1.6rem' }} />
                                     </IconButton>
                                   </TableCell>
                                 </TableRow>
@@ -354,10 +382,10 @@ const ProductionResultDefectDialog = ({
                             bgcolor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'
                           }}>
                             <TableCell colSpan={2} align="right">
-                              <Typography variant="subtitle2">합계</Typography>
+                              <Typography variant="subtitle2" sx={{ fontSize: '1.2rem' }}>합계</Typography>
                             </TableCell>
                             <TableCell align="center">
-                              <Typography variant="subtitle2">
+                              <Typography variant="subtitle2" sx={{ fontSize: '1.2rem' }}>
                                 {defectInfos.reduce((sum, item) => sum + (Number(item.defectQty) || 0), 0)}
                               </Typography>
                             </TableCell>
@@ -379,7 +407,7 @@ const ProductionResultDefectDialog = ({
                           (isDarkMode ? 'rgba(76, 175, 80, 0.5)' : 'rgba(76, 175, 80, 0.5)') :
                           (isDarkMode ? 'rgba(244, 67, 54, 0.5)' : 'rgba(244, 67, 54, 0.5)')}`
                     }}>
-                      <Typography variant="body2" color={isDefectInfoValid() ? 'success.main' : 'error.main'}>
+                      <Typography variant="body1" color={isDefectInfoValid() ? 'success.main' : 'error.main'} sx={{ fontSize: '1.2rem' }}>
                         {isDefectInfoValid() ?
                             '✓ 모든 불량정보가 올바르게 입력되었습니다.' :
                             '✗ 총 불량수량과 등록된 불량정보의 합이 일치해야 합니다.'}
@@ -393,11 +421,11 @@ const ProductionResultDefectDialog = ({
 
         <DialogActions sx={{
           borderTop: `1px solid ${theme.palette.divider}`,
-          p: 2,
+          p: 3,
           justifyContent: 'space-between',
           bgcolor: isDarkMode ? theme.palette.grey[900] : theme.palette.grey[100]
         }}>
-          <Typography variant="body2" color={isDefectInfoValid() ? 'success.main' : 'error.main'} sx={{ ml: 2 }}>
+          <Typography variant="body1" color={isDefectInfoValid() ? 'success.main' : 'error.main'} sx={{ ml: 2, fontSize: '1.2rem' }}>
             {isDefectInfoValid() ?
                 '✓ 저장할 준비가 완료되었습니다.' :
                 defectInfos.length === 0 ?
@@ -405,7 +433,15 @@ const ProductionResultDefectDialog = ({
                     `불량수량 합계가 ${defectInfos.reduce((sum, item) => sum + (Number(item.defectQty) || 0), 0)}/${selectedProduction?.defectQty || 0}입니다.`}
           </Typography>
           <Box>
-            <Button onClick={onClose} sx={{ mr: 1 }}>
+            <Button 
+                onClick={onClose} 
+                sx={{ 
+                  mr: 2, 
+                  fontSize: '1.2rem',
+                  py: 1
+                }}
+                size="large"
+            >
               취소
             </Button>
             <Button
@@ -413,7 +449,12 @@ const ProductionResultDefectDialog = ({
                 variant="contained"
                 color="primary"
                 disabled={!isDefectInfoValid()}
-                sx={{ bgcolor: getAccentColor() }}
+                sx={{ 
+                  bgcolor: getAccentColor(),
+                  fontSize: '1.2rem',
+                  py: 1
+                }}
+                size="large"
             >
               저장
             </Button>

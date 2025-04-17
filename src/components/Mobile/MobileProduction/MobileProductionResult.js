@@ -2,16 +2,16 @@ import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
-  Button,
   IconButton,
+  Button,
   Chip,
   Snackbar,
   Alert,
-  useTheme
+  useTheme,
+  Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DOMAINS, useDomain } from '../../../contexts/DomainContext';
 import { useGraphQL } from "../../../apollo/useGraphQL";
 import { useGridUtils } from "../../../utils/grid/useGridUtils";
@@ -36,7 +36,6 @@ import {
 import ProductionResultList from './ProductionResultList';
 import ProductionResultFilterDialog from './ProductionResultFilterDialog';
 import ProductionResultEditDialog from './ProductionResultEditDialog';
-import ProductionResultHelpDialog from './ProductionResultHelpDialog';
 import ProductionResultDefectDialog from './ProductionResultDefectDialog';
 
 const MobileProductionResult = () => {
@@ -46,6 +45,7 @@ const MobileProductionResult = () => {
   const isDarkMode = theme.palette.mode === 'dark';
   const { executeQuery, executeMutation } = useGraphQL();
   const { generateId, formatDateToYYYYMMDD } = useGridUtils();
+  const [isAddMode, setIsAddMode] = useState(false);
 
   // 스타일 관련 함수
   const getAccentColor = () => {
@@ -174,7 +174,6 @@ const MobileProductionResult = () => {
   const [workOrderList, setWorkOrderList] = useState([]); // 작업지시 목록
   const [searchParams, setSearchParams] = useState(SEARCH_CONDITIONS);
   const [loading, setLoading] = useState(false);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDefectInfoModalOpen, setIsDefectInfoModalOpen] = useState(false);
@@ -258,10 +257,10 @@ const MobileProductionResult = () => {
   };
 
   // API 호출 함수들
-  const handleSearch = async () => {
+  const handleSearch = async (params = searchParams) => {
     try {
       setLoading(true);
-      const formattedParams = formatSearchParams(searchParams);
+      const formattedParams = formatSearchParams(params);
 
       const { data } = await executeQuery({
         query: PRODUCTION_GET,
@@ -382,22 +381,18 @@ const MobileProductionResult = () => {
   // 사용자 인터랙션 핸들러
   const handleAddNew = () => {
     setSelectedProduction(createNewProduction());
-    setEditMode(false);
     setDefectInfos([]);
+    setEditMode(false);
+    setIsAddMode(true);
     setIsEditDialogOpen(true);
   };
 
   const handleEdit = (production) => {
-    setSelectedProduction({
-      ...production,
-      goodQty: Number(production.actualQuantity) || 0,
-      defectQty: Number(production.defectQuantity) || 0,
-      prodDate: production.productionDate,
-      workers: production.worker || '',
-      memo: production.resultInfo || ''
-    });
+    setSelectedProduction(production);
+    // 불량정보 초기화 (추후 불량정보 조회 API 연동 시 해당 생산실적의 불량정보 조회)
+    setDefectInfos([]);
     setEditMode(true);
-    // 불량정보 조회 로직 추가 필요 (생략)
+    setIsAddMode(false);
     setIsEditDialogOpen(true);
   };
 
@@ -407,14 +402,6 @@ const MobileProductionResult = () => {
 
   const handleCloseFilter = () => {
     setIsFilterDialogOpen(false);
-  };
-
-  const handleOpenHelp = () => {
-    setIsHelpModalOpen(true);
-  };
-
-  const handleCloseHelp = () => {
-    setIsHelpModalOpen(false);
   };
 
   const handleOpenDefectInfoModal = () => {
@@ -518,100 +505,120 @@ const MobileProductionResult = () => {
     loadData();
   }, []);
 
+  const renderHeader = () => (
+    <Box sx={{ mb: 2, pt: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Typography variant="h6" component="h1" sx={{ fontWeight: 'bold', fontSize: '1.3rem' }}>
+          생산실적
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <IconButton
+              onClick={handleOpenFilter}
+              sx={{ 
+                color: getAccentColor(), 
+                fontSize: '1.6rem', 
+                padding: '10px',
+                border: `1px solid ${getBorderColor()}`,
+                borderRadius: '8px',
+                minWidth: '48px',
+                minHeight: '48px'
+              }}
+              size="large"
+          >
+            <FilterListIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton
+              onClick={handleAddNew}
+              sx={{ 
+                color: getAccentColor(), 
+                fontSize: '1.6rem', 
+                padding: '10px',
+                border: `1px solid ${getBorderColor()}`,
+                borderRadius: '8px',
+                minWidth: '48px',
+                minHeight: '48px'
+              }}
+              size="large"
+          >
+            <AddIcon fontSize="inherit" />
+          </IconButton>
+        </Box>
+      </Box>
+      <Divider sx={{ my: 1 }} />
+    </Box>
+  );
+
   return (
-      <Box sx={{ width: '100%' }}>
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2
-        }}>
-          <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
-            생산실적
-          </Typography>
-          <Box>
-            <IconButton
-                onClick={handleOpenHelp}
-                size="small"
-                sx={{ mr: 1 }}
-            >
-              <HelpOutlineIcon />
-            </IconButton>
-            <IconButton
-                onClick={handleOpenFilter}
-                size="small"
-                sx={{ mr: 1 }}
-            >
-              <FilterListIcon />
-            </IconButton>
-            <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAddNew}
-                size="small"
-                sx={{ bgcolor: getAccentColor() }}
-            >
-              등록
-            </Button>
-          </Box>
-        </Box>
+      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* 헤더 영역 */}
+        {renderHeader()}
 
-        <Box sx={{ mb: 1 }}>
-          {(searchParams.equipmentId || searchParams.productId || searchParams.fromDate || searchParams.toDate) && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {searchParams.equipmentId && (
-                    <Chip
-                        label={`설비: ${equipmentList.find(e => e.id === searchParams.equipmentId)?.name || searchParams.equipmentId}`}
-                        onDelete={() => {
-                          setSearchParams({ ...searchParams, equipmentId: '' });
-                          handleSearch();
-                        }}
-                        size="small"
-                    />
-                )}
-                {searchParams.productId && (
-                    <Chip
-                        label={`제품: ${productList.find(p => p.id === searchParams.productId)?.name || searchParams.productId}`}
-                        onDelete={() => {
-                          setSearchParams({ ...searchParams, productId: '' });
-                          handleSearch();
-                        }}
-                        size="small"
-                    />
-                )}
-                {searchParams.fromDate && (
-                    <Chip
-                        label={`시작일: ${format(searchParams.fromDate, 'yyyy-MM-dd')}`}
-                        onDelete={() => {
-                          setSearchParams({ ...searchParams, fromDate: null });
-                          handleSearch();
-                        }}
-                        size="small"
-                    />
-                )}
-                {searchParams.toDate && (
-                    <Chip
-                        label={`종료일: ${format(searchParams.toDate, 'yyyy-MM-dd')}`}
-                        onDelete={() => {
-                          setSearchParams({ ...searchParams, toDate: null });
-                          handleSearch();
-                        }}
-                        size="small"
-                    />
-                )}
-              </Box>
-          )}
-        </Box>
+        {/* 활성 필터 표시 영역 */}
+        {(searchParams.equipmentId || searchParams.productId) && (
+            <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {searchParams.equipmentId && (
+                  <Chip
+                      label={`설비: ${equipmentList.find(e => e.id === searchParams.equipmentId)?.name || searchParams.equipmentId}`}
+                      onDelete={() => {
+                        setSearchParams(prev => {
+                          const updated = { ...prev, equipmentId: '' };
+                          // 상태 업데이트 후 바로 검색 실행
+                          setTimeout(() => handleSearch(updated), 0);
+                          return updated;
+                        });
+                      }}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontSize: '0.9rem', height: '32px' }}
+                  />
+              )}
+              {searchParams.productId && (
+                  <Chip
+                      label={`제품: ${productList.find(p => p.id === searchParams.productId)?.name || searchParams.productId}`}
+                      onDelete={() => {
+                        setSearchParams(prev => {
+                          const updated = { ...prev, productId: '' };
+                          // 상태 업데이트 후 바로 검색 실행
+                          setTimeout(() => handleSearch(updated), 0);
+                          return updated;
+                        });
+                      }}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontSize: '0.9rem', height: '32px' }}
+                  />
+              )}
+              <Chip
+                  label="필터 초기화"
+                  onDelete={() => {
+                    setSearchParams(SEARCH_CONDITIONS);
+                    setTimeout(() => handleSearch(SEARCH_CONDITIONS), 0);
+                  }}
+                  onClick={() => {
+                    setSearchParams(SEARCH_CONDITIONS);
+                    setTimeout(() => handleSearch(SEARCH_CONDITIONS), 0);
+                  }}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: '0.9rem', height: '32px' }}
+              />
+            </Box>
+        )}
 
-        <ProductionResultList
-            productionList={productionList}
-            loading={loading}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddNew={handleAddNew}
-            getAccentColor={getAccentColor}
-            getBorderColor={getBorderColor}
-        />
+        {/* 생산실적 목록 컴포넌트 - 남은 공간을 모두 차지하도록 설정 */}
+        <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+          <ProductionResultList
+              productionList={productionList}
+              loading={loading}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onAddNew={handleAddNew}
+              getAccentColor={getAccentColor}
+              getBorderColor={getBorderColor}
+          />
+        </Box>
 
         {/* 필터 다이얼로그 */}
         <ProductionResultFilterDialog
@@ -619,67 +626,56 @@ const MobileProductionResult = () => {
             onClose={handleCloseFilter}
             searchParams={searchParams}
             onFilterChange={handleFilterChange}
-            onDateChange={handleDateChange}
             onResetFilters={handleResetFilters}
             onApplyFilters={handleApplyFilters}
-            equipmentList={equipmentList}
-            productList={productList}
             getAccentColor={getAccentColor}
+            productList={productList}
+            equipmentList={equipmentList}
         />
 
-        {/* 편집 다이얼로그 */}
+        {/* 생산실적 추가/수정 다이얼로그 */}
         <ProductionResultEditDialog
             open={isEditDialogOpen}
-            onClose={() => setIsEditDialogOpen(false)}
+            onClose={() => {
+              setIsEditDialogOpen(false);
+              setIsAddMode(false);
+            }}
             production={selectedProduction}
             editMode={editMode}
             onInputChange={handleInputChange}
+            onSave={handleSave}
             onEquipmentChange={handleEquipmentChange}
             onProductChange={handleProductChange}
             onWorkOrderChange={handleWorkOrderChange}
             onDateChange={handleProductionDateChange}
-            onSave={handleSave}
-            onDefectInfoButtonClick={handleOpenDefectInfoModal}
-            defectInfos={defectInfos}
-            isDefectInfoValid={isDefectInfoValid}
-            productList={productList}
-            equipmentList={equipmentList}
-            workOrderList={workOrderList}
+            onOpenDefectInfo={handleOpenDefectInfoModal}
             getAccentColor={getAccentColor}
+            equipmentList={equipmentList}
+            productList={productList}
+            workOrderList={workOrderList}
         />
 
         {/* 불량정보 다이얼로그 */}
         <ProductionResultDefectDialog
             open={isDefectInfoModalOpen}
             onClose={handleCloseDefectInfoModal}
-            onSave={() => {
-              handleCloseDefectInfoModal();
-              handleSave();
-            }}
             defectInfos={defectInfos}
             setDefectInfos={setDefectInfos}
-            selectedProduction={selectedProduction}
             getAccentColor={getAccentColor}
         />
 
-        {/* 도움말 다이얼로그 */}
-        <ProductionResultHelpDialog
-            open={isHelpModalOpen}
-            onClose={handleCloseHelp}
-            getAccentColor={getAccentColor}
-        />
-
-        {/* 알림 스낵바 */}
+        {/* 스낵바 알림 */}
         <Snackbar
             open={snackbar.open}
-            autoHideDuration={3000}
+            autoHideDuration={6000}
             onClose={handleCloseSnackbar}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            sx={{ mb: 2 }}
         >
           <Alert
               onClose={handleCloseSnackbar}
               severity={snackbar.severity}
-              sx={{ width: '100%' }}
+              sx={{ width: '100%', fontSize: '1rem' }}
           >
             {snackbar.message}
           </Alert>

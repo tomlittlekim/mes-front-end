@@ -29,23 +29,24 @@ const MobileAppContainer = () => {
         </Typography>
 
         <Card className="mobile-card" variant="outlined" sx={{ mb: 3 }}>
-          <CardContent>
+          <CardContent sx={{ p: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Button
                     variant="contained"
                     fullWidth
-                    startIcon={<InventoryIcon />}
+                    startIcon={<InventoryIcon sx={{ fontSize: '1.8rem' }} />}
                     sx={{
                       bgcolor: getAccentColor(),
                       py: 2,
-                      height: '100px',
+                      height: '120px',
                       flexDirection: 'column',
+                      fontSize: '1.2rem',
                       '& .MuiButton-startIcon': {
                         margin: 0,
-                        mb: 1,
+                        mb: 1.5,
                         '& svg': {
-                          fontSize: '2rem'
+                          fontSize: '2.2rem'
                         }
                       }
                     }}
@@ -58,17 +59,18 @@ const MobileAppContainer = () => {
                 <Button
                     variant="contained"
                     fullWidth
-                    startIcon={<ListAltIcon />}
+                    startIcon={<ListAltIcon sx={{ fontSize: '1.8rem' }} />}
                     sx={{
                       bgcolor: getAccentColor(),
                       py: 2,
-                      height: '100px',
+                      height: '120px',
                       flexDirection: 'column',
+                      fontSize: '1.2rem',
                       '& .MuiButton-startIcon': {
                         margin: 0,
-                        mb: 1,
+                        mb: 1.5,
                         '& svg': {
-                          fontSize: '2rem'
+                          fontSize: '2.2rem'
                         }
                       }
                     }}
@@ -82,11 +84,11 @@ const MobileAppContainer = () => {
         </Card>
 
         <Card className="mobile-card" variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+          <CardContent sx={{ p: 2 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 'bold', fontSize: '1.1rem' }}>
               공지사항
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body1" sx={{ fontSize: '1rem', lineHeight: 1.5 }}>
               모바일 버전에서는 <strong>제품 관리</strong>와 <strong>생산실적</strong> 기능만 이용 가능합니다.
               <br />
               <br />
