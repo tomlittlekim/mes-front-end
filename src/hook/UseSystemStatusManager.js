@@ -35,7 +35,7 @@ function useSystemStatusManager() {
     }]);
 
     useEffect(() => {
-        if (loginUser.id > 0) {
+        if (loginUser.id !== null) {
             initialSetting();
             // const interval = setInterval(() => {
             //     initialSetting();
@@ -44,6 +44,14 @@ function useSystemStatusManager() {
             // return () => clearInterval(interval);
         }
     }, [loginUser])
+
+    // useEffect(() => {
+    //     if(userGroup.length > 1 && userRoleGroup.length > 1 && compCdGroup.length > 1 && siteGroup.length > 1) {}
+    //     console.log(userGroup)
+    //     console.log(userRoleGroup)
+    //     console.log(compCdGroup)
+    //     console.log(siteGroup)
+    // }, [userGroup, userRoleGroup, compCdGroup, siteGroup]);
 
     const initialSetting = async () => {
         const compCdData = await getCompanySelect();
