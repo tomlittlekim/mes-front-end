@@ -34,36 +34,50 @@ const ProductEditDialog = ({
           onClose={onClose}
           fullWidth
           maxWidth="sm"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+            }
+          }}
       >
         <DialogTitle sx={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           bgcolor: getAccentColor(),
-          color: 'white'
+          color: 'white',
+          py: 2,
+          px: 3,
+          fontSize: '1.5rem'
         }}>
           {editMode ? '제품 수정' : '신규 제품 등록'}
           <IconButton
-              size="small"
+              size="large"
               onClick={onClose}
               sx={{ color: 'white' }}
           >
-            <CloseIcon />
+            <CloseIcon sx={{ fontSize: '1.8rem' }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 2, mt: 1 }}>
-          <Grid container spacing={2}>
+        <DialogContent sx={{ pt: 5, px: 3, mt: 2 }}>
+          <Grid container spacing={3} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
               <TextField
-                  label="제품 ID"
+                  label="제품ID"
                   name="userMaterialId"
                   value={material.userMaterialId}
                   onChange={onInputChange}
                   variant="outlined"
-                  size="small"
+                  size="medium"
                   fullWidth
                   required
                   placeholder="제품ID를 입력하세요"
+                  InputProps={{
+                    sx: { fontSize: '1.2rem', py: 0.5 }
+                  }}
+                  InputLabelProps={{
+                    sx: { fontSize: '1.2rem' }
+                  }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -73,23 +87,30 @@ const ProductEditDialog = ({
                   value={material.materialName}
                   onChange={onInputChange}
                   variant="outlined"
-                  size="small"
+                  size="medium"
                   fullWidth
                   required
                   placeholder="제품명을 입력하세요"
+                  InputProps={{
+                    sx: { fontSize: '1.2rem', py: 0.5 }
+                  }}
+                  InputLabelProps={{
+                    sx: { fontSize: '1.2rem' }
+                  }}
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>자재유형</InputLabel>
+              <FormControl variant="outlined" size="medium" fullWidth>
+                <InputLabel sx={{ fontSize: '1.2rem' }}>자재유형</InputLabel>
                 <Select
                     name="materialCategory"
                     value={material.materialCategory}
                     onChange={onInputChange}
                     label="자재유형"
+                    sx={{ fontSize: '1.2rem' }}
                 >
                   {CATEGORY_OPTIONS.map(option => (
-                      <MenuItem key={option.value} value={option.value}>
+                      <MenuItem key={option.value} value={option.value} sx={{ fontSize: '1.2rem' }}>
                         {option.label}
                       </MenuItem>
                   ))}
@@ -103,22 +124,29 @@ const ProductEditDialog = ({
                   value={material.materialStandard}
                   onChange={onInputChange}
                   variant="outlined"
-                  size="small"
+                  size="medium"
                   fullWidth
                   placeholder="규격을 입력하세요"
+                  InputProps={{
+                    sx: { fontSize: '1.2rem', py: 0.5 }
+                  }}
+                  InputLabelProps={{
+                    sx: { fontSize: '1.2rem' }
+                  }}
               />
             </Grid>
             <Grid item xs={6}>
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>단위</InputLabel>
+              <FormControl variant="outlined" size="medium" fullWidth>
+                <InputLabel sx={{ fontSize: '1.2rem' }}>단위</InputLabel>
                 <Select
                     name="unit"
                     value={material.unit}
                     onChange={onInputChange}
                     label="단위"
+                    sx={{ fontSize: '1.2rem' }}
                 >
                   {UNIT_OPTIONS.map(option => (
-                      <MenuItem key={option.value} value={option.value}>
+                      <MenuItem key={option.value} value={option.value} sx={{ fontSize: '1.2rem' }}>
                         {option.label}
                       </MenuItem>
                   ))}
@@ -133,42 +161,39 @@ const ProductEditDialog = ({
                   value={material.baseQuantity}
                   onChange={onInputChange}
                   variant="outlined"
-                  size="small"
+                  size="medium"
                   fullWidth
-                  InputProps={{ inputProps: { min: 0 } }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                  label="보관창고"
-                  name="materialStorage"
-                  value={material.materialStorage}
-                  onChange={onInputChange}
-                  variant="outlined"
-                  size="small"
-                  fullWidth
-                  placeholder="보관창고 정보를 입력하세요"
+                  InputProps={{ 
+                    inputProps: { min: 0 },
+                    sx: { fontSize: '1.2rem', py: 0.5 }
+                  }}
+                  InputLabelProps={{
+                    sx: { fontSize: '1.2rem' }
+                  }}
               />
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-              variant="outlined"
-              onClick={onClose}
-              startIcon={<CloseIcon />}
-              fullWidth
-          >
-            취소
-          </Button>
+        <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
           <Button
               variant="contained"
               onClick={onSave}
-              startIcon={<SaveIcon />}
-              sx={{ bgcolor: getAccentColor() }}
+              startIcon={<SaveIcon sx={{ fontSize: '1.5rem' }} />}
+              sx={{ bgcolor: getAccentColor(), fontSize: '1.2rem', py: 2, height: '56px' }}
               fullWidth
+              size="large"
           >
             저장
+          </Button>
+          <Button
+              variant="outlined"
+              onClick={onClose}
+              startIcon={<CloseIcon sx={{ fontSize: '1.5rem' }} />}
+              fullWidth
+              size="large"
+              sx={{ fontSize: '1.2rem', py: 2, height: '56px' }}
+          >
+            취소
           </Button>
         </DialogActions>
       </Dialog>

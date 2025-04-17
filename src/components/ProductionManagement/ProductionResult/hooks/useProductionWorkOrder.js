@@ -1,29 +1,8 @@
 import { useCallback, useState } from 'react';
-import { gql } from '@apollo/client';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
 import { useWorkOrder } from './useWorkOrder';
 import Message from '../../../../utils/message/Message';
-
-// GraphQL 쿼리 정의
-export const WORK_ORDERS_QUERY = gql`
-    query getWorkOrders($filter: WorkOrderFilter) {
-        workOrders(filter: $filter) {
-            site
-            compCd
-            workOrderId
-            prodPlanId
-            productId
-            orderQty
-            shiftType
-            state
-            flagActive
-            createUser
-            createDate
-            updateUser
-            updateDate
-        }
-    }
-`;
+import { WORK_ORDERS_QUERY } from './graphql-queries';
 
 /**
  * 작업지시 관련 로직을 관리하는 커스텀 훅
@@ -43,7 +22,7 @@ export const useProductionWorkOrder = () => {
     formatWorkOrderGridData
   } = useWorkOrder();
 
-  // 작업지시 목록 새로고침 함수 - 간소화
+  // 작업지시 목록 새로고침 함수
   const refreshWorkOrderList = useCallback((onRefreshed) => {
     setIsLoading(true);
 

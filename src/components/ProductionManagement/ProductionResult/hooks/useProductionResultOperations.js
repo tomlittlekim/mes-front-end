@@ -1,56 +1,13 @@
-// useProductionResultOperations.js의 문제 해결
 import { useCallback, useState } from 'react';
-import { gql } from '@apollo/client';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
 import { useProductionResult } from './useProductionResult';
 import Message from '../../../../utils/message/Message';
 import Swal from 'sweetalert2';
-
-// GraphQL 쿼리 정의 유지
-export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
-    query getProductionResultsByWorkOrderId($workOrderId: String!) {
-        productionResultsByWorkOrderId(workOrderId: $workOrderId) {
-            id
-            workOrderId
-            prodResultId
-            goodQty
-            defectQty
-            progressRate
-            defectRate
-            equipmentId
-            resultInfo
-            defectCause
-            createUser
-            createDate
-            updateUser
-            updateDate
-            flagActive
-        }
-    }
-`;
-
-export const DEFECT_INFO_BY_PROD_RESULT_QUERY = gql`
-    query getDefectInfosByProdResultId($prodResultId: String!) {
-        defectInfosByProdResultId(prodResultId: $prodResultId) {
-            id
-            workOrderId
-            prodResultId
-            defectId
-            productId
-            defectQty
-            defectType
-            defectReason
-            resultInfo
-            state
-            defectCause
-            createUser
-            createDate
-            updateUser
-            updateDate
-            flagActive
-        }
-    }
-`;
+import {
+  PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY,
+  PRODUCTION_RESULTS_QUERY,
+  DEFECT_INFO_BY_PROD_RESULT_QUERY
+} from './graphql-queries';
 
 /**
  * 생산실적 관련 작업을 처리하는 커스텀 훅
@@ -73,8 +30,9 @@ export const useProductionResultOperations = (
 
   // 생산실적 목록 로드 함수
   const loadProductionResults = useCallback((workOrder, setProductionResultList, setProductionResult) => {
+    // 작업지시가 선택된 경우
     if (workOrder && workOrder.workOrderId) {
-      executeQuery({
+      return executeQuery({
         query: PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY,
         variables: { workOrderId: workOrder.workOrderId }
       })
@@ -84,25 +42,53 @@ export const useProductionResultOperations = (
             ...result,
             id: result.prodResultId
           }));
-
-          // 여기서 진척률이 서버에서 제대로 계산되지 않았을 경우 계산 가능
-          // 작업지시수량 대비 모든 생산실적의 양품수량 합계로 진척률 계산
-
           setProductionResultList(results);
         } else {
           setProductionResultList([]);
         }
         setProductionResult(null);
+        return response;
       })
       .catch(error => {
         console.error("Error fetching production results:", error);
         setProductionResultList([]);
         setProductionResult(null);
+        return error;
       });
-    } else {
+    }
+    // 작업지시가 선택되지 않은 경우 - 생산실적 목록 초기화
+    else {
       setProductionResultList([]);
       setProductionResult(null);
+      return Promise.resolve();
     }
+  }, [executeQuery]);
+
+  // 생산실적 목록 필터로 로드 함수 (신규)
+  const loadProductionResultsByFilter = useCallback((filter, setProductionResultList, setProductionResult) => {
+    return executeQuery({
+      query: PRODUCTION_RESULTS_QUERY,
+      variables: { filter }
+    })
+    .then(response => {
+      if (response.data && response.data.productionResults) {
+        const results = response.data.productionResults.map(result => ({
+          ...result,
+          id: result.prodResultId
+        }));
+        setProductionResultList(results);
+      } else {
+        setProductionResultList([]);
+      }
+      setProductionResult(null);
+      return response;
+    })
+    .catch(error => {
+      console.error("Error fetching production results by filter:", error);
+      setProductionResultList([]);
+      setProductionResult(null);
+      return error;
+    });
   }, [executeQuery]);
 
   // 불량정보 목록 로드 함수
@@ -169,7 +155,7 @@ export const useProductionResultOperations = (
     }
   }, [modalResolveReject]);
 
-  // 불량정보 저장 핸들러 - 수정됨
+  // 불량정보 저장 핸들러
   const handleSaveDefectInfos = useCallback((defectInfoList) => {
     console.log("불량정보 저장 시작:", defectInfoList);
 
@@ -214,7 +200,7 @@ export const useProductionResultOperations = (
     }
   }, []);
 
-  // 생산실적 저장 함수 - 수정됨
+  // 생산실적 저장 함수
   const saveResult = useCallback((
       productionResult,
       productionResultList,
@@ -222,11 +208,6 @@ export const useProductionResultOperations = (
       setProductionResultList
   ) => {
     try {
-      if (!selectedWorkOrder) {
-        Message.showWarning('작업지시를 선택해주세요.');
-        return Promise.resolve();
-      }
-
       if (!productionResult) {
         Message.showWarning('저장할 생산실적이 없습니다.');
         return Promise.resolve();
@@ -237,6 +218,12 @@ export const useProductionResultOperations = (
 
       if (!currentRow) {
         Message.showWarning('저장할 생산실적이 없습니다.');
+        return Promise.resolve();
+      }
+
+      // 제품ID 필수 체크 - 작업지시가 없는 경우
+      if (!currentRow.productId && (!selectedWorkOrder || !selectedWorkOrder.productId)) {
+        Message.showWarning('제품ID는 필수 입력 항목입니다.');
         return Promise.resolve();
       }
 
@@ -265,7 +252,7 @@ export const useProductionResultOperations = (
               saveProductionResult(
                   !currentRow.prodResultId,
                   currentRow,
-                  selectedWorkOrder,
+                  selectedWorkOrder || { productId: currentRow.productId }, // 작업지시가 없으면 생산실적의 제품ID 사용
                   latestDefectInfos || defectInfosForSave, // 최신 불량정보 또는 상태에 저장된 불량정보 사용
                   () => {
                     // 성공 메시지 표시 후, 생산실적 저장 이후 항상 상태 초기화
@@ -298,18 +285,19 @@ export const useProductionResultOperations = (
 
       // 생산실적 데이터 준비
       const isNewResult = !currentRow.prodResultId;
+      const productionInfo = selectedWorkOrder || { productId: currentRow.productId }; // 작업지시가 없으면 생산실적의 제품ID 사용
 
       console.log("생산실적 저장 시작:", {
         isNewResult,
         currentRow,
-        selectedWorkOrder,
+        productionInfo,
         defectInfosForSave
       });
 
       return saveProductionResult(
           isNewResult,
           currentRow,
-          selectedWorkOrder,
+          productionInfo,
           defectInfosForSave, // 상태에 저장된 불량정보 사용
           () => {
             // 성공 메시지 표시 후, 생산실적 저장 이후 항상 상태 초기화
@@ -340,7 +328,6 @@ export const useProductionResultOperations = (
         } else {
           Message.showError({ message: '생산실적 저장 중 오류가 발생했습니다.' });
         }
-
         return Promise.resolve();
       });
     } catch (error) {
@@ -364,7 +351,7 @@ export const useProductionResultOperations = (
       setProductionResult,
       setProductionResultList
   ) => {
-    if (!selectedWorkOrder || !productionResult) {
+    if (!productionResult) {
       Message.showWarning('삭제할 생산실적을 선택해주세요.');
       return;
     }
@@ -393,28 +380,16 @@ export const useProductionResultOperations = (
           setProductionResultList([]);
         }
     );
-  }, [selectedWorkOrder, deleteProductionResult, refreshWorkOrderList, setSelectedWorkOrder]);
+  }, [deleteProductionResult, refreshWorkOrderList, setSelectedWorkOrder]);
 
-  // 새 생산실적 생성 함수
+  // 새 생산실적 생성 함수 (작업지시 기반)
   const createResult = useCallback((setProductionResultList, setProductionResult, productResultListData) => {
-    if (!selectedWorkOrder) {
-      Message.showWarning('작업지시를 선택해주세요.');
-      return;
-    }
-
-    // 기존 양품수량 합계 계산 - 매개변수로 받은 데이터 사용
-    const existingGoodQtySum = productResultListData?.reduce((sum, result) => {
-      return sum + (Number(result.goodQty) || 0);
-    }, 0) || 0;
-
-    console.log('기존 생산실적 양품수량 합계:', existingGoodQtySum);
-    console.log('작업지시수량:', selectedWorkOrder.orderQty);
-
     // 새 생산실적 객체 생성
     const newResult = {
       id: `temp_${Date.now()}`, // 임시 ID (클라이언트용)
-      workOrderId: selectedWorkOrder.workOrderId,
+      workOrderId: selectedWorkOrder ? selectedWorkOrder.workOrderId : null,
       prodResultId: null, // 서버에서 생성될 ID
+      productId: selectedWorkOrder ? selectedWorkOrder.productId : "",
       goodQty: 0,
       defectQty: 0,
       equipmentId: "",
@@ -423,11 +398,7 @@ export const useProductionResultOperations = (
       progressRate: null, // 백엔드에서 자동 계산될 값
       defectRate: null, // 백엔드에서 자동 계산될 값
       createDate: null, // 백엔드에서 자동 설정될 값
-      flagActive: true,
-
-      // 클라이언트 측 진척률 계산을 위한 메타데이터 (필요 시)
-      _existingGoodQtySum: existingGoodQtySum,
-      _orderQty: selectedWorkOrder.orderQty
+      flagActive: true
     };
 
     // 새 행을 목록에 추가하고 선택
@@ -436,13 +407,42 @@ export const useProductionResultOperations = (
 
     // 불량정보 상태 초기화
     setDefectInfosForSave([]);
-  }, [selectedWorkOrder, setDefectInfosForSave]);
+  }, [selectedWorkOrder]);
+
+  // 새 생산실적 생성 함수 (독립형) - 신규
+  const createIndependentResult = useCallback((setProductionResultList, setProductionResult) => {
+    // 작업지시와 무관한 새 생산실적 객체 생성
+    const newResult = {
+      id: `temp_${Date.now()}`, // 임시 ID (클라이언트용)
+      workOrderId: null, // 작업지시 없음
+      prodResultId: null, // 서버에서 생성될 ID
+      productId: "", // 제품ID 입력 필요
+      goodQty: 0,
+      defectQty: 0,
+      equipmentId: "",
+      resultInfo: "",
+      defectCause: "",
+      progressRate: null,
+      defectRate: null,
+      createDate: null,
+      flagActive: true
+    };
+
+    // 새 행을 목록에 추가하고 선택
+    setProductionResultList(prev => [newResult, ...prev]);
+    setProductionResult(newResult);
+
+    // 불량정보 상태 초기화
+    setDefectInfosForSave([]);
+  }, []);
 
   return {
     loadProductionResults,
+    loadProductionResultsByFilter,
     saveResult,
     deleteResult,
     createResult,
+    createIndependentResult,
     isDefectInfoModalOpen,
     openDefectInfoModal,
     closeDefectInfoModal,
@@ -452,5 +452,3 @@ export const useProductionResultOperations = (
     handleProductionResultEdit
   };
 };
-
-export default useProductionResultOperations;

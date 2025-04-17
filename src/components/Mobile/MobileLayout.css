@@ -11,12 +11,33 @@
   z-index: 1100;
 }
 
-/* 터치 영역 최적화 */
+/* 터치 영역 최적화 - 적절한 크기 조정 */
 .MuiListItem-root {
   padding: 12px 16px;
 }
 
 .MuiIconButton-root {
+  padding: 12px;
+}
+
+/* 모바일 버튼 크기 조정 */
+.MuiButton-root {
+  min-height: 42px;
+  font-size: 1rem;
+}
+
+/* 모바일 폼 필드 크기 조정 */
+.MuiFormControl-root .MuiInputBase-root {
+  font-size: 1rem;
+}
+
+.MuiFormControl-root .MuiInputLabel-root {
+  font-size: 1rem;
+}
+
+/* 터치 가능한 항목에 대한 적절한 여백 */
+.mobile-touch-item {
+  margin-bottom: 12px;
   padding: 12px;
 }
 
@@ -69,7 +90,7 @@ body.imos .mobile-layout Container::-webkit-scrollbar-thumb:hover {
   margin-bottom: 16px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
 }
 
 /* 터치 피드백 효과 */

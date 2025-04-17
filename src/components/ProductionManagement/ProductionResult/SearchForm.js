@@ -12,10 +12,11 @@ import DateRangePicker from '../../Common/DateRangePicker';
  * @param {Object} props - 컴포넌트 속성
  * @param {Object} props.control - React Hook Form control 객체
  * @param {Array} props.equipmentOptions - 설비 옵션 목록
+ * @param {Array} props.productOptions - 제품 옵션 목록
  * @param {Function} props.handleDateRangeChange - 날짜 범위 변경 핸들러
  * @returns {JSX.Element}
  */
-const SearchForm = ({ control, equipmentOptions, handleDateRangeChange }) => {
+const SearchForm = ({ control, equipmentOptions, productOptions = [], handleDateRangeChange }) => {
   return (
       <>
         <Grid item xs={12} sm={6} md={3}>
@@ -39,14 +40,21 @@ const SearchForm = ({ control, equipmentOptions, handleDateRangeChange }) => {
               name="productId"
               control={control}
               render={({ field }) => (
-                  <TextField
-                      {...field}
-                      label="제품ID"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      placeholder="제품ID를 입력하세요"
-                  />
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="product-label">제품ID</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="product-label"
+                        label="제품ID"
+                    >
+                      <MenuItem value="">전체</MenuItem>
+                      {productOptions.map(option => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label ? `${option.value} (${option.label})` : option.value}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
               )}
           />
         </Grid>

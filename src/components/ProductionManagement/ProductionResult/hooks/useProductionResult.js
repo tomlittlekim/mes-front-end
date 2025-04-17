@@ -1,42 +1,11 @@
 import { useCallback } from 'react';
-import { gql } from '@apollo/client';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
 import Message from '../../../../utils/message/Message';
-
-// GraphQL 쿼리 정의
-const SAVE_PRODUCTION_RESULT_MUTATION = gql`
-    mutation SaveProductionResult($createdRows: [ProductionResultInput], $updatedRows: [ProductionResultUpdate], $defectInfos: [DefectInfoInput]) {
-        saveProductionResult(createdRows: $createdRows, updatedRows: $updatedRows, defectInfos: $defectInfos)
-    }
-`;
-
-const DELETE_PRODUCTION_RESULT_MUTATION = gql`
-    mutation DeleteProductionResult($prodResultId: String!) {
-        deleteProductionResult(prodResultId: $prodResultId)
-    }
-`;
-
-const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
-    query getProductionResultsByWorkOrderId($workOrderId: String!) {
-        productionResultsByWorkOrderId(workOrderId: $workOrderId) {
-            id
-            workOrderId
-            prodResultId
-            goodQty
-            defectQty
-            progressRate
-            defectRate
-            equipmentId
-            resultInfo
-            defectCause
-            createUser
-            createDate
-            updateUser
-            updateDate
-            flagActive
-        }
-    }
-`;
+import {
+  SAVE_PRODUCTION_RESULT_MUTATION,
+  DELETE_PRODUCTION_RESULT_MUTATION,
+  PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY
+} from './graphql-queries';
 
 /**
  * 생산실적 관련 로직을 처리하는 커스텀 훅
@@ -51,17 +20,17 @@ export const useProductionResult = () => {
    *
    * @param {boolean} isNewResult - 신규 생산실적 여부
    * @param {Object} productionResult - 생산실적 데이터
-   * @param {Object} selectedWorkOrder - 선택된 작업지시 객체
+   * @param {Object} productionInfo - 생산 정보(작업지시 또는 제품 정보)
    * @param {Array} defectInfos - 불량정보 목록
    * @param {Function} onSuccess - 성공 시 콜백 함수
    * @returns {Promise} GraphQL mutation 결과를 반환하는 Promise
    */
-  const saveProductionResult = useCallback((isNewResult, productionResult, selectedWorkOrder, defectInfos, onSuccess) => {
+  const saveProductionResult = useCallback((isNewResult, productionResult, productionInfo, defectInfos, onSuccess) => {
     // 디버깅 로그 추가
     console.log('[saveProductionResult] 호출됨:', {
       isNewResult,
       productionResult,
-      selectedWorkOrder,
+      productionInfo,
       defectInfos: defectInfos || []
     });
 
@@ -70,28 +39,33 @@ export const useProductionResult = () => {
     let updatedRows = null;
     let defectInfoInputs = null;
 
+    // 제품ID 필수 확인
+    if (!productionResult.productId && (!productionInfo || !productionInfo.productId)) {
+      const error = new Error('제품ID는 필수 입력 항목입니다.');
+      Message.showError({ message: error.message });
+      return Promise.reject(error);
+    }
+
+    // 생산실적 데이터 준비
+    const baseData = {
+      workOrderId: productionResult.workOrderId || (productionInfo ? productionInfo.workOrderId : null),
+      productId: productionResult.productId || (productionInfo ? productionInfo.productId : null),
+      goodQty: productionResult.goodQty || 0,
+      defectQty: productionResult.defectQty || 0,
+      equipmentId: productionResult.equipmentId || "",
+      resultInfo: productionResult.resultInfo || "",
+      defectCause: productionResult.defectCause || "",
+      flagActive: true
+    };
+
     if (isNewResult) {
       // 신규 생산실적 생성
-      createdRows = [{
-        workOrderId: selectedWorkOrder.workOrderId,
-        goodQty: productionResult.goodQty || 0,
-        defectQty: productionResult.defectQty || 0,
-        equipmentId: productionResult.equipmentId || "",
-        resultInfo: productionResult.resultInfo || "",
-        defectCause: productionResult.defectCause || "",
-        flagActive: true
-      }];
+      createdRows = [baseData];
     } else {
       // 기존 생산실적 수정
       updatedRows = [{
         prodResultId: productionResult.prodResultId,
-        workOrderId: selectedWorkOrder.workOrderId,
-        goodQty: productionResult.goodQty || 0,
-        defectQty: productionResult.defectQty || 0,
-        equipmentId: productionResult.equipmentId || "",
-        resultInfo: productionResult.resultInfo || "",
-        defectCause: productionResult.defectCause || "",
-        flagActive: true
+        ...baseData
       }];
     }
 
@@ -101,7 +75,8 @@ export const useProductionResult = () => {
         // 불량정보 객체 최적화
         const optimizedDefect = {
           prodResultId: productionResult.prodResultId,
-          productId: selectedWorkOrder.productId,
+          productId: productionResult.productId || (productionInfo ? productionInfo.productId : null),
+          workOrderId: productionResult.workOrderId || (productionInfo ? productionInfo.workOrderId : null),
           defectQty: Number(defect.defectQty),
           defectType: defect.defectType,
           defectCause: defect.defectCause,
