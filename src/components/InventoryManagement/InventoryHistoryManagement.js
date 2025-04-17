@@ -125,16 +125,30 @@ const InventoryHistoryManagement = (props) => {
     setAddRows([]);
 
     try {
+      // 자재명 필드 디버깅 로그 추가
+      console.log('검색 조건 자재명:', data.materialName);
 
       const filter = {
         inOutType: data.inOutType || null,
         warehouseName: data.warehouseName || null,
         supplierName: data.supplierName || null,
         manufacturerName: data.manufacturerName || null,
-        materialName: data.materialName || null,
-        startDate: data.dateRange?.startDate ? new Date(data.dateRange.startDate).toISOString().split('T')[0] : null,
-        endDate: data.dateRange?.endDate ? new Date(data.dateRange.endDate).toISOString().split('T')[0] : null
+        // 필드명을 백엔드 DTO와 일치시킴
       };
+
+      // 자재명이 있는 경우에만 materialNames 필드 추가
+      if (data.materialName && data.materialName.trim() !== '') {
+        filter.materialNames = [data.materialName.trim()];
+      }
+      
+      // 날짜 필드 추가
+      if (data.dateRange?.startDate) {
+        filter.startDate = new Date(data.dateRange.startDate).toISOString().split('T')[0];
+      }
+      
+      if (data.dateRange?.endDate) {
+        filter.endDate = new Date(data.dateRange.endDate).toISOString().split('T')[0];
+      }
 
       console.log('GraphQL 필터:', filter);
 
