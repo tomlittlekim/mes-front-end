@@ -19,7 +19,6 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
 import Message from "../../utils/message/Message";
-import {graphFetch} from "../../api/fetchConfig";
 import {deleteFactory, getFactory, saveFactory} from "../../api/standardInfo/factoryApi";
 
 const FactoryManagement = (props) => {
@@ -48,6 +47,63 @@ const FactoryManagement = (props) => {
   const [factoryList, setFactoryList] = useState([]);
 
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  // 컴포넌트 마운트 시 초기 데이터 로드
+  useEffect(() => {
+    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
+    const timer = setTimeout(() => {
+      getFactory(
+          getValues()
+      ).then((data) => {
+        if (data.errors) {
+        } else {
+          const rowsWithId = data.map((row, index) => ({
+            ...row,
+            id: row.factoryId  // 또는 row.factoryId || index + 1
+          }));
+          setFactoryList(rowsWithId);
+        }
+        setIsLoading(false);
+      })
+          .catch((err) => {
+            setIsLoading(false);
+          });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 공장 목록 그리드 컬럼 정의
+  const factoryColumns = [
+    { field: 'factoryId', headerName: '공장 ID', width: 150 },
+    {
+      field: 'factoryName',
+      headerName: '공장 명',
+      width: 150 ,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    { field: 'factoryCode', headerName: '공장 코드', width: 100, editable: true  },
+    { field: 'address', headerName: '주소', width: 200, flex: 1, editable: true },
+    { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
+    { field: 'remark', headerName: '비고', width: 100, editable: true},
+    { field: 'createUser', headerName: '작성자', width: 100},
+    { field: 'createDate', headerName: '작성일', width: 200},
+    { field: 'updateUser', headerName: '수정자', width: 100},
+    { field: 'updateDate', headerName: '수정일', width: 200},
+  ];
 
   // 검색 조건 변경 핸들러
   const handleSearch = (data) => {
@@ -83,78 +139,11 @@ const FactoryManagement = (props) => {
     });
   };
 
-
-  function handleProcessRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    setFactoryList((prev) => {
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedRows(prevUpdatedRows => {
-        // 같은 factoryId를 가진 기존 행이 있는지 확인
-        const existingIndex = prevUpdatedRows.findIndex(row => row.factoryId === newRow.factoryId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-
-    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
-    return { ...oldRow, ...newRow };
-  }
-
   // 공장 선택 핸들러
   const handleFactorySelect = (params) => {
     const factory = factoryList.find(f => f.id === params.id);
     setSelectedFactory(factory);
   };
-
-  // FactoryInput으로 보낼 데이터만 골라내는 함수
-  const transformRowForMutation = (row) => ({
-    factoryName: row.factoryName,
-    factoryCode: row.factoryCode,
-    address: row.address,
-    telNo: row.telNo,
-    remark: row.remark,
-  });
-
-  const transformRowForUpdate = (row) => ({
-    factoryId: row.factoryId,
-    factoryName: row.factoryName,
-    factoryCode: row.factoryCode,
-    address: row.address,
-    telNo: row.telNo,
-    remark: row.remark,
-  });
-
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
@@ -314,74 +303,6 @@ const FactoryManagement = (props) => {
     });
   };
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      getFactory(
-          getValues()
-      ).then((data) => {
-            if (data.errors) {
-            } else {
-              const rowsWithId = data.map((row, index) => ({
-                ...row,
-                id: row.factoryId  // 또는 row.factoryId || index + 1
-              }));
-              setFactoryList(rowsWithId);
-            }
-            setIsLoading(false);
-          })
-          .catch((err) => {
-            setIsLoading(false);
-          });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 공장 목록 그리드 컬럼 정의
-  const factoryColumns = [
-    { field: 'factoryId', headerName: '공장 ID', width: 150 },
-    {
-      field: 'factoryName',
-      headerName: '공장 명',
-      width: 150 ,
-      editable: true,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    { field: 'factoryCode', headerName: '공장 코드', width: 100, editable: true  },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 100,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //       { value: 'Y', label: '사용' },
-    //       { value: 'N', label: '미사용' }
-    //   ]
-    // },
-    { field: 'address', headerName: '주소', width: 200, flex: 1, editable: true },
-    { field: 'telNo', headerName: '전화번호', width: 150, editable: true },
-    { field: 'remark', headerName: '비고', width: 100, editable: true},
-    { field: 'createUser', headerName: '작성자', width: 100},
-    { field: 'createDate', headerName: '작성일', width: 200},
-    { field: 'updateUser', headerName: '수정자', width: 100},
-    { field: 'updateDate', headerName: '수정일', width: 200},
-  ];
-  
   // 공장 목록 그리드 버튼
   const factoryGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
@@ -396,20 +317,79 @@ const FactoryManagement = (props) => {
     }
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
-  
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-  
+
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
     }
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
+
+  // FactoryInput으로 보낼 데이터만 골라내는 함수
+  const transformRowForMutation = (row) => ({
+    factoryName: row.factoryName,
+    factoryCode: row.factoryCode,
+    address: row.address,
+    telNo: row.telNo,
+    remark: row.remark,
+  });
+
+  const transformRowForUpdate = (row) => ({
+    factoryId: row.factoryId,
+    factoryName: row.factoryName,
+    factoryCode: row.factoryCode,
+    address: row.address,
+    telNo: row.telNo,
+    remark: row.remark,
+  });
+
+
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setFactoryList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        // 같은 factoryId를 가진 기존 행이 있는지 확인
+        const existingIndex = prevUpdatedRows.findIndex(row => row.factoryId === newRow.factoryId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
