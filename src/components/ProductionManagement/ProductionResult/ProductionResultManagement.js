@@ -182,6 +182,7 @@ const ProductionResultManagement = (props) => {
                     onRowClick={handleWorkOrderSelect}
                     tabId={props.tabId}
                     height={450}  // 높이 일치
+                    productOptions={productOptions} // productOptions 전달 확인
                 />
               </Grid>
 
@@ -192,11 +193,11 @@ const ProductionResultManagement = (props) => {
                     selectedWorkOrder={selectedWorkOrder}
                     onRowClick={handleProductionResultSelect}
                     onCreateResult={handleCreateResult}
-                    onCreateIndependentResult={handleCreateIndependentResult} // 독립형 생산실적 생성
+                    onCreateIndependentResult={handleCreateIndependentResult}
                     onSave={handleSave}
                     onDelete={handleDelete}
                     equipmentOptions={equipmentOptions}
-                    productOptions={productOptions} // 제품 옵션 목록 추가
+                    productOptions={productOptions} // 제품 옵션 목록 확인
                     setProductionResultList={setProductionResultList}
                     setProductionResult={setProductionResult}
                     productionResult={productionResult}

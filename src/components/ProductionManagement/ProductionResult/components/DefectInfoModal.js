@@ -293,8 +293,6 @@ const DefectInfoModal = ({
       flagActive: true
     }));
 
-    console.log('저장될 불량정보:', defectInfos);
-
     // 부모 컴포넌트의 저장 함수 호출
     if (typeof onSave === 'function') {
       onSave(defectInfos);

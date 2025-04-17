@@ -57,8 +57,17 @@ const SearchForm = ({ control, equipmentOptions, productOptions = [], handleDate
                     >
                       <MenuItem value="">전체</MenuItem>
                       {productOptions.map(option => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label ? `${option.value} (${option.label})` : option.value}
+                          <MenuItem
+                              key={option.systemMaterialId}
+                              value={option.systemMaterialId}  // value는 systemMaterialId(실제 값)
+                          >
+                            {/* 보여지는 값은 userMaterialId(제품ID)와 materialName(제품명) */}
+                            {option.userMaterialId || ''} {option.materialName ? `(${option.materialName})` : ''}
+                            {option.materialType ? (
+                                <Typography variant="caption" color="textSecondary" style={{ display: 'block' }}>
+                                  {option.materialTypeDisplay || option.materialType}
+                                </Typography>
+                            ) : null}
                           </MenuItem>
                       ))}
                     </Select>

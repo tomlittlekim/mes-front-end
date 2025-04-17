@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
 import { useWorkOrder } from './useWorkOrder';
 import Message from '../../../../utils/message/Message';
@@ -9,7 +9,7 @@ import { WORK_ORDERS_QUERY } from './graphql-queries';
  */
 export const useProductionWorkOrder = () => {
   const { executeQuery } = useGraphQL();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [currentFilter, setCurrentFilter] = useState({
     state: ['IN_PROGRESS'],
@@ -22,11 +22,24 @@ export const useProductionWorkOrder = () => {
     formatWorkOrderGridData
   } = useWorkOrder();
 
-  // 작업지시 목록 새로고침 함수
+  // API 호출 중복 방지를 위한 ref
+  const isLoadingRef = useRef(false);
+  const lastFilterRef = useRef(null);
+
+  // 작업지시 목록 새로고침 함수 - 중복 호출 방지
   const refreshWorkOrderList = useCallback((onRefreshed) => {
+    // 이미 로딩 중인 경우 중복 호출 방지
+    if (isLoadingRef.current) {
+      if (onRefreshed) {
+        onRefreshed();
+      }
+      return Promise.resolve();
+    }
+
+    isLoadingRef.current = true;
     setIsLoading(true);
 
-    executeQuery({
+    return executeQuery({
       query: WORK_ORDERS_QUERY,
       variables: { filter: currentFilter }
     })
@@ -39,21 +52,27 @@ export const useProductionWorkOrder = () => {
           onRefreshed();
         }
       }
-      setIsLoading(false);
+      return response;
     })
     .catch(error => {
       console.error("Error refreshing work orders:", error);
-      setIsLoading(false);
-
       if (onRefreshed) {
         onRefreshed();
       }
+      return error;
+    })
+    .finally(() => {
+      setIsLoading(false);
+      isLoadingRef.current = false;
     });
   }, [executeQuery, formatWorkOrderGridData, setWorkOrderList, currentFilter]);
 
-  // 작업지시 목록 로드 함수
+  // 작업지시 목록 로드 함수 - 중복 호출 및 동일 요청 방지
   const loadWorkOrders = useCallback((filter = {}) => {
-    setIsLoading(true);
+    // 이미 로딩 중인 경우 중복 호출 방지
+    if (isLoadingRef.current) {
+      return Promise.resolve();
+    }
 
     // 기본 필터 설정
     const searchFilter = {
@@ -62,8 +81,20 @@ export const useProductionWorkOrder = () => {
       flagActive: filter.flagActive !== undefined ? filter.flagActive : true
     };
 
+    // 동일한 필터로 중복 요청인 경우 스킵
+    if (
+        lastFilterRef.current &&
+        JSON.stringify(lastFilterRef.current) === JSON.stringify(searchFilter)
+    ) {
+      return Promise.resolve({ data: { workOrders: workOrderList } });
+    }
+
+    isLoadingRef.current = true;
+    setIsLoading(true);
+
     // 현재 필터 상태 업데이트
     setCurrentFilter(searchFilter);
+    lastFilterRef.current = searchFilter;
 
     return executeQuery({
       query: WORK_ORDERS_QUERY,
@@ -76,17 +107,19 @@ export const useProductionWorkOrder = () => {
       } else {
         setWorkOrderList([]);
       }
-      setIsLoading(false);
       return response;
     })
     .catch(error => {
       console.error("Error fetching work orders:", error);
       Message.showError({ message: '데이터를 불러오는데 실패했습니다.' });
-      setIsLoading(false);
       setWorkOrderList([]);
       throw error;
+    })
+    .finally(() => {
+      setIsLoading(false);
+      isLoadingRef.current = false;
     });
-  }, [executeQuery, formatWorkOrderGridData, setWorkOrderList]);
+  }, [executeQuery, formatWorkOrderGridData, setWorkOrderList, workOrderList]);
 
   return {
     workOrderList,

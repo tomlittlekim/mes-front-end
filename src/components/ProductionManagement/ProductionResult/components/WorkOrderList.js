@@ -1,4 +1,4 @@
-// WorkOrderList.js 수정
+// WorkOrderList.js 수정 - ProductMaterialSelector 활용
 import React, { useMemo } from 'react';
 import { Typography } from '@mui/material';
 import { format } from 'date-fns';
@@ -12,9 +12,10 @@ import ShiftTypeChip from './ShiftTypeChip';
  * @param {Array} props.workOrderList - 작업지시 목록 데이터
  * @param {Function} props.onRowClick - 행 클릭 핸들러
  * @param {String} props.tabId - 탭 ID
+ * @param {Array} props.productOptions - 제품 옵션 목록
  * @returns {JSX.Element}
  */
-const WorkOrderList = ({ workOrderList, onRowClick, tabId, height = 350 }) => {
+const WorkOrderList = ({ workOrderList, onRowClick, tabId, productOptions = [], height = 350 }) => {
   // 작업지시 목록 그리드 컬럼 정의
   const workOrderColumns = useMemo(() => ([
     {
@@ -34,9 +35,44 @@ const WorkOrderList = ({ workOrderList, onRowClick, tabId, height = 350 }) => {
     {
       field: 'productId',
       headerName: '제품ID',
-      width: 150,
+      width: 180,
       headerAlign: 'center',
-      align: 'center'
+      align: 'center',
+      renderCell: (params) => {
+        // systemMaterialId를 기준으로 제품 찾기
+        const product = productOptions.find(p =>
+            p.systemMaterialId === params.value
+        );
+
+        // 제품을 찾았으면 userMaterialId와 materialName 표시
+        if (product) {
+          return (
+              <Typography variant="body2">
+                {product.userMaterialId || ''} {product.materialName ? `(${product.materialName})` : ''}
+              </Typography>
+          );
+        }
+
+        // 대체 검색: userMaterialId와 일치하는지 확인
+        const productByUserId = productOptions.find(p =>
+            p.userMaterialId === params.value
+        );
+
+        if (productByUserId) {
+          return (
+              <Typography variant="body2">
+                {productByUserId.userMaterialId || ''} {productByUserId.materialName ? `(${productByUserId.materialName})` : ''}
+              </Typography>
+          );
+        }
+
+        // 제품을 찾지 못한 경우 원래 값 표시
+        return (
+            <Typography variant="body2">
+              {params.value || '-'}
+            </Typography>
+        );
+      }
     },
     {
       field: 'orderQty',
@@ -119,7 +155,7 @@ const WorkOrderList = ({ workOrderList, onRowClick, tabId, height = 350 }) => {
         }
       }
     }
-  ]), []);
+  ]), [productOptions]); // productOptions를 의존성 배열에 추가
 
   // 작업지시 목록 그리드 버튼
   const workOrderGridButtons = useMemo(() => ([]), []);

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
 import Message from '../../../../utils/message/Message';
 import {
@@ -15,8 +15,13 @@ import {
 export const useProductionResult = () => {
   const { executeQuery, executeMutation } = useGraphQL();
 
+  // API 호출 중복 방지를 위한 ref
+  const isExecutingMutationRef = useRef(false);
+  const isSavingRef = useRef(false);
+  const isDeletingRef = useRef({});
+
   /**
-   * 생산실적 저장 함수
+   * 생산실적 저장 함수 - 중복 호출 방지 적용
    *
    * @param {boolean} isNewResult - 신규 생산실적 여부
    * @param {Object} productionResult - 생산실적 데이터
@@ -26,13 +31,14 @@ export const useProductionResult = () => {
    * @returns {Promise} GraphQL mutation 결과를 반환하는 Promise
    */
   const saveProductionResult = useCallback((isNewResult, productionResult, productionInfo, defectInfos, onSuccess) => {
-    // 디버깅 로그 추가
-    console.log('[saveProductionResult] 호출됨:', {
-      isNewResult,
-      productionResult,
-      productionInfo,
-      defectInfos: defectInfos || []
-    });
+    // 이미 저장 중인 경우 중복 호출 방지
+    if (isSavingRef.current) {
+      const error = new Error('저장 중입니다. 잠시만 기다려주세요.');
+      Message.showWarning(error.message);
+      return Promise.reject(error);
+    }
+
+    isSavingRef.current = true;
 
     // 변수 준비
     let createdRows = null;
@@ -43,6 +49,7 @@ export const useProductionResult = () => {
     if (!productionResult.productId && (!productionInfo || !productionInfo.productId)) {
       const error = new Error('제품ID는 필수 입력 항목입니다.');
       Message.showError({ message: error.message });
+      isSavingRef.current = false;
       return Promise.reject(error);
     }
 
@@ -85,16 +92,9 @@ export const useProductionResult = () => {
           flagActive: true
         };
 
-        console.log('[saveProductionResult] 최적화된 불량정보:', optimizedDefect);
         return optimizedDefect;
       });
     }
-
-    console.log('[saveProductionResult] 생산실적 저장 요청:', {
-      createdRows,
-      updatedRows,
-      defectInfoInputs
-    });
 
     // GraphQL 뮤테이션 실행
     return executeMutation({
@@ -106,8 +106,6 @@ export const useProductionResult = () => {
       }
     })
     .then((result) => {
-      console.log('[saveProductionResult] 저장 결과:', result);
-
       if (result.data && result.data.saveProductionResult) {
         Message.showSuccess('생산실적이 저장되었습니다.', onSuccess);
         return result;
@@ -121,16 +119,27 @@ export const useProductionResult = () => {
       console.error("[saveProductionResult] Error saving production result:", error);
       Message.showError({ message: error.message || '생산실적 저장 중 오류가 발생했습니다.' });
       throw error;
+    })
+    .finally(() => {
+      isSavingRef.current = false;
     });
   }, [executeMutation]);
 
   /**
-   * 생산실적 삭제 함수
+   * 생산실적 삭제 함수 - 중복 삭제 방지 적용
    *
    * @param {string} prodResultId - 삭제할 생산실적 ID
    * @param {Function} onSuccess - 성공 시 콜백 함수
    */
   const deleteProductionResult = useCallback((prodResultId, onSuccess) => {
+    // 이미 삭제 중인 경우 중복 호출 방지
+    if (isDeletingRef.current[prodResultId]) {
+      Message.showWarning('삭제 처리 중입니다. 잠시만 기다려주세요.');
+      return;
+    }
+
+    isDeletingRef.current[prodResultId] = true;
+
     Message.showDeleteConfirm(() => {
       executeMutation({
         mutation: DELETE_PRODUCTION_RESULT_MUTATION,
@@ -146,7 +155,13 @@ export const useProductionResult = () => {
       .catch((error) => {
         console.error("Error deleting production result:", error);
         Message.showError({ message: '생산실적 삭제 중 오류가 발생했습니다.' });
+      })
+      .finally(() => {
+        delete isDeletingRef.current[prodResultId];
       });
+    }, () => {
+      // 취소 시에도 상태 초기화
+      delete isDeletingRef.current[prodResultId];
     });
   }, [executeMutation]);
 

@@ -46,11 +46,11 @@ const ProductionResultList = ({
           </Typography>
       )
     },
-    // 제품ID 필드 추가 (필수 입력 필드)
+    // 제품ID 필드 추가 (필수 입력 필드, ProductMaterialSelector 사용)
     {
       field: 'productId',
       headerName: '제품ID',
-      width: 150,
+      width: 180,
       headerAlign: 'center',
       align: 'center',
       editable: true,
@@ -58,17 +58,19 @@ const ProductionResultList = ({
           <ProductMaterialSelector {...params} productMaterials={productOptions} />
       ),
       renderCell: (params) => {
+        // systemMaterialId(실제 값)를 이용해 제품 찾기
         const product = productOptions?.find(p => p.systemMaterialId === params.value);
         if (product) {
           return (
               <Typography variant="body2">
-                {product.userMaterialId || product.systemMaterialId} ({product.materialName})
+                {/* 보여지는 값은 userMaterialId, 괄호 안에 materialName 표시 */}
+                {product.userMaterialId || ''} {product.materialName ? `(${product.materialName})` : ''}
               </Typography>
           );
         }
         return (
-            <Typography variant="body2">
-              {params.value || '필수 입력'}
+            <Typography variant="body2" color="error">
+              {params.value ? params.value : '필수 입력'}
             </Typography>
         );
       },
@@ -319,8 +321,6 @@ const ProductionResultList = ({
     onCellEditCommit: handleCellEditCommit,
     // 셀 편집 완료 후 처리를 위한 processRowUpdate 추가
     processRowUpdate: (newRow, oldRow) => {
-      console.log("processRowUpdate 호출됨:", { newRow, oldRow });
-
       // 음수 값 방지
       if (newRow.goodQty < 0) {
         newRow.goodQty = 0;
@@ -338,7 +338,6 @@ const ProductionResultList = ({
 
       // 현재 수정한 행이 선택된 행이라면 productionResult도 업데이트
       if (productionResult && productionResult.id === newRow.id) {
-        console.log("선택된 행 업데이트:", newRow);
         setProductionResult(newRow);
 
         // onRowEdit 핸들러가 제공된 경우 호출
@@ -351,7 +350,6 @@ const ProductionResultList = ({
     },
     // 에러 처리
     onProcessRowUpdateError: (error) => {
-      console.error("행 업데이트 오류:", error);
       Swal.fire({
         title: '오류',
         text: '데이터 업데이트 중 오류가 발생했습니다.',

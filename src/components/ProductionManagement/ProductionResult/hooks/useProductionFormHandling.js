@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 
@@ -19,6 +19,10 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
     }
   });
 
+  // 중복 실행 방지를 위한 ref
+  const isSearchingRef = useRef(false);
+  const lastSearchParamsRef = useRef(null);
+
   // 날짜 범위 변경 핸들러
   const handleDateRangeChange = useCallback((startDate, endDate) => {
     setValue('dateRange', { startDate, endDate });
@@ -35,10 +39,28 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
         endDate: null
       }
     });
+
+    // 검색 상태 초기화
+    isSearchingRef.current = false;
+    lastSearchParamsRef.current = null;
   }, [reset]);
 
-  // 검색 실행 함수
+  // 검색 실행 함수 - 중복 실행 방지 및 동일 검색 스킵
   const handleSearch = useCallback((data) => {
+    // 이미 검색 중인 경우 중복 실행 방지
+    if (isSearchingRef.current) {
+      return;
+    }
+
+    // 동일한 검색 파라미터로 중복 검색 방지
+    const searchParams = JSON.stringify(data);
+    if (lastSearchParamsRef.current === searchParams) {
+      return;
+    }
+
+    isSearchingRef.current = true;
+    lastSearchParamsRef.current = searchParams;
+
     // 선택 상태 초기화
     setSelectedWorkOrder(null);
     setProductionResult(null);
@@ -61,8 +83,6 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
     if (data.equipmentId) {
       filter.equipmentId = data.equipmentId;
     }
-
-    console.log("1",data.dateRange);
 
     // dateRange 객체에서 시작일/종료일을 추출하여 필터 데이터로 변환
     if (data.dateRange) {
@@ -90,7 +110,11 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
     filter.flagActive = true;
 
     // 작업지시 검색
-    loadWorkOrders(filter);
+    loadWorkOrders(filter)
+    .finally(() => {
+      // 검색 완료 후 상태 업데이트
+      isSearchingRef.current = false;
+    });
   }, [loadWorkOrders, setSelectedWorkOrder, setProductionResult, setProductionResultList]);
 
   return {
