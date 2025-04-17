@@ -62,6 +62,8 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
       filter.equipmentId = data.equipmentId;
     }
 
+    console.log("1",data.dateRange);
+
     // dateRange 객체에서 시작일/종료일을 추출하여 필터 데이터로 변환
     if (data.dateRange) {
       if (data.dateRange.startDate) {
