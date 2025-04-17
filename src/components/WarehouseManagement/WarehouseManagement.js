@@ -12,11 +12,10 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
+import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import Message from "../../utils/message/Message";
-import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
 import {deleteWarehouse, getWarehouse, saveWarehouse} from "../../api/standardInfo/wareHouseApi";
@@ -36,7 +35,6 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      // flagActive: null
     }
   });
 
@@ -53,19 +51,113 @@ const WarehouseManagement = (props) => {
 
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
+  // 컴포넌트 마운트 시 초기 데이터 로드
+  useEffect(() => {
+    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
+    const timer = setTimeout(() => {
+
+      getWarehouse(
+          getValues()
+      ).then((res) => {
+        if (res.errors) {
+        } else {
+          const rowsWithId = res.map((row) => ({
+            ...row,
+            id: row.warehouseId,
+            createDate: row.createDate?.replace("T", " ") || "",
+            updateDate: row.updateDate?.replace("T", " ") || ""
+          }));
+          setWarehouseList(rowsWithId);
+        }
+        setIsLoading(false);
+      }).catch((err) => {
+        setIsLoading(false);
+      });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    fetchGridCodesByCodeClassId("CD20250401114109083",setWarehouseTypeOptions)
+  }, []);
+
+  useEffect(() => {
+    getGridFactory()
+        .then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.map((row) => ({
+              value: row.factoryId,
+              label: row.factoryId
+            }));
+            setFactoryTypeOptions(options);
+
+            const models = data.map((row) => ({
+              factoryId: row.factoryId,
+              factoryName: row.factoryName,
+              factoryCode: row.factoryCode
+            }));
+            setFactoryModel(models);
+
+          }
+        }).catch((err) => console.error(err));
+  }, []);
+
+  // 창고 목록 그리드 컬럼 정의
+  const warehouseColumns = [
+    {
+      field: 'factoryId',
+      headerName: '공장 ID',
+      width: 100,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: factoryTypeOptions,
+      flex:1
+    },
+    { field: 'factoryName', headerName: '공장명', width: 150 },
+    { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
+    {
+      field: 'warehouseName',
+      headerName: '창고 명',
+      width: 100,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'warehouseType',
+      headerName: '창고 유형',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: warehouseTypeOptions,
+    },
+    { field: 'createUser', headerName: '등록자', width: 100 },
+    { field: 'createDate', headerName: '등록일', width: 150 },
+    { field: 'updateUser', headerName: '수정자', width: 100 },
+    { field: 'updateDate', headerName: '수정일', width: 150 }
+  ];
+
   // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
     }
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
-  
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
   };
   
   const getBorderColor = () => {
@@ -82,66 +174,8 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      // flagActive: null
     });
   };
-
-  function handleProcessRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    if (newRow.factoryId !== oldRow.factoryId) {
-      const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
-      if (selectedFactory) {
-        newRow = {
-          ...newRow,
-          factoryName: selectedFactory.factoryName,
-          factoryCode: selectedFactory.factoryCode,
-        };
-      }
-    }
-
-    setWarehouseList((prev) => {
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedRows(prevUpdatedRows => {
-        const existingIndex = prevUpdatedRows.findIndex(row => row.warehouseId === newRow.warehouseId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-
-    return { ...oldRow, ...newRow };
-  }
-
 
   // 검색 실행 함수
   const handleSearch = (data) => {
@@ -181,7 +215,6 @@ const WarehouseManagement = (props) => {
       warehouseId: '자동입력',
       warehouseName: '',
       warehouseType: '',
-      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -196,7 +229,6 @@ const WarehouseManagement = (props) => {
     factoryId: row.factoryId,
     warehouseName: row.warehouseName,
     warehouseType: row.warehouseType,
-    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -204,9 +236,7 @@ const WarehouseManagement = (props) => {
     factoryId: row.factoryId,
     warehouseName: row.warehouseName,
     warehouseType: row.warehouseType,
-    // flagActive: row.flagActive
   });
-
 
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
@@ -344,119 +374,6 @@ const WarehouseManagement = (props) => {
     });
   };
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-
-      getWarehouse(
-          getValues()
-      ).then((res) => {
-        if (res.errors) {
-        } else {
-          const rowsWithId = res.map((row) => ({
-            ...row,
-            id: row.warehouseId,
-            createDate: row.createDate?.replace("T", " ") || "",
-            updateDate: row.updateDate?.replace("T", " ") || ""
-          }));
-          setWarehouseList(rowsWithId);
-        }
-        setIsLoading(false);
-      }).catch((err) => {
-            setIsLoading(false);
-      });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    fetchGridCodesByCodeClassId("CD20250401114109083",setWarehouseTypeOptions)
-  }, []);
-
-  useEffect(() => {
-
-    getGridFactory()
-        .then((data) => {
-      if (data.errors) {
-        console.error(data.errors);
-      } else {
-        // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.map((row) => ({
-          value: row.factoryId,
-          label: row.factoryId
-        }));
-        setFactoryTypeOptions(options);
-
-        const models = data.map((row) => ({
-          factoryId: row.factoryId,
-          factoryName: row.factoryName,
-          factoryCode: row.factoryCode
-        }));
-        setFactoryModel(models);
-
-      }
-    }).catch((err) => console.error(err));
-  }, []);
-
-  // 창고 목록 그리드 컬럼 정의
-  const warehouseColumns = [
-    {
-      field: 'factoryId',
-      headerName: '공장 ID',
-      width: 100,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: factoryTypeOptions,
-      flex:1
-    },
-    { field: 'factoryName', headerName: '공장명', width: 150 },
-    { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
-    {
-      field: 'warehouseName',
-      headerName: '창고 명',
-      width: 100,
-      editable: true,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    {
-      field: 'warehouseType',
-      headerName: '창고 유형',
-      width: 150,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: warehouseTypeOptions,
-    },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 90,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //     { value: 'Y', label: '사용' },
-    //     { value: 'N', label: '미사용' }
-    //   ]
-    // },
-    { field: 'createUser', headerName: '등록자', width: 100 },
-    { field: 'createDate', headerName: '등록일', width: 150 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 150 }
-  ];
-
   // 창고 목록 그리드 버튼
   const warehouseGridButtons = [
     { label: '등록', onClick: handleAddRow, icon: <AddIcon /> },
@@ -464,9 +381,61 @@ const WarehouseManagement = (props) => {
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
 
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
 
+    if (newRow.factoryId !== oldRow.factoryId) {
+      const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
+      if (selectedFactory) {
+        newRow = {
+          ...newRow,
+          factoryName: selectedFactory.factoryName,
+          factoryCode: selectedFactory.factoryCode,
+        };
+      }
+    }
 
+    setWarehouseList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
 
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.warehouseId === newRow.warehouseId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    return { ...oldRow, ...newRow };
+  }
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -572,28 +541,6 @@ const WarehouseManagement = (props) => {
             )}
           />
         </Grid>
-        {/*<Grid item xs={12} sm={6} md={3}>*/}
-        {/*  <Controller*/}
-        {/*    name="flagActive"*/}
-        {/*    control={control}*/}
-        {/*    render={({ field }) => (*/}
-        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
-        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
-        {/*        <Select*/}
-        {/*          {...field}*/}
-        {/*          labelId="flagActive-label"*/}
-        {/*          label="사용여부"*/}
-        {/*          displayEmpty*/}
-        {/*          notched*/}
-        {/*        >*/}
-        {/*          <MenuItem value={null}>전체</MenuItem>*/}
-        {/*          <MenuItem value="Y">사용</MenuItem>*/}
-        {/*          <MenuItem value="N">미사용</MenuItem>*/}
-        {/*        </Select>*/}
-        {/*      </FormControl>*/}
-        {/*    )}*/}
-        {/*  />*/}
-        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}
