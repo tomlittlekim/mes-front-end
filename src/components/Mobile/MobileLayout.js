@@ -1,5 +1,3 @@
-// MobileLayout.js에서 메뉴 이름을 생산실적등록에서 생산실적으로 변경
-
 import React, { useState, useCallback } from 'react';
 import {
   AppBar,
@@ -69,7 +67,14 @@ const MobileLayout = ({ children }) => {
     }
     // '생산실적' 메뉴 클릭 시
     else if (id === 'production-result') {
-      openTab({ id: 'mm-result-in', name: '생산실적', group: 'pm' });
+      // 개발 중 알림
+      Swal.fire({
+        title: '알림',
+        text: '개발 중인 메뉴입니다.',
+        icon: 'info',
+        confirmButtonColor: getAccentColor(),
+        confirmButtonText: '확인'
+      });
     }
 
     setDrawerOpen(false);
@@ -117,9 +122,9 @@ const MobileLayout = ({ children }) => {
               {domainName}
             </Typography>
             <IconButton color="inherit" onClick={toggleTheme} size="medium">
-              {isDarkMode ? 
-                <Brightness7Icon sx={{ fontSize: '1.6rem' }} /> : 
-                <Brightness4Icon sx={{ fontSize: '1.6rem' }} />
+              {isDarkMode ?
+                  <Brightness7Icon sx={{ fontSize: '1.6rem' }} /> :
+                  <Brightness4Icon sx={{ fontSize: '1.6rem' }} />
               }
             </IconButton>
           </Toolbar>
@@ -165,12 +170,12 @@ const MobileLayout = ({ children }) => {
                 <ListItemIcon>
                   <HomeIcon sx={{ color: getAccentColor(), fontSize: '1.6rem' }} />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="홈" 
-                  primaryTypographyProps={{ 
-                    fontSize: '1.1rem',
-                    fontWeight: 500 
-                  }} 
+                <ListItemText
+                    primary="홈"
+                    primaryTypographyProps={{
+                      fontSize: '1.1rem',
+                      fontWeight: 500
+                    }}
                 />
               </ListItem>
 
@@ -180,12 +185,12 @@ const MobileLayout = ({ children }) => {
                 <ListItemIcon>
                   <InventoryIcon sx={{ color: getAccentColor(), fontSize: '1.6rem' }} />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="제품 관리" 
-                  primaryTypographyProps={{ 
-                    fontSize: '1.1rem',
-                    fontWeight: 500 
-                  }} 
+                <ListItemText
+                    primary="제품 관리"
+                    primaryTypographyProps={{
+                      fontSize: '1.1rem',
+                      fontWeight: 500
+                    }}
                 />
               </ListItem>
 
@@ -193,12 +198,12 @@ const MobileLayout = ({ children }) => {
                 <ListItemIcon>
                   <ListAltIcon sx={{ color: getAccentColor(), fontSize: '1.6rem' }} />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="생산실적" 
-                  primaryTypographyProps={{ 
-                    fontSize: '1.1rem',
-                    fontWeight: 500 
-                  }} 
+                <ListItemText
+                    primary="생산실적"
+                    primaryTypographyProps={{
+                      fontSize: '1.1rem',
+                      fontWeight: 500
+                    }}
                 />
               </ListItem>
             </List>
@@ -210,13 +215,13 @@ const MobileLayout = ({ children }) => {
                 <ListItemIcon>
                   <ExitToAppIcon sx={{ fontSize: '1.6rem', color: theme.palette.error.main }} />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="로그아웃" 
-                  primaryTypographyProps={{ 
-                    fontSize: '1.1rem',
-                    fontWeight: 500,
-                    color: theme.palette.error.main
-                  }} 
+                <ListItemText
+                    primary="로그아웃"
+                    primaryTypographyProps={{
+                      fontSize: '1.1rem',
+                      fontWeight: 500,
+                      color: theme.palette.error.main
+                    }}
                 />
               </ListItem>
             </List>

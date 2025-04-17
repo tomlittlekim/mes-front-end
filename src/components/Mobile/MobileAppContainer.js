@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import MobileLayout from './MobileLayout';
 import MobileProductManagement from './MobileProduct/MobileProductManagement';
-import MobileProductionResult from './MobileProduction/MobileProductionResult';
 import { Box, Typography, Card, CardContent, Button, useTheme, Grid } from '@mui/material';
 import { useTabs } from '../../contexts/TabContext';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { Inventory as InventoryIcon, ListAlt as ListAltIcon } from '@mui/icons-material';
+import Swal from 'sweetalert2';
 
 const MobileAppContainer = () => {
   const { activeTab, openTab } = useTabs();
@@ -19,6 +19,17 @@ const MobileAppContainer = () => {
       return isDarkMode ? '#e67e22' : '#d35400';
     }
     return isDarkMode ? '#1976d2' : '#0a2351';
+  };
+
+  // 생산실적 메뉴 클릭 시 알림 표시
+  const handleProductionResultClick = () => {
+    Swal.fire({
+      title: '알림',
+      text: '개발 중인 메뉴입니다.',
+      icon: 'info',
+      confirmButtonColor: getAccentColor(),
+      confirmButtonText: '확인'
+    });
   };
 
   // 메인 화면 렌더링
@@ -74,7 +85,7 @@ const MobileAppContainer = () => {
                         }
                       }
                     }}
-                    onClick={() => openTab({ id: 'mm-result-in', name: '생산실적', group: 'pm' })}
+                    onClick={handleProductionResultClick}
                 >
                   생산실적
                 </Button>
@@ -89,7 +100,7 @@ const MobileAppContainer = () => {
               공지사항
             </Typography>
             <Typography variant="body1" sx={{ fontSize: '1rem', lineHeight: 1.5 }}>
-              모바일 버전에서는 <strong>제품 관리</strong>와 <strong>생산실적</strong> 기능만 이용 가능합니다.
+              모바일 버전에서는 <strong>제품 관리</strong> 기능만 이용 가능합니다.
               <br />
               <br />
               더 많은 기능을 이용하시려면 PC 버전을 이용해주세요.
@@ -109,7 +120,17 @@ const MobileAppContainer = () => {
       case 'pi-product':
         return <MobileProductManagement />;
       case 'mm-result-in':
-        return <MobileProductionResult />;
+        // 생산실적 메뉴 접근 시 알림 표시 후 메인으로 리다이렉트
+        Swal.fire({
+          title: '알림',
+          text: '개발 중인 메뉴입니다.',
+          icon: 'info',
+          confirmButtonColor: getAccentColor(),
+          confirmButtonText: '확인'
+        }).then(() => {
+          openTab({ id: 'main', name: '메인' });
+        });
+        return renderMain();
       default:
         return renderMain();
     }
