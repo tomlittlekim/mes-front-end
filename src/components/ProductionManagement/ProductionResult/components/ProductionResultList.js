@@ -172,7 +172,7 @@ const ProductionResultList = ({
     {
       field: 'equipmentId',
       headerName: '설비ID',
-      width: 150,
+      width: 180,  // 너비 증가
       headerAlign: 'center',
       align: 'center',
       editable: true,
@@ -182,7 +182,16 @@ const ProductionResultList = ({
         const equipment = equipmentOptions.find(e => e.value === params.value);
         return (
             <Typography variant="body2">
-              {equipment ? equipment.label : params.value || ''}
+              {equipment ? (
+                  <span>
+            {equipment.label}
+                    {equipment.factoryName && equipment.lineName ? (
+                        <span style={{ fontSize: '0.85em', color: 'gray', display: 'block' }}>
+                {equipment.factoryName} &gt; {equipment.lineName}
+              </span>
+                    ) : null}
+          </span>
+              ) : params.value || ''}
             </Typography>
         );
       }

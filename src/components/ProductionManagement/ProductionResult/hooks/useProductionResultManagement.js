@@ -1,9 +1,9 @@
-import {useEffect, useState, useCallback} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useProductionWorkOrder} from './useProductionWorkOrder';
 import {useProductionResultOperations} from './useProductionResultOperations';
 import {useProductionFormHandling} from './useProductionFormHandling';
 import {useGraphQL} from '../../../../apollo/useGraphQL';
-import {PRODUCTS_QUERY} from './graphql-queries';
+import {PRODUCTS_QUERY, EQUIPMENTS_QUERY} from './graphql-queries';
 import {enrichProductWithDisplayValues} from '../utils/materialTypeUtils';
 
 /**
@@ -88,23 +88,49 @@ export const useProductionResultManagement = (tabId) => {
 
         setProductOptions(enrichedProducts);
         setIsProductMaterialsLoaded(true);
-      } else {
-        console.error("제품 정보 로드: 데이터가 없습니다.", response);
-
-        // 백업 데이터 설정 (실제 구현 시 제거)
-        setProductOptions([
-          { systemMaterialId: 'PROD001', materialName: '제품 A', materialCategory: '전자부품', materialType: 'COMPLETE_PRODUCT' },
-          { systemMaterialId: 'PROD002', materialName: '제품 B', materialCategory: '기계부품', materialType: 'COMPLETE_PRODUCT' },
-          { systemMaterialId: 'PROD003', materialName: '제품 C', materialCategory: '화학제품', materialType: 'COMPLETE_PRODUCT' },
-          { systemMaterialId: 'PROD004', materialName: '반제품 D', materialCategory: '전자부품', materialType: 'HALF_PRODUCT' },
-          { systemMaterialId: 'PROD005', materialName: '원자재 E', materialCategory: '금속', materialType: 'RAW_MATERIAL' }
-        ].map(product => enrichProductWithDisplayValues(product)));
-
-        alert('제품 정보를 불러오는데 실패했습니다. 임시 데이터를 사용합니다.');
       }
     } catch (error) {
       console.error("제품 정보 로드 오류:", error);
       alert('제품 정보를 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [executeQuery]);
+
+  // 설비 정보 로드 함수
+  const loadEquipments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await executeQuery({
+        query: EQUIPMENTS_QUERY,
+        variables: {
+          filter: {
+            factoryId: '',
+            factoryName: '',
+            lineId: '',
+            lineName: '',
+            equipmentId: '',
+            equipmentName: '',
+            equipmentSn: '',
+            equipmentType: ''
+          }
+        }
+      });
+
+      if (response?.data?.getEquipments) {
+        // 설비 정보를 드롭박스 옵션 형식으로 변환
+        const formattedEquipments = response.data.getEquipments.map(equipment => ({
+          value: equipment.equipmentId,
+          label: `${equipment.equipmentName || ''} (${equipment.equipmentId})`,
+          factoryName: equipment.factoryName,
+          lineName: equipment.lineName,
+          equipmentType: equipment.equipmentType
+        }));
+
+        setEquipmentOptions(formattedEquipments);
+      }
+    } catch (error) {
+      console.error("설비 정보 로드 오류:", error);
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +180,7 @@ export const useProductionResultManagement = (tabId) => {
     }
   }, [productionResultList]);
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
+  // 컴포넌트 마운트 시 초기 데이터 로드 useEffect 내에서 호출
   useEffect(() => {
     const loadData = () => {
       // 작업지시 목록 로드
@@ -163,29 +189,11 @@ export const useProductionResultManagement = (tabId) => {
         flagActive: true
       });
 
-      // 제품 목록 로드 (실제 구현에서는 API에서 가져옴)
-      executeQuery({
-        query: PRODUCTS_QUERY,
-        variables: { filter: { flagActive: true } }
-      }).then(response => {
-        if (response.data && response.data.products) {
-          const formattedProducts = response.data.products.map(product => ({
-            value: product.productId,
-            label: product.productName || product.productCode
-          }));
-          setProductOptions(formattedProducts);
-        }
-      }).catch(error => {
-        console.error("Error fetching products:", error);
-        // 임시 제품 데이터 설정 (실제 구현 시 삭제)
-        setProductOptions([
-          { value: 'PROD001', label: '제품 A' },
-          { value: 'PROD002', label: '제품 B' },
-          { value: 'PROD003', label: '제품 C' },
-          { value: 'PROD004', label: '제품 D' },
-          { value: 'PROD005', label: '제품 E' }
-        ]);
-      });
+      // 제품 목록 로드
+      loadProductMaterials();
+
+      // 설비 목록 로드 (추가)
+      loadEquipments();
     };
 
     // 초기 데이터 로드
@@ -202,20 +210,6 @@ export const useProductionResultManagement = (tabId) => {
       clearInterval(interval);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 설비 목록 로드
-  useEffect(() => {
-    // 임시 데이터 (실제 구현에서는 API 호출로 대체)
-    const equipments = [
-      { value: 'EQ001', label: '생산라인 1호기' },
-      { value: 'EQ002', label: '생산라인 2호기' },
-      { value: 'EQ003', label: '생산라인 3호기' },
-      { value: 'EQ004', label: '조립라인 1호기' },
-      { value: 'EQ005', label: '조립라인 2호기' }
-    ];
-
-    setEquipmentOptions(equipments);
-  }, []);
 
   return {
     // 검색폼 관련

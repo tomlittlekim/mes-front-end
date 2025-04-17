@@ -1,5 +1,13 @@
 import React from 'react';
-import { Grid, TextField, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import {
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Typography
+} from '@mui/material';
 import { Controller } from 'react-hook-form';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -74,6 +82,11 @@ const SearchForm = ({ control, equipmentOptions, productOptions = [], handleDate
                       {equipmentOptions.map(option => (
                           <MenuItem key={option.value} value={option.value}>
                             {option.label}
+                            {option.factoryName && option.lineName ? (
+                                <Typography variant="caption" color="textSecondary" style={{ display: 'block' }}>
+                                  {option.factoryName} &gt; {option.lineName}
+                                </Typography>
+                            ) : null}
                           </MenuItem>
                       ))}
                     </Select>

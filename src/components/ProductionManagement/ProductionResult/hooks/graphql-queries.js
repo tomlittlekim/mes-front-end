@@ -147,3 +147,19 @@ export const PRODUCTS_QUERY = gql`
         }
     }
 `;
+
+// 설비 목록 조회 쿼리
+export const EQUIPMENTS_QUERY = gql`
+    query getEquipments($filter: EquipmentFilter) {
+        getEquipments(filter: $filter) {
+            equipmentId
+            equipmentName
+            equipmentType
+            factoryId
+            factoryName
+            lineId
+            lineName
+            equipmentStatus
+        }
+    }
+`;
