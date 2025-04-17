@@ -36,13 +36,6 @@ const CustomerManagement = (props) => {
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
 
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
@@ -57,7 +50,6 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessType: '',
-      // flagActive: null
     }
   });
 
@@ -72,6 +64,96 @@ const CustomerManagement = (props) => {
   //거래처 유형 리스트 불러오기
   const [vendorTypeOptions, setVendorTypeOptions] = useState([]);
 
+  useEffect(() => {
+    fetchGridCodesByCodeClassId("CD20250331110039125",setVendorTypeOptions)
+  }, []);
+
+  // 컴포넌트 마운트 시 초기 데이터 로드
+  useEffect(() => {
+    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
+    const timer = setTimeout(() => {
+
+      getVendors(
+          getValues()
+      ).then((data) => {
+        if (data.errors) {
+        } else {
+          const rowsWithId = data.map((row, index) => ({
+            ...row,
+            id: row.vendorId  // 또는 row.factoryId || index + 1
+          }));
+          setVendorList(rowsWithId);
+        }
+        setIsLoading(false);
+      })
+          .catch((err) => {
+            setIsLoading(false);
+          });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 거래처 목록 그리드 컬럼 정의
+  const customerColumns = [
+    { field: 'vendorId', headerName: '거래처코드', width: 140, flex: 1 },
+    {
+      field: 'vendorName',
+      headerName: '거래처명',
+      width: 120 ,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'vendorType',
+      headerName: '거래처 유형',
+      width: 100,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: vendorTypeOptions
+    },
+    {
+      field: 'businessRegNo',
+      headerName: '사업자등록 번호',
+      width: 100,
+      editable: true,
+      flex: 1,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    { field: 'ceoName', headerName: '대표자명', width: 100, editable: true },
+    { field: 'businessType', headerName: '업종/업태', width: 100, editable: true },
+    { field: 'address', headerName: '주소', width: 150 ,editable: true  },
+    { field: 'telNo', headerName: '전화번호', width: 130, editable: true },
+    { field: 'createUser', headerName: '작성자', width: 90},
+    { field: 'createDate', headerName: '작성일', width: 150},
+    { field: 'updateUser', headerName: '수정자', width: 90},
+    { field: 'updateDate', headerName: '수정일', width: 150}
+  ];
+
   // 초기화 함수
   const handleReset = () => {
     reset({
@@ -79,56 +161,8 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessType: '',
-      // flagActive: null
     });
   };
-
-  function handleProcessRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    setVendorList((prev) => {
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedRows(prevUpdatedRows => {
-        const existingIndex = prevUpdatedRows.findIndex(row => row.vendorId === newRow.vendorId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-
-    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
-    return { ...oldRow, ...newRow };
-  }
-
 
   // 검색 실행 함수
   const handleSearch = (data) => {
@@ -168,7 +202,6 @@ const CustomerManagement = (props) => {
     businessType: row.businessType,
     address: row.address,
     telNo: row.telNo,
-    // flagActive: row.flagActive
   });
 
   const transformRowForUpdate = (row) => ({
@@ -180,7 +213,6 @@ const CustomerManagement = (props) => {
     businessType: row.businessType,
     address: row.address,
     telNo: row.telNo,
-    // flagActive: row.flagActive
   });
 
   // 저장 버튼 클릭 핸들러
@@ -334,7 +366,6 @@ const CustomerManagement = (props) => {
       businessType: '',
       address: '',
       telNo: '',
-      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -345,114 +376,58 @@ const CustomerManagement = (props) => {
     setSelectedVendor(newVendor);
   };
 
-
-  useEffect(() => {
-    fetchGridCodesByCodeClassId("CD20250331110039125",setVendorTypeOptions)
-  }, []);
-
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-
-      getVendors(
-          getValues()
-      ).then((data) => {
-        if (data.errors) {
-        } else {
-          const rowsWithId = data.map((row, index) => ({
-            ...row,
-            id: row.vendorId  // 또는 row.factoryId || index + 1
-          }));
-          setVendorList(rowsWithId);
-        }
-        setIsLoading(false);
-      })
-          .catch((err) => {
-            setIsLoading(false);
-          });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 거래처 목록 그리드 컬럼 정의
-  const customerColumns = [
-    { field: 'vendorId', headerName: '거래처코드', width: 140, flex: 1 },
-    {
-      field: 'vendorName',
-      headerName: '거래처명',
-      width: 120 ,
-      editable: true,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    {
-      field: 'vendorType',
-      headerName: '거래처 유형',
-      width: 100,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: vendorTypeOptions
-    },
-    {
-      field: 'businessRegNo',
-      headerName: '사업자등록 번호',
-      width: 100,
-      editable: true,
-      flex: 1,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    { field: 'ceoName', headerName: '대표자명', width: 100, editable: true },
-    { field: 'businessType', headerName: '업종/업태', width: 100, editable: true },
-    { field: 'address', headerName: '주소', width: 150 ,editable: true  },
-    { field: 'telNo', headerName: '전화번호', width: 130, editable: true },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 90,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //     { value: 'Y', label: '사용' },
-    //     { value: 'N', label: '미사용' }
-    //   ]
-    // },
-    { field: 'createUser', headerName: '작성자', width: 90},
-    { field: 'createDate', headerName: '작성일', width: 150},
-    { field: 'updateUser', headerName: '수정자', width: 90},
-    { field: 'updateDate', headerName: '수정일', width: 150}
-  ];
-
   // 거래처 목록 그리드 버튼
   const customerGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
     { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
+
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    setVendorList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.vendorId === newRow.vendorId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    // processRowUpdate에서는 최종적으로 반영할 newRow(또는 updatedRow)를 반환해야 함
+    return { ...oldRow, ...newRow };
+  }
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
