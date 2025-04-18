@@ -1,511 +1,947 @@
-import React, { useState, useEffect } from 'react';
-import './OrderRegistration.css';
-import { useForm, Controller } from 'react-hook-form';
-import { 
-  TextField, 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
-  Select,
-  Grid, 
-  Box, 
-  Typography, 
-  useTheme,
-  Stack,
-  IconButton,
-  alpha
-} from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Paper, Collapse, Button, Stack, IconButton, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { EnhancedDataGridWrapper } from '../Common';
+import SearchCondition from '../Common/SearchCondition';
+import {
+  getOrderHeaders, getOrderDetails, getVendors, getProducts, getPaymentMethods,
+  upsertOrderHeaders, upsertOrderDetails, deleteOrderHeader, deleteOrderDetail,
+  getNewOrderHeader, getNewOrderDetail
+} from '../../api/orderApi';
+import Message from '../../utils/message/Message';
+import { format, parse } from 'date-fns';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
-import Swal from 'sweetalert2';
-import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import HelpModal from '../Common/HelpModal';
+import EditIcon from '@mui/icons-material/Edit';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import koLocale from 'date-fns/locale/ko';
+import UseSystemStatusManager from "../../hook/UseSystemStatusManager";
 
-const OrderRegistration = (props) => {
-  // 현재 테마 가져오기
-  const theme = useTheme();
-  const { domain } = useDomain();
-  const isDarkMode = theme.palette.mode === 'dark';
-  
-  // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      orderId: '',
-      customerName: '',
-      productName: '',
-      productType: '',
-      fromDate: null,
-      toDate: null
-    }
+const OrderRegistration = () => {
+  const { userGroup } = UseSystemStatusManager()
+  // 상태 관리
+  const [searchParams, setSearchParams] = useState({
+    orderNo: null,
+    fromDate: null,
+    toDate: null,
+    customerId: null,
+    materialId: null
   });
 
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [orderList, setOrderList] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [orderDetail, setOrderDetail] = useState(null);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  // 주문번호 입력값을 별도로 관리
+  const [orderNoInput, setOrderNoInput] = useState('');
 
-  // 도메인별 색상 설정
-  const getTextColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+  const [headerRows, setHeaderRows] = useState([]);
+  const [selectedHeader, setSelectedHeader] = useState(null);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const [detailRows, setDetailRows] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [headerNo, setHeaderNo] = useState(1);
+  const [detailNo, setDetailNo] = useState(1);
+  const [editedHeaderRows, setEditedHeaderRows] = useState(new Set());
+  const [editedDetailRows, setEditedDetailRows] = useState(new Set());
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // 초기 데이터 로딩
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      const [vendorList, productList, paymentList, headers] = await Promise.all([
+        getVendors(),
+        getProducts(),
+        getPaymentMethods(),
+        getOrderHeaders({})
+      ]);
+      
+      setVendors(vendorList || []);
+      setProducts(productList || []);
+      setPaymentMethods(paymentList || []);
+      setHeaderRows(headers || []);
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
     }
-    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
-  
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-  
-  const getBorderColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#f5e8d7';
-    }
-    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
 
-  // 초기화 함수
+  // 검색 조건 변경 시 헤더 데이터 조회 (주문번호 제외)
+  const handleSearch = async (newParams, isButtonClick = false) => {
+    try {
+      setLoading(true);
+      // 빈 문자열을 null로 변환
+      const cleanedParams = Object.fromEntries(
+        Object.entries(newParams).map(([key, value]) => [
+          key,
+          value === '' ? null : value
+        ])
+      );
+
+      // 버튼 클릭이 아닌 경우, 주문번호는 이전 값 유지
+      const finalParams = isButtonClick 
+        ? { ...cleanedParams, orderNo: orderNoInput || null }
+        : { ...cleanedParams, orderNo: searchParams.orderNo };
+      
+      setSearchParams(finalParams);
+      const headers = await getOrderHeaders(finalParams);
+      setHeaderRows(headers || []);
+      // 검색 시 선택된 헤더 초기화
+      setSelectedHeader(null);
+      setDetailRows([]);
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 초기화 핸들러
   const handleReset = () => {
-    reset({
-      orderId: '',
-      customerName: '',
-      productName: '',
-      productType: '',
+    const initialParams = {
+      orderNo: null,
       fromDate: null,
-      toDate: null
+      toDate: null,
+      customerId: null,
+      materialId: null
+    };
+    setOrderNoInput('');
+    handleSearch(initialParams);
+  };
+
+  // 헤더 선택 시 상세 데이터 조회 및 상세번호 초기화
+  useEffect(() => {
+    const loadDetails = async () => {
+      setDetailNo(1); // 헤더 변경 시 상세번호 초기화
+      if (!selectedHeader?.id) {
+        setDetailRows([]);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        const details = await getOrderDetails(selectedHeader.orderNo);
+        setDetailRows(details || []);
+      } catch (error) {
+        Message.showError(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDetails();
+  }, [selectedHeader]);
+
+  // 날짜 포맷 변환 함수
+  const formatDate = (date) => {
+    if (!date) return '';  // null/undefined 처리
+    return format(new Date(date), 'yyyy-MM-dd');
+  };
+
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    return parse(dateStr, 'yyyy-MM-dd', new Date());
+  };
+
+  // 날짜 선택 컴포넌트
+  const DatePickerCell = ({ value, field, id, api }) => {
+    return (
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={koLocale}>
+        <DatePicker
+          value={parseDate(value)}
+          onChange={(newValue) => {
+            api.setEditCellValue({ id, field, value: formatDate(newValue) });
+          }}
+          slotProps={{
+            textField: {
+              size: "small",
+              fullWidth: true,
+              variant: "outlined"
+            }
+          }}
+          format="yyyy-MM-dd"
+        />
+      </LocalizationProvider>
+    );
+  };
+
+  // 행 수정 처리 - 헤더
+  const processHeaderRowUpdate = (newRow, oldRow) => {
+    const updatedRow = { ...newRow };
+    setHeaderRows(prev => prev.map(row => 
+      row.orderNo === oldRow.orderNo ? updatedRow : row
+    ));
+    // 수정된 행 추적
+    if (updatedRow.id) {
+      setEditedHeaderRows(prev => new Set(prev).add(updatedRow.orderNo));
+    }
+    return updatedRow;
+  };
+
+  // 행 수정 처리 - 상세
+  const processDetailRowUpdate = (newRow, oldRow) => {
+    const updatedRow = { ...newRow };
+    setDetailRows(prev => prev.map(row => 
+      row.orderSubNo === oldRow.orderSubNo ? updatedRow : row
+    ));
+    // 수정된 행 추적
+    if (updatedRow.id !== null) {
+      setEditedDetailRows(prev => new Set(prev).add(updatedRow.orderSubNo));
+    }
+    return updatedRow;
+  };
+
+  // 저장할 행 필터링 - 헤더
+  const getHeaderRowsToSave = () => {
+    return headerRows.filter(row => {
+      // 신규 행(id가 null)인 경우 필수 필드 체크
+      if (row.id === null) {
+        return row.orderDate && row.customerId; // 필수 필드가 있는 경우만 포함
+      }
+      // 수정된 행만 포함
+      return editedHeaderRows.has(row.orderNo);
     });
   };
 
-  // 검색 실행 함수
-  const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: '0000001', orderDate: '2024-03-15', customer: '(주)한국전자', product: '[T55VD] 보라 VIOLET', spec: '정품입고', unit: 'L', price: 1, quantity: 3, totalAmount: 3000, paymentMethod: '선택형', deliveryAddress: '서울시 강남구', note: '배송전 연락 요망' },
-      { id: '0000002', orderDate: '2024-03-16', customer: '대림산업', product: 'PFI-050M_빨강', spec: '정품입고', unit: 'L', price: 1, quantity: 5, totalAmount: 5000, paymentMethod: 'Drop down', deliveryAddress: '경기도 성남시', note: '' },
-      { id: '0000003', orderDate: '2024-03-17', customer: '중앙출판', product: '모조지70g', spec: '91.4cm(폭)', unit: 'M', price: 1, quantity: 1, totalAmount: 1000, paymentMethod: '선택형', deliveryAddress: '서울시 서초구', note: '오후 배송 요망' },
-      { id: '0000004', orderDate: '2024-03-18', customer: '신한물산', product: '포장비닐', spec: '100cm(폭)', unit: 'EA', price: 10, quantity: 100, totalAmount: 10000, paymentMethod: 'Drop down', deliveryAddress: '인천시 연수구', note: '' }
-    ];
-    
-    setOrderList(dummyData);
-    setSelectedOrder(null);
-    setOrderDetail(null);
-  };
-
-  // 주문 선택 핸들러
-  const handleOrderSelect = (params) => {
-    const order = orderList.find(o => o.id === params.id);
-    setSelectedOrder(order);
-    
-    if (!order) return;
-    
-    // 주문 상세 정보 (실제로는 API 호출)
-    const detailData = {
-      ...order,
-      contactPerson: '홍길동',
-      contactPhone: '010-1234-5678',
-      email: 'hong@example.com',
-      deliveryMethod: '택배',
-      registDate: '2023-01-15',
-      updateDate: '2023-06-20',
-      registUser: '자동입력',
-      updateUser: '자동입력'
-    };
-    
-    setOrderDetail([detailData]);
-  };
-
-  // 등록 버튼 클릭 핸들러
-  const handleAdd = () => {
-    const newOrder = {
-      id: `NEW_${Date.now()}`,
-      orderDate: new Date().toISOString().split('T')[0],
-      customer: '',
-      product: '',
-      spec: '',
-      unit: '',
-      price: 0,
-      quantity: 0,
-      totalAmount: 0,
-      paymentMethod: '',
-      deliveryAddress: '',
-      note: '',
-      contactPerson: '',
-      contactPhone: '',
-      email: '',
-      deliveryMethod: '',
-      registDate: new Date().toISOString().split('T')[0],
-      updateDate: new Date().toISOString().split('T')[0],
-      registUser: '시스템',
-      updateUser: '시스템'
-    };
-    
-    setOrderList([...orderList, newOrder]);
-    setSelectedOrder(newOrder);
-    setOrderDetail([newOrder]);
-  };
-
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
-    if (!selectedOrder) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '저장할 주문을 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-    
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
+  // 저장할 행 필터링 - 상세
+  const getDetailRowsToSave = () => {
+    return detailRows.filter(row => {
+      // 신규 행(id가 null)인 경우 필수 필드 체크
+      if (row.id === null) {
+        return row.systemMaterialId && row.quantity && row.unitPrice; // 필수 필드가 있는 경우만 포함
+      }
+      // 수정된 행만 포함
+      return editedDetailRows.has(row.orderSubNo);
     });
   };
 
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
-    if (!selectedOrder) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 주문을 선택해주세요.',
-        confirmButtonText: '확인'
-      });
+  // 편집 버튼 렌더링 컴포넌트 - 헤더용
+  const EditButton = ({ params }) => {
+    const isEditing = isEditMode && params.row.id;
+
+    const handleClick = (event) => {
+      // 이벤트 전파 중지
+      event.stopPropagation();
+      setIsEditMode(prev => !prev);
+      // 편집 모드 시작 시 해당 row 선택
+      if (!isEditing) {
+        setSelectedHeader(params.row);
+        if (params.row.id) {
+          loadDetails(params.row.orderNo);
+        }
+      }
+    };
+
+    return (
+      <IconButton 
+        size="small" 
+        onClick={handleClick}
+        color={isEditing ? "primary" : "default"}
+      >
+        <EditIcon />
+      </IconButton>
+    );
+  };
+
+  // 헤더 그리드 컬럼 정의
+  const headerColumns = [
+    { 
+      field: 'orderNo', 
+      headerName: '주문번호', 
+      width: 150,
+      editable: false,
+      renderCell: (params) => params.value || '자동생성'
+    },
+    { 
+      field: 'orderDate', 
+      headerName: '주문일자', 
+      width: 120,
+      editable: true,
+      required: true,
+      renderCell: (params) => renderRequiredCell(params, 'orderDate'),
+      renderEditCell: (params) => <DatePickerCell {...params} />,
+      valueFormatter: (params) => params?.value ? formatDate(params.value) : ''
+    },
+    { 
+      field: 'customerId', 
+      headerName: '고객사', 
+      width: 150,
+      editable: true,
+      required: true,
+      type: 'singleSelect',
+      valueOptions: vendors.map(v => ({
+        value: v.vendorId,
+        label: v.vendorName
+      })),
+      renderCell: (params) => renderRequiredCell(params, 'customerId')
+    },
+    { 
+      field: 'orderer', 
+      headerName: '주문자', 
+      width: 120,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: userGroup.map(u => ({
+        value: u.loginId,
+        label: u.userName
+      })),
+      renderCell: (params) => renderCell(params, 'orderer')
+    },
+    { 
+      field: 'flagVatAmount', 
+      headerName: '부가세여부', 
+      width: 100,
+      editable: true,
+      type: 'boolean',
+      renderCell: (params) => params.value ? '예' : '아니오'
+    },
+    { 
+      field: 'totalAmount', 
+      headerName: '총금액', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString() || '자동계산'
+    },
+    { 
+      field: 'vatAmount', 
+      headerName: '부가세', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString() || '자동계산'
+    },
+    { 
+      field: 'finalAmount', 
+      headerName: '최종금액', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString() || '자동계산'
+    },
+    { 
+      field: 'deliveryDate', 
+      headerName: '납기일', 
+      width: 120,
+      editable: true,
+      renderCell: (params) => renderCell(params, 'deliveryDate'),
+      renderEditCell: (params) => <DatePickerCell {...params} />,
+      valueFormatter: (params) => params?.value ? formatDate(params.value) : ''
+    },
+    { 
+      field: 'paymentMethod', 
+      headerName: '결제방식', 
+      width: 120,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: paymentMethods.map(m => ({
+        value: m.codeId,
+        label: m.codeName
+      })),
+      renderCell: (params) => renderCell(params, 'paymentMethod')
+    },
+    { 
+      field: 'deliveryAddr', 
+      headerName: '배송주소', 
+      width: 200,
+      editable: true,
+      renderCell: (params) => renderCell(params, 'deliveryAddr')
+    },
+    { 
+      field: 'remark', 
+      headerName: '비고사항', 
+      width: 200,
+      editable: true,
+      renderCell: (params) => params.value || '-'
+    }
+  ];
+
+  // 상세 그리드 컬럼 정의 - 편집 컬럼 제거
+  const detailColumns = [
+    { 
+      field: 'orderSubNo', 
+      headerName: '상세번호', 
+      width: 120,
+      editable: false,
+      renderCell: (params) => params.value || '자동생성'
+    },
+    { 
+      field: 'systemMaterialId', 
+      headerName: '품목ID', 
+      width: 150,
+      editable: true,
+      required: true,
+      type: 'singleSelect',
+      valueOptions: products.map(p => ({
+        value: p.systemMaterialId,
+        label: `${p.materialName} (${p.materialStandard})`
+      })),
+      renderCell: (params) => renderRequiredCell(params, 'systemMaterialId')
+    },
+    { 
+      field: 'materialName', 
+      headerName: '품목명', 
+      width: 200,
+      editable: false,
+      renderCell: (params) => params.value || '자동입력'
+    },
+    { 
+      field: 'materialStandard', 
+      headerName: '규격', 
+      width: 120,
+      editable: false,
+      renderCell: (params) => params.value || '자동입력'
+    },
+    { 
+      field: 'unit', 
+      headerName: '단위', 
+      width: 80,
+      editable: false,
+      renderCell: (params) => params.value || '자동입력'
+    },
+    { 
+      field: 'deliveryDate', 
+      headerName: '납기일', 
+      width: 120,
+      editable: true,
+      renderCell: (params) => renderCell(params, 'deliveryDate'),
+      renderEditCell: (params) => <DatePickerCell {...params} />,
+      valueFormatter: (params) => params?.value ? formatDate(params.value) : ''
+    },
+    { 
+      field: 'quantity', 
+      headerName: '수량', 
+      width: 100,
+      type: 'number',
+      editable: true,
+      required: true,
+      renderCell: (params) => renderRequiredCell(params, 'quantity')
+    },
+    { 
+      field: 'unitPrice', 
+      headerName: '단가', 
+      width: 120,
+      type: 'number',
+      editable: true,
+      required: true,
+      renderCell: (params) => renderRequiredCell(params, 'unitPrice')
+    },
+    { 
+      field: 'supplyPrice', 
+      headerName: '공급가', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString() || '자동계산'
+    },
+    { 
+      field: 'vatPrice', 
+      headerName: '부가세', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString() || '자동계산'
+    },
+    { 
+      field: 'totalPrice', 
+      headerName: '합계금액', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString() || '자동계산'
+    },
+    { 
+      field: 'remark', 
+      headerName: '비고사항', 
+      width: 200,
+      editable: true,
+      renderCell: (params) => params.value || '-'
+    }
+  ];
+
+  // isCellEditable 로직 수정
+  const isHeaderCellEditable = (params) => {
+    const nonEditableFields = ['orderNo', 'totalAmount', 'vatAmount', 'finalAmount'];
+    // 신규 row이거나 편집 모드일 때 수정 가능
+    return (!params.row.id || isEditMode) && !nonEditableFields.includes(params.field);
+  };
+
+  const isDetailCellEditable = (params) => {
+    const nonEditableFields = ['orderSubNo', 'materialName', 'materialStandard', 'unit', 'supplyPrice', 'vatPrice', 'totalPrice'];
+    return !nonEditableFields.includes(params.field);
+  };
+
+  // 일반 셀 렌더링 함수
+  const renderCell = (params, field) => {
+    if (field === 'orderer') {
+      const user = userGroup.find(u=>u.loginId === params.value);
+      return user?.userName || '-';
+    }
+    if (field === 'customerId') {
+      const vendor = vendors.find(v => v.vendorId === params.value);
+      return vendor?.vendorName || '-';
+    }
+    if (field === 'paymentMethod') {
+      const method = paymentMethods.find(m => m.codeId === params.value);
+      return method?.codeName || '-';
+    }
+    if (field === 'systemMaterialId') {
+      const product = products.find(p => p.systemMaterialId === params.value);
+      return product?.materialName || '-';
+    }
+    return params.value || '-';
+  };
+
+  // 필수 필드 렌더링 함수
+  const renderRequiredCell = (params, field) => {
+    if (!params.value) {
+      return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
+    }
+    if (field === 'customerId') {
+      const vendor = vendors.find(v => v.vendorId === params.value);
+      return vendor?.vendorName || params.value;
+    }
+    if (field === 'paymentMethod') {
+      const method = paymentMethods.find(m => m.codeId === params.value);
+      return method?.codeName || params.value;
+    }
+    if (field === 'systemMaterialId') {
+      const product = products.find(p => p.systemMaterialId === params.value);
+      return product?.materialName || params.value;
+    }
+    return params.value;
+  };
+
+  // 헤더 row 클릭 핸들러
+  const handleHeaderRowClick = (params) => {
+    // 편집 모드일 때는 detail 조회하지 않음
+    if (isEditMode) {
+      return;
+    }
+    setSelectedHeader(params.row);
+    if (params.row.id) {
+      loadDetails(params.row.orderNo);
+    } else {
+      setDetailRows([]);
+    }
+  };
+
+  // 헤더 row 더블클릭 핸들러
+  const handleHeaderRowDoubleClick = (params) => {
+    // 편집 모드이고 저장된 row인 경우에만 처리
+    if (isEditMode && params.row.id) {
+      setEditedHeaderRows(prev => new Set(prev).add(params.row.orderNo));
+    }
+  };
+
+  const loadDetails = async (orderNo) => {
+    try {
+      setLoading(true);
+      const details = await getOrderDetails(orderNo);
+      setDetailRows(details || []);
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddHeader = async () => {
+    try {
+      setLoading(true);
+      const newHeader = await getNewOrderHeader(headerNo);
+      if (newHeader) {
+        const newRow = { ...newHeader, id: null };
+        setHeaderRows([...headerRows, newRow]);
+        setHeaderNo(prev => prev + 1);
+      }
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddDetail = async () => {
+    if (!selectedHeader?.orderNo) {
+      Message.showWarning('주문을 먼저 선택해주세요');
       return;
     }
     
-    Swal.fire({
-      title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const updatedList = orderList.filter(o => o.id !== selectedOrder.id);
-        setOrderList(updatedList);
-        setSelectedOrder(null);
-        setOrderDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
+    try {
+      setLoading(true);
+      const newDetail = await getNewOrderDetail({
+        no: detailNo,
+        orderNo: selectedHeader.orderNo
+      });
+      if (newDetail) {
+        const newRow = { ...newDetail, id: null };
+        setDetailRows([...detailRows, newRow]);
+        setDetailNo(prev => prev + 1);
+      }
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteHeader = async (id) => {
+    const targetRow = headerRows.find(row => row.id === id);
+    
+    // 신규 row인 경우 바로 삭제
+    if (!targetRow?.id) {
+      setHeaderRows(prev => prev.filter(row => row.orderNo !== targetRow.orderNo));
+      setSelectedHeader(null);
+      setDetailRows([]);
+      return;
+    }
+
+    Message.showDeleteConfirm(async () => {
+      try {
+        setLoading(true);
+        await deleteOrderHeader(id);
+        Message.showSuccess('주문 삭제 성공', () => {
+          loadInitialData();
+          setSelectedHeader(null);
+          setDetailRows([]);
         });
+      } catch (error) {
+        Message.showError(error);
+      } finally {
+        setLoading(false);
       }
     });
   };
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      handleSearch({});
-      setIsLoading(false);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  const handleDeleteDetail = async () => {
+    if (!selectedDetail) {
+      Message.showWarning('삭제할 주문 상세를 선택해주세요.');
+      return;
+    }
 
-  // 주문 목록 그리드 컬럼 정의
-  const orderColumns = [
-    { field: 'id', headerName: '주문ID', width: 100 },
-    { field: 'orderDate', headerName: '주문일자', width: 110 },
-    { field: 'customer', headerName: '고객사', width: 150 },
-    { field: 'product', headerName: '제품', width: 180, flex: 1 },
-    { field: 'spec', headerName: '규격', width: 120 },
-    { field: 'unit', headerName: '단위', width: 70 },
-    { field: 'price', headerName: '단가', width: 80, type: 'number' },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number' },
-    { field: 'totalAmount', headerName: '총금액', width: 100, type: 'number' },
-    { field: 'paymentMethod', headerName: '결제방식', width: 100 },
-    { field: 'deliveryAddress', headerName: '배송주소', width: 200 },
-    { field: 'note', headerName: '비고사항', width: 150 }
-  ];
-  
-  // 주문 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'id', headerName: '주문ID', width: 100, editable: true },
-    { field: 'orderDate', headerName: '주문일자', width: 110, editable: true },
-    { field: 'customer', headerName: '고객사', width: 150, editable: true },
-    { field: 'contactPerson', headerName: '고객담당자', width: 100, editable: true },
-    { field: 'contactPhone', headerName: '연락처', width: 120, editable: true },
-    { field: 'email', headerName: '이메일', width: 150, editable: true },
-    { field: 'product', headerName: '제품', width: 180, editable: true },
-    { field: 'spec', headerName: '규격', width: 120, editable: true },
-    { field: 'unit', headerName: '단위', width: 70, editable: true },
-    { field: 'price', headerName: '단가', width: 80, type: 'number', editable: true },
-    { field: 'quantity', headerName: '수량', width: 80, type: 'number', editable: true },
-    { field: 'totalAmount', headerName: '총금액', width: 100, type: 'number', editable: true },
-    { 
-      field: 'paymentMethod', 
-      headerName: '결제방식', 
-      width: 100, 
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: ['선택형', 'Drop down', '현금', '카드', '계좌이체']
-    },
-    { field: 'deliveryAddress', headerName: '배송주소', width: 200, editable: true },
-    { 
-      field: 'deliveryMethod', 
-      headerName: '배송방법', 
-      width: 100, 
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: ['택배', '방문수령', '직접배송']
-    },
-    { field: 'note', headerName: '비고사항', width: 150, editable: true },
-    { field: 'registUser', headerName: '등록자', width: 100 },
-    { field: 'registDate', headerName: '등록일', width: 120 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 120 }
-  ];
+    // 신규 row인 경우 바로 삭제
+    if (!selectedDetail.id) {
+      setDetailRows(prev => prev.filter(row => row.orderSubNo !== selectedDetail.orderSubNo));
+      setSelectedDetail(null);
+      return;
+    }
 
-  // 주문 목록 그리드 버튼
-  const orderGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> }
-  ];
+    Message.showDeleteConfirm(async () => {
+      try {
+        setLoading(true);
+        await deleteOrderDetail(selectedDetail.id);
+        Message.showSuccess('주문 상세 삭제 성공', async () => {
+          if (selectedHeader?.orderNo) {
+            const details = await getOrderDetails(selectedHeader.orderNo);
+            setDetailRows(details || []);
+            setSelectedDetail(null);
+          }
+        });
+      } catch (error) {
+        Message.showError(error);
+      } finally {
+        setLoading(false);
+      }
+    });
+  };
 
-  // 주문 상세 그리드 버튼
-  const detailGridButtons = [
-    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
-  ];
+  // 상세 row 클릭 핸들러
+  const handleDetailRowClick = (params) => {
+    setSelectedDetail(params.row);
+  };
+
+  // 저장 후 편집 모드 해제
+  const handleSaveHeader = async () => {
+    try {
+      setLoading(true);
+      const rowsToSave = getHeaderRowsToSave();
+      if (rowsToSave.length === 0) {
+        Message.showWarning('저장할 데이터가 없습니다.');
+        return;
+      }
+
+      // 백엔드에 필요한 필드만 추려냄
+      const payload = rowsToSave.map(row => ({
+        id: row.id,
+        site: row.site,
+        compCd: row.compCd,
+        orderNo: row.orderNo,
+        orderDate: row.orderDate,
+        customerId: row.customerId,
+        orderer: row.orderer,
+        flagVatAmount: row.flagVatAmount,
+        deliveryDate: row.deliveryDate,
+        paymentMethod: row.paymentMethod,
+        deliveryAddr: row.deliveryAddr,
+        remark: row.remark
+      }));
+
+      await upsertOrderHeaders(payload);  // ✅ 올바른 요청 형식
+      setIsEditMode(false);
+      setEditedHeaderRows(new Set());
+      Message.showSuccess('주문 정보 저장 성공', loadInitialData);
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDetail = async () => {
+    try {
+      setLoading(true);
+      const rowsToSave = getDetailRowsToSave();
+      if (rowsToSave.length === 0) {
+        Message.showWarning('저장할 데이터가 없습니다.');
+        return;
+      }
+
+      const payload = rowsToSave.map(row => ({
+        id: row.id,
+        site: row.site,
+        compCd: row.compCd,
+        orderNo: row.orderNo,
+        orderSubNo: row.orderSubNo,
+        systemMaterialId: row.systemMaterialId,
+        deliveryDate: row.deliveryDate,
+        quantity: row.quantity,
+        unitPrice: row.unitPrice,
+        discountedAmount: row.discountedAmount,
+        remark: row.remark,
+        flagVatAmount: selectedHeader.flagVatAmount
+      }));
+
+      await upsertOrderDetails(payload);
+      setIsEditMode(false);
+      setEditedDetailRows(new Set());
+      Message.showSuccess('주문 상세 저장 성공', async () => {
+        // 헤더 재조회 후 상세 데이터 조회
+        const headers = await getOrderHeaders(searchParams);
+        setHeaderRows(headers || []);
+        if (selectedHeader?.orderNo) {
+          loadDetails(selectedHeader.orderNo);
+        }
+      });
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 편집 모드 토글 핸들러
+  const handleToggleEditMode = () => {
+    setIsEditMode(prev => !prev);
+    // 편집 모드 해제 시 수정 row 초기화
+    if (isEditMode) {
+      setEditedHeaderRows(new Set());
+    }
+  };
 
   return (
-    <Box sx={{ p: 0, minHeight: '100vh' }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: 2,
-        borderBottom: `1px solid ${getBorderColor()}`,
-        pb: 1
-      }}>
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            fontWeight: 600,
-            color: getTextColor()
-          }}
+    <Box sx={{ height: '100%', width: '100%', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* 검색 조건 영역 */}
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={koLocale}>
+        <SearchCondition
+          title="주문 검색"
+          onSearch={() => handleSearch(searchParams, true)}
+          onReset={handleReset}
         >
-          주문등록
-        </Typography>
-        <IconButton
-          onClick={() => setIsHelpModalOpen(true)}
-          sx={{
-            ml: 1,
-            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: isDarkMode 
-                ? alpha(theme.palette.primary.light, 0.1)
-                : alpha(theme.palette.primary.main, 0.05)
-            }
-          }}
-        >
-          <HelpOutlineIcon />
-        </IconButton>
-      </Box>
-
-      {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
-      <SearchCondition 
-        onSearch={handleSubmit(handleSearch)}
-        onReset={handleReset}
-      >
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="orderId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="주문ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="주문ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="customerName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="고객사"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="고객사를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="제품"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="제품명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productType"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="productType-label">제품 종류</InputLabel>
-                <Select
-                  {...field}
-                  labelId="productType-label"
-                  label="제품 종류"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="원자재">원자재</MenuItem>
-                  <MenuItem value="부자재">부자재</MenuItem>
-                  <MenuItem value="완제품">완제품</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Controller
-                name="fromDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="시작일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
-              />
-              <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-              <Controller
-                name="toDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="종료일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
-              />
-            </Stack>
-          </LocalizationProvider>
-        </Grid>
-      </SearchCondition>
-      
-      {/* 그리드 영역 */}
-      {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 주문 기본 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title="주문목록"
-              rows={orderList}
-              columns={orderColumns}
-              buttons={orderGridButtons}
-              height={450}
-              onRowClick={handleOrderSelect}
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              size="small"
+              label="주문번호"
+              name="orderNo"
+              value={orderNoInput}
+              onChange={(e) => setOrderNoInput(e.target.value)}
             />
           </Grid>
-          
-          {/* 주문 상세 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`주문상세정보 ${selectedOrder ? '- ' + selectedOrder.id : ''}`}
-              rows={orderDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
-              gridProps={{
-                editMode: 'row'
+          <Grid item xs={12} sm={6} md={3}>
+            <DatePicker
+              label="From"
+              value={parseDate(searchParams.fromDate)}
+              onChange={(newValue) => handleSearch({ ...searchParams, fromDate: formatDate(newValue) })}
+              slotProps={{
+                textField: {
+                  size: "small",
+                  fullWidth: true
+                }
               }}
             />
           </Grid>
-        </Grid>
-      )}
-      
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 주문등록 화면에서는 고객의 주문 정보를 효율적으로 관리할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 주문목록에서 특정 주문을 선택하면 해당 주문의 상세 정보를 확인할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 주문등록, 수정, 삭제 기능을 통해 주문 정보를 실시간으로 업데이트할 수 있습니다.
-          </Typography>
-        </Stack>
-      </Box>
+          <Grid item xs={12} sm={6} md={3}>
+            <DatePicker
+              label="To"
+              value={parseDate(searchParams.toDate)}
+              onChange={(newValue) => handleSearch({ ...searchParams, toDate: formatDate(newValue) })}
+              slotProps={{
+                textField: {
+                  size: "small",
+                  fullWidth: true
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>고객사</InputLabel>
+              <Select
+                value={searchParams.customerId || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? null : e.target.value;
+                  handleSearch({ ...searchParams, customerId: value });
+                }}
+                label="고객사"
+              >
+                <MenuItem value="">전체</MenuItem>
+                {vendors.map(vendor => (
+                  <MenuItem key={vendor.vendorId} value={vendor.vendorId}>
+                    {vendor.vendorName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>제품</InputLabel>
+              <Select
+                value={searchParams.materialId || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? null : e.target.value;
+                  handleSearch({ ...searchParams, materialId: value });
+                }}
+                label="제품"
+              >
+                <MenuItem value="">전체</MenuItem>
+                {products.map(product => (
+                  <MenuItem key={product.systemMaterialId} value={product.systemMaterialId}>
+                    {`${product.materialName} (${product.materialStandard})`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </SearchCondition>
+      </LocalizationProvider>
 
-      {/* 도움말 모달 */}
-      <HelpModal
-        open={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="주문등록 도움말"
-      >
-        <Typography variant="body2" color={getTextColor()}>
-          • 주문등록에서는 거래처로부터 받은 주문 정보를 등록하고 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 주문번호, 거래처 정보, 제품 정보, 주문수량 등을 관리하여 주문을 체계적으로 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 주문 정보는 생산 계획, 작업 지시, 출하 관리 등에서 활용됩니다.
-        </Typography>
-      </HelpModal>
+      {/* 기본 주문정보 영역 */}
+      <Paper sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+            <Box component="h3" sx={{ m: 0 }}>기본 주문정보</Box>
+            <Stack direction="row" spacing={1}>
+              {headerRows.some(row => row.id) ? (
+                <Button 
+                  startIcon={<EditIcon />} 
+                  onClick={handleToggleEditMode}
+                  color={isEditMode ? "primary" : "default"}
+                >
+                  {isEditMode ? '편집 중' : '편집'}
+                </Button>
+              ) : null}
+              <Button startIcon={<AddIcon />} onClick={handleAddHeader}>
+                등록
+              </Button>
+              <Button 
+                startIcon={<SaveIcon />} 
+                onClick={handleSaveHeader}
+                disabled={!isEditMode && !headerRows.some(row => !row.id)}
+              >
+                저장
+              </Button>
+              <Button
+                startIcon={<DeleteIcon />}
+                onClick={() => selectedHeader && handleDeleteHeader(selectedHeader.id)}
+                color='error'
+                disabled={!selectedHeader}
+              >
+                삭제
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          <EnhancedDataGridWrapper
+            rows={headerRows}
+            columns={headerColumns}
+            onRowClick={handleHeaderRowClick}
+            loading={loading}
+            hideToolbar
+            gridProps={{
+              editMode: 'cell',
+              getRowId: (row) => row.orderNo,
+              processRowUpdate: processHeaderRowUpdate,
+              isCellEditable: isHeaderCellEditable,
+              disableSelectionOnClick: true,
+              autoHeight: false
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* 주문 상세정보 영역 */}
+      <Collapse in={Boolean(selectedHeader)}>
+        <Paper sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+              <Box component="h3" sx={{ m: 0 }}>주문 상세정보</Box>
+              <Stack direction="row" spacing={1}>
+                <Button 
+                  startIcon={<AddIcon />} 
+                  onClick={handleAddDetail}
+                  disabled={!selectedHeader?.id}
+                >
+                  등록
+                </Button>
+                <Button 
+                  startIcon={<SaveIcon />} 
+                  onClick={handleSaveDetail}
+                  disabled={!selectedHeader?.id}
+                >
+                  저장
+                </Button>
+                <Button
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDeleteDetail}
+                  disabled={!selectedDetail}
+                  color="error"
+                >
+                  삭제
+                </Button>
+              </Stack>
+            </Stack>
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <EnhancedDataGridWrapper
+              rows={detailRows}
+              columns={detailColumns}
+              loading={loading}
+              hideToolbar
+              onRowClick={handleDetailRowClick}
+              gridProps={{
+                editMode: 'cell',
+                getRowId: (row) => row.orderSubNo,
+                processRowUpdate: processDetailRowUpdate,
+                isCellEditable: isDetailCellEditable,
+                disableSelectionOnClick: false,
+                autoHeight: false,
+                selectionModel: selectedDetail ? [selectedDetail.orderSubNo] : []
+              }}
+            />
+          </Box>
+        </Paper>
+      </Collapse>
     </Box>
   );
 };
