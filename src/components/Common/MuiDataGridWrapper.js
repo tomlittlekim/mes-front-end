@@ -13,7 +13,6 @@ import {
   Card, 
   CardContent, 
   CardHeader, 
-  Stack, 
   useTheme,
   Toolbar
 } from '@mui/material';
@@ -176,6 +175,12 @@ const MuiDataGridWrapper = ({
     rowBufferPx: 60                   // 더 많은 행 버퍼링
   };
 
+  const centeredColumns = (columns || defaultColumns).map((col) => ({
+    ...col,
+    headerAlign: col.headerAlign || 'center',
+    align: col.align || 'center',
+  }));
+
   // 그리드 컴포넌트 렌더링
   return (
     <Card 
@@ -266,7 +271,7 @@ const MuiDataGridWrapper = ({
           data-tab-id={tabId}
         >
           <DataGrid
-            columns={columns || defaultColumns}
+            columns={centeredColumns}
             rows={rows || []}
             pageSizeOptions={[25, 50, 100]}
             pagination={true}

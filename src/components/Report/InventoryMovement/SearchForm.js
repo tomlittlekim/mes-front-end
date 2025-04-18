@@ -1,7 +1,11 @@
 import React from 'react';
-import { Grid, TextField } from '@mui/material';
+import { Grid, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Controller } from 'react-hook-form';
-// DatePicker 등 필요한 컴포넌트 추가 import 필요
+// DatePicker -> DateRangePicker 관련 import 추가
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import ko from "date-fns/locale/ko"; 
+import DateRangePicker from '../../Common/DateRangePicker'; // 사용자 정의 DateRangePicker 컴포넌트 경로
 
 /**
  * 입출고 현황 검색 폼
@@ -11,68 +15,34 @@ import { Controller } from 'react-hook-form';
  */
 const SearchForm = ({ control, handleDateRangeChange }) => {
   return (
-    <Grid container spacing={2} alignItems="center">
-      <Grid item xs={12} sm={6} md={4}>
-        {/* 입출고일자 범위 (DateRangePicker 필요) */}
-        <Controller
-          name="movementDateRange"
-          control={control}
-          render={({ field }) => (
-            <TextField 
-              {...field} 
-              label="입출고일자 범위 (시작일)" // 임시
-              type="date" 
-              fullWidth 
-              InputLabelProps={{ shrink: true }}
-              onChange={(e) => {
-                const startDate = e.target.value;
-                const endDate = field.value ? field.value[1] : null;
-                field.onChange([startDate, endDate]);
-                if (handleDateRangeChange) handleDateRangeChange([startDate, endDate]);
-              }} 
-            />
-          )}
-        />
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+      <Grid container spacing={2} alignItems="center">
+        {/* 날짜 범위 필드 */} 
+        <Grid item xs={12} sm={12} md={12}> {/* 전체 너비 사용 */} 
+          <Controller
+            name="movementDateRange"
+            control={control}
+            defaultValue={[null, null]} // 기본값 배열로 설정
+            render={({ field }) => (
+              <DateRangePicker
+                  startDate={field.value?.[0]}
+                  endDate={field.value?.[1]}
+                  onRangeChange={(startDate, endDate) => {
+                      field.onChange([startDate, endDate]); 
+                      if (handleDateRangeChange) {
+                        handleDateRangeChange([startDate, endDate]);
+                      }
+                  }}
+                  startLabel="시작일"
+                  endLabel="종료일"
+                  label="입출고일자"
+                  size="small"
+              />
+            )}
+          />
+        </Grid>
       </Grid>
-       <Grid item xs={12} sm={6} md={4}>
-        <Controller
-          name="movementEndDate"
-          control={control}
-          render={({ field }) => (
-            <TextField 
-              {...field} 
-              label="입출고일자 범위 (종료일)" // 임시
-              type="date" 
-              fullWidth 
-              InputLabelProps={{ shrink: true }}
-              onChange={(e) => {
-                const endDate = e.target.value;
-                const startDate = field.value ? field.value[0] : null;
-                field.onChange([startDate, endDate]);
-                if (handleDateRangeChange) handleDateRangeChange([startDate, endDate]);
-              }} 
-            />
-          )}
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4}>
-        {/* 품목 선택 (Autocomplete 필요) */}
-        <Controller
-          name="item"
-          control={control}
-          defaultValue=""
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="품목"
-              fullWidth
-              placeholder="품목 코드 또는 이름"
-              InputLabelProps={{ shrink: true }}
-            />
-          )}
-        />
-      </Grid>
-    </Grid>
+    </LocalizationProvider>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './ProductionResultManagement.css';
-import { Grid, Box, IconButton, Stack, Typography, useTheme, alpha } from '@mui/material';
+import { Grid, Box, IconButton, Stack, Typography, useTheme, alpha, Alert } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DOMAINS, useDomain } from '../../../contexts/DomainContext';
 import HelpModal from '../../Common/HelpModal';
@@ -9,7 +9,7 @@ import { SearchCondition } from '../../Common';
 import WorkOrderList from './components/WorkOrderList';
 import ProductionResultList from './components/ProductionResultList';
 import SearchForm from './SearchForm';
-import DefectInfoModal from './components/DefectInfoModal'; // 불량정보 모달 컴포넌트 추가
+import DefectInfoModal from './components/DefectInfoModal';
 import { useProductionResultManagement } from './hooks/useProductionResultManagement';
 
 /**
@@ -40,7 +40,7 @@ const ProductionResultManagement = (props) => {
   ]);
 
   const {
-    // 검색폼 상태 및 핸들러
+    // 검색폼 관련
     control,
     handleSubmit,
     reset,
@@ -49,23 +49,24 @@ const ProductionResultManagement = (props) => {
     handleReset,
     handleSearch,
 
-    // 작업지시 관련 상태
+    // 작업지시 관련
     isLoading,
     workOrderList,
     selectedWorkOrder,
     handleWorkOrderSelect,
 
-    // 생산실적 관련 상태
+    // 생산실적 관련
     productionResultList,
-    productionResult,
     setProductionResultList,
+    productionResult,
     setProductionResult,
     handleCreateResult,
+    handleCreateIndependentResult, // 독립형 생산실적 생성 함수
     handleSave,
     handleDelete,
     handleProductionResultSelect,
 
-    // 불량정보 모달 관련 상태 및 핸들러
+    // 불량정보 모달 관련
     isDefectInfoModalOpen,
     openDefectInfoModal,
     closeDefectInfoModal,
@@ -76,6 +77,7 @@ const ProductionResultManagement = (props) => {
 
     // 옵션 데이터
     equipmentOptions,
+    productOptions, // 제품 옵션 목록
 
     // 리프레시 키
     refreshKey
@@ -147,9 +149,28 @@ const ProductionResultManagement = (props) => {
           <SearchForm
               control={control}
               equipmentOptions={equipmentOptions}
+              productOptions={productOptions}
               handleDateRangeChange={handleDateRangeChange}
           />
         </SearchCondition>
+
+        {/* 신규 기능 안내 메시지 */}
+        <Alert
+            severity="info"
+            sx={{
+              mb: 2,
+              '& .MuiAlert-message': {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }
+            }}
+        >
+          <Typography variant="body2" align="center">
+            작업지시 없이도 생산실적을 등록할 수 있습니다.
+            제품ID는 필수 입력 항목입니다.
+          </Typography>
+        </Alert>
 
         {/* 그리드 영역 */}
         {!isLoading && (
@@ -161,6 +182,7 @@ const ProductionResultManagement = (props) => {
                     onRowClick={handleWorkOrderSelect}
                     tabId={props.tabId}
                     height={450}  // 높이 일치
+                    productOptions={productOptions} // productOptions 전달 확인
                 />
               </Grid>
 
@@ -171,9 +193,11 @@ const ProductionResultManagement = (props) => {
                     selectedWorkOrder={selectedWorkOrder}
                     onRowClick={handleProductionResultSelect}
                     onCreateResult={handleCreateResult}
+                    onCreateIndependentResult={handleCreateIndependentResult}
                     onSave={handleSave}
                     onDelete={handleDelete}
                     equipmentOptions={equipmentOptions}
+                    productOptions={productOptions} // 제품 옵션 목록 확인
                     setProductionResultList={setProductionResultList}
                     setProductionResult={setProductionResult}
                     productionResult={productionResult}
@@ -193,10 +217,13 @@ const ProductionResultManagement = (props) => {
         }}>
           <Stack spacing={1}>
             <Typography variant="body2" color={getTextColor()}>
-              • 생산실적등록 화면에서는 작업지시에 따른 생산실적을 등록하고 관리할 수 있습니다.
+              • 생산실적등록 화면에서는 생산실적을 등록하고 관리할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 작업지시목록에서 특정 작업지시를 선택하면 해당 작업지시의 생산실적을 등록할 수 있습니다.
+              • 작업지시와 연계하여 생산실적을 등록하거나, 작업지시 없이 독립적으로 생산실적을 등록할 수 있습니다.
+            </Typography>
+            <Typography variant="body2" color={getTextColor()}>
+              • 생산실적 등록 시 제품ID는 필수 입력 항목입니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
               • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 기록하여 생산이력을 관리합니다.
@@ -217,7 +244,13 @@ const ProductionResultManagement = (props) => {
             • 생산실적등록에서는 생산 작업의 실적 정보를 등록하고 관리할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 작업지시목록에서 작업지시를 선택한 후 등록 버튼을 클릭하여 생산실적을 등록합니다.
+            • 두 가지 방식으로 생산실적을 등록할 수 있습니다:
+          </Typography>
+          <Typography variant="body2" color={getTextColor()} paragraph sx={{ pl: 2 }}>
+            1. 작업지시목록에서 작업지시를 선택한 후 '등록' 버튼을 클릭 (작업지시 연계)
+          </Typography>
+          <Typography variant="body2" color={getTextColor()} paragraph sx={{ pl: 2 }}>
+            2. '독립 생산실적' 버튼을 클릭하여 작업지시 없이 등록 (제품ID 직접 입력 필요)
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 양품수량, 불량수량을 입력하면 자동으로 진척률과 불량률이 계산됩니다.

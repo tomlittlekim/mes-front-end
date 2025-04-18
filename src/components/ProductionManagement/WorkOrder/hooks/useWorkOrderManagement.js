@@ -28,9 +28,15 @@ export const useWorkOrderManagement = (tabId) => {
     defaultValues: {
       prodPlanId: '',
       productId: '',
+      productName: '',
+      materialCategory: '',
       workOrderId: '',
       state: '',
-      dateRange: {
+      planStartDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      planEndDateRange: {
         startDate: null,
         endDate: null
       }
@@ -44,6 +50,7 @@ export const useWorkOrderManagement = (tabId) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [productMaterials, setProductMaterials] = useState([]);
 
   // 그리드 유틸리티 훅 사용
   const { formatDateToYYYYMMDD, generateId } = useGridUtils();
@@ -116,19 +123,58 @@ export const useWorkOrderManagement = (tabId) => {
       }
   `;
 
+  const MATERIALS_QUERY = gql`
+      query getAllMaterials {
+          getAllMaterials {
+              materialType
+              categories {
+                  materialCategory
+                  materials {
+                      systemMaterialId
+                      userMaterialId
+                      materialName
+                      materialStandard
+                      unit
+                      materialType
+                      materialCategory
+                  }
+              }
+          }
+      }
+  `;
+
   // 새 작업지시 행 생성 함수
   const createNewWorkOrder = useCallback(() => {
     const currentDate = new Date();
     const currentUser = loginUser.loginId;
     const newId = generateId();
 
+    // 선택된 생산계획이 없으면 기본값 사용
+    if (!selectedPlan) {
+      return {
+        id: newId,
+        workOrderId: '자동입력',
+        prodPlanId: '',
+        productId: '',
+        orderQty: 0,
+        shiftType: 'DAY',
+        state: 'PLANNED', // 기본값
+        flagActive: true,
+        createUser: currentUser,
+        createDate: currentDate,
+        updateUser: currentUser,
+        updateDate: currentDate
+      };
+    }
+
+    // 선택된 생산계획의 정보를 그대로 사용
     return {
       id: newId,
       workOrderId: '자동입력',
-      prodPlanId: selectedPlan ? selectedPlan.prodPlanId : '',
-      productId: selectedPlan ? selectedPlan.productId : '',
-      orderQty: selectedPlan ? selectedPlan.planQty : 0,
-      shiftType: selectedPlan ? selectedPlan.shiftType || 'DAY' : 'DAY',
+      prodPlanId: selectedPlan.prodPlanId,
+      productId: selectedPlan.productId,
+      orderQty: selectedPlan.planQty,
+      shiftType: selectedPlan.shiftType || 'DAY',
       state: 'PLANNED', // 기본값
       flagActive: true,
       createUser: currentUser,
@@ -205,9 +251,15 @@ export const useWorkOrderManagement = (tabId) => {
     reset({
       prodPlanId: '',
       productId: '',
+      productName: '',
+      materialCategory: '',
       workOrderId: '',
       state: '',
-      dateRange: {
+      planStartDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      planEndDateRange: {
         startDate: null,
         endDate: null
       }
@@ -226,33 +278,100 @@ export const useWorkOrderManagement = (tabId) => {
     // 날짜 형식 변환 - null 값도 허용
     const filterData = {...data};
 
-    // dateRange 객체에서 시작일 범위를 추출하여 필터 데이터로 변환
-    if (filterData.dateRange) {
-      if (filterData.dateRange.startDate) {
-        try {
-          filterData.planStartDateFrom = format(filterData.dateRange.startDate, 'yyyy-MM-dd');
-        } catch (error) {
-          console.error("Invalid startDate:", error);
-          filterData.planStartDateFrom = null;
-        }
+    // planStartDateRange 객체에서 시작일 범위를 추출하여 필터 데이터로 변환
+    if (filterData.planStartDateRange) {
+      if (filterData.planStartDateRange.startDate) {
+        filterData.planStartDateFrom = filterData.planStartDateRange.startDate;
       }
-
-      if (filterData.dateRange.endDate) {
-        try {
-          filterData.planStartDateTo = format(filterData.dateRange.endDate, 'yyyy-MM-dd');
-        } catch (error) {
-          console.error("Invalid endDate:", error);
-          filterData.planStartDateTo = null;
-        }
+      if (filterData.planStartDateRange.endDate) {
+        filterData.planStartDateTo = filterData.planStartDateRange.endDate;
       }
+      delete filterData.planStartDateRange;
+    }
 
-      // dateRange 객체 제거 (GraphQL에 불필요한 데이터 전송 방지)
-      delete filterData.dateRange;
+    // planEndDateRange 객체에서 종료일 범위를 추출하여 필터 데이터로 변환
+    if (filterData.planEndDateRange) {
+      if (filterData.planEndDateRange.startDate) {
+        filterData.planEndDateFrom = filterData.planEndDateRange.startDate;
+      }
+      if (filterData.planEndDateRange.endDate) {
+        filterData.planEndDateTo = filterData.planEndDateRange.endDate;
+      }
+      delete filterData.planEndDateRange;
     }
 
     // state 필드 처리 - 값이 있으면 배열로 변환
     if (filterData.state) {
       filterData.state = [filterData.state]; // 단일 값을 배열로 변환
+    }
+
+    // productName 값이 있으면, 해당 제품명과 일치하는 제품들의 systemMaterialId를 찾아 필터링
+    if (filterData.productName && productMaterials.length > 0) {
+      const matchingProducts = productMaterials.filter(m => 
+        m.materialName?.toLowerCase().includes(filterData.productName.toLowerCase())
+      );
+      
+      if (matchingProducts.length > 0) {
+        // 일치하는 제품들의 systemMaterialId를 배열로 만들어 필터에 추가
+        const matchingProductIds = matchingProducts.map(m => m.systemMaterialId);
+        // 이미 productId 값이 있으면 교집합으로 필터링
+        if (filterData.productId) {
+          const currentProductId = filterData.productId;
+          if (matchingProductIds.includes(currentProductId)) {
+            // 기존 productId가 matchingProductIds에 포함되면 그대로 유지
+            filterData.productId = currentProductId;
+          } else {
+            // 일치하는 항목이 없으면 빈 결과가 나오도록 존재하지 않는 ID 설정
+            filterData.productId = 'NO_MATCH_PRODUCT_ID';
+          }
+        } else {
+          // productId 값이 없었으면 matchingProductIds 중 하나라도 일치하면 결과에 포함되도록 설정
+          filterData.productIds = matchingProductIds;
+        }
+      } else {
+        // 일치하는 제품이 없으면 빈 결과가 나오도록 존재하지 않는 ID 설정
+        filterData.productId = 'NO_MATCH_PRODUCT_ID';
+      }
+      // 검색 후에는 제품명 조건 제거
+      delete filterData.productName;
+    }
+
+    // materialCategory 값이 있으면, 해당 유형과 일치하는 제품들의 systemMaterialId를 찾아 필터링
+    if (filterData.materialCategory && productMaterials.length > 0) {
+      const matchingProducts = productMaterials.filter(m => 
+        m.materialCategory?.toLowerCase().includes(filterData.materialCategory.toLowerCase())
+      );
+      
+      if (matchingProducts.length > 0) {
+        // 일치하는 제품들의 systemMaterialId를 배열로 만들어 필터에 추가
+        const matchingProductIds = matchingProducts.map(m => m.systemMaterialId);
+        
+        // 이미 productIds 값이 있으면 교집합으로 필터링
+        if (filterData.productIds) {
+          filterData.productIds = filterData.productIds.filter(id => matchingProductIds.includes(id));
+          if (filterData.productIds.length === 0) {
+            // 교집합이 없으면 빈 결과가 나오도록 존재하지 않는 ID 설정
+            filterData.productId = 'NO_MATCH_PRODUCT_ID';
+            delete filterData.productIds;
+          }
+        } 
+        // 이미 productId 값이 있으면 해당 ID가 matchingProductIds에 포함되는지 확인
+        else if (filterData.productId && filterData.productId !== 'NO_MATCH_PRODUCT_ID') {
+          if (!matchingProductIds.includes(filterData.productId)) {
+            // 포함되지 않으면 빈 결과가 나오도록 존재하지 않는 ID 설정
+            filterData.productId = 'NO_MATCH_PRODUCT_ID';
+          }
+        }
+        // 둘 다 없으면 matchingProductIds 설정
+        else if (!filterData.productId || filterData.productId !== 'NO_MATCH_PRODUCT_ID') {
+          filterData.productIds = matchingProductIds;
+        }
+      } else {
+        // 일치하는 제품이 없으면 빈 결과가 나오도록 존재하지 않는 ID 설정
+        filterData.productId = 'NO_MATCH_PRODUCT_ID';
+      }
+      // 검색 후에는 제품유형 조건 제거
+      delete filterData.materialCategory;
     }
 
     // 생산계획 검색
@@ -271,7 +390,7 @@ export const useWorkOrderManagement = (tabId) => {
       setIsLoading(false);
       setPlanList([]);
     });
-  }, [executeQuery, PRODUCTION_PLANS_QUERY, formatPlanGridData, setUpdatedRows, setAddRows, reset]);
+  }, [executeQuery, PRODUCTION_PLANS_QUERY, formatPlanGridData, setUpdatedRows, setAddRows, reset, productMaterials]);
 
   // 계획 선택 핸들러
   const handlePlanSelect = useCallback((params) => {
@@ -578,6 +697,11 @@ export const useWorkOrderManagement = (tabId) => {
     );
   }, [selectedWorkOrder, executeMutation, COMPLETE_WORK_ORDER_MUTATION]);
 
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = useCallback((fieldName, startDate, endDate) => {
+    setValue(fieldName, { startDate, endDate });
+  }, [setValue]);
+
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 컴포넌트 마운트 시에만 초기 데이터 로드
@@ -589,26 +713,46 @@ export const useWorkOrderManagement = (tabId) => {
           setIsLoading(true);
           // 초기 빈 검색 조건으로 데이터 로드
           const filterData = {};
-
-          executeQuery(PRODUCTION_PLANS_QUERY, { filter: filterData })
-          .then(response => {
-            if (response.data && isMounted) {
-              const formattedData = formatPlanGridData(response.data);
-              setPlanList(formattedData);
-              setRefreshKey(prev => prev + 1);
-            }
-            if (isMounted) {
-              setIsLoading(false);
-            }
-          })
-          .catch(error => {
-            console.error("Error fetching production plans:", error);
-            if (isMounted) {
-              Message.showError({ message: '데이터를 불러오는데 실패했습니다.' });
-              setIsLoading(false);
-              setPlanList([]);
-            }
-          });
+          
+          // 생산계획 데이터 조회
+          const planResponse = await executeQuery(PRODUCTION_PLANS_QUERY, { filter: filterData });
+          if (planResponse.data && isMounted) {
+            const formattedData = formatPlanGridData(planResponse.data);
+            setPlanList(formattedData);
+            setRefreshKey(prev => prev + 1);
+          }
+          
+          // 제품 마스터 데이터 조회
+          const materialsResponse = await executeQuery(MATERIALS_QUERY);
+          if (materialsResponse.data && isMounted) {
+            const materials = [];
+            
+            // 제품 정보 추출
+            const allMaterials = materialsResponse.data.getAllMaterials || [];
+            allMaterials.forEach(materialTypeGroup => {
+              const materialType = materialTypeGroup.materialType;
+              const categories = materialTypeGroup.categories || [];
+              
+              categories.forEach(category => {
+                const materialCategory = category.materialCategory;
+                const categoryMaterials = category.materials || [];
+                
+                categoryMaterials.forEach(material => {
+                  materials.push({
+                    ...material,
+                    materialType,
+                    materialCategory
+                  });
+                });
+              });
+            });
+            
+            setProductMaterials(materials);
+          }
+          
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
       } catch (err) {
         console.error("Initial data load error:", err);
@@ -669,6 +813,8 @@ export const useWorkOrderManagement = (tabId) => {
     handleProcessRowUpdate,
     getTextColor,
     getBgColor,
-    getBorderColor
+    getBorderColor,
+    productMaterials,
+    handleDateRangeChange
   };
 };

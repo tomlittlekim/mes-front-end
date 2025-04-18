@@ -3,29 +3,24 @@ import './WarehouseManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
   useTheme,
-  Stack, alpha, IconButton
+  alpha, IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import {EnhancedDataGridWrapper, MuiDataGridWrapper, SearchCondition} from '../Common';
+import {EnhancedDataGridWrapper, SearchCondition} from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
-import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
+import {deleteWarehouse, getWarehouse, saveWarehouse} from "../../api/standardInfo/wareHouseApi";
+import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
+import {getGridFactory} from "../../api/standardInfo/factoryApi";
 
 const WarehouseManagement = (props) => {
   // 현재 테마 가져오기
@@ -40,7 +35,6 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      // flagActive: null
     }
   });
 
@@ -57,19 +51,113 @@ const WarehouseManagement = (props) => {
 
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
+  // 컴포넌트 마운트 시 초기 데이터 로드
+  useEffect(() => {
+    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
+    const timer = setTimeout(() => {
+
+      getWarehouse(
+          getValues()
+      ).then((res) => {
+        if (res.errors) {
+        } else {
+          const rowsWithId = res.map((row) => ({
+            ...row,
+            id: row.warehouseId,
+            createDate: row.createDate?.replace("T", " ") || "",
+            updateDate: row.updateDate?.replace("T", " ") || ""
+          }));
+          setWarehouseList(rowsWithId);
+        }
+        setIsLoading(false);
+      }).catch((err) => {
+        setIsLoading(false);
+      });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    fetchGridCodesByCodeClassId("CD20250401114109083",setWarehouseTypeOptions)
+  }, []);
+
+  useEffect(() => {
+    getGridFactory()
+        .then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.map((row) => ({
+              value: row.factoryId,
+              label: row.factoryId
+            }));
+            setFactoryTypeOptions(options);
+
+            const models = data.map((row) => ({
+              factoryId: row.factoryId,
+              factoryName: row.factoryName,
+              factoryCode: row.factoryCode
+            }));
+            setFactoryModel(models);
+
+          }
+        }).catch((err) => console.error(err));
+  }, []);
+
+  // 창고 목록 그리드 컬럼 정의
+  const warehouseColumns = [
+    {
+      field: 'factoryId',
+      headerName: '공장 ID',
+      width: 100,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: factoryTypeOptions,
+      flex:1
+    },
+    { field: 'factoryName', headerName: '공장명', width: 150 },
+    { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
+    {
+      field: 'warehouseName',
+      headerName: '창고 명',
+      width: 100,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'warehouseType',
+      headerName: '창고 유형',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: warehouseTypeOptions,
+    },
+    { field: 'createUser', headerName: '등록자', width: 100 },
+    { field: 'createDate', headerName: '등록일', width: 150 },
+    { field: 'updateUser', headerName: '수정자', width: 100 },
+    { field: 'updateDate', headerName: '수정일', width: 150 }
+  ];
+
   // 도메인별 색상 설정
   const getTextColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
     }
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
-  
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
   };
   
   const getBorderColor = () => {
@@ -86,9 +174,212 @@ const WarehouseManagement = (props) => {
       factoryName: '',
       warehouseId: '',
       warehouseName: '',
-      // flagActive: null
     });
   };
+
+  // 검색 실행 함수
+  const handleSearch = (data) => {
+    setUpdatedRows([]);
+    setAddRows([]);
+
+    getWarehouse(data)
+        .then((res) => {
+          const rowsWithId = res.map((row) => ({
+            ...row,
+            id: row.warehouseId,
+            createDate: row.createDate?.replace("T", " ") || "",
+            updateDate: row.updateDate?.replace("T", " ") || ""
+          }));
+          setWarehouseList(rowsWithId);
+        })
+        .catch((err) => {
+          console.error("창고 목록 불러오기 실패", err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+  };
+
+  // 창고 선택 핸들러
+  const handleWarehouseSelect = (params) => {
+    const warehouse = warehouseList.find(w => w.id === params.id);
+    setSelectedWarehouse(warehouse);
+  };
+
+  // 행 추가 핸들러
+  const handleAddRow = () => {
+    const newWarehouse = {
+      id: `NEW_${Date.now()}`,
+      factoryId: '',
+      factoryName: '',
+      warehouseId: '자동입력',
+      warehouseName: '',
+      warehouseType: '',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
+    };
+    
+    setWarehouseList([newWarehouse, ...warehouseList]);
+  };
+
+
+  const transformRowForMutation = (row) => ({
+    factoryId: row.factoryId,
+    warehouseName: row.warehouseName,
+    warehouseType: row.warehouseType,
+  });
+
+  const transformRowForUpdate = (row) => ({
+    warehouseId: row.warehouseId,
+    factoryId: row.factoryId,
+    warehouseName: row.warehouseName,
+    warehouseType: row.warehouseType,
+  });
+
+  // 저장 버튼 클릭 핸들러
+  const handleSave = () => {
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      warehouseName: '창고명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
+    const createdWarehouseInputs = addRows.map(transformRowForMutation);
+    const updatedWarehouseInputs = updatedRows.map(transformRowForUpdate);
+
+    saveWarehouse(
+        {
+          createdRows: createdWarehouseInputs,
+          updatedRows: updatedWarehouseInputs,
+        }
+    ).then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
+  };
+
+  // 삭제 버튼 클릭 핸들러
+  const handleDelete = () => {
+    if (!selectedWarehouse) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '삭제할 창고를 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const isDeleteAddRows = addRows.find(f => f.id === selectedWarehouse.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedWarehouse.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedWarehouse.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedWarehouse.id);
+      setUpdatedRows(updatedRowsLit)
+    }
+
+    Swal.fire({
+      title: '삭제 확인',
+      text: '정말 삭제하시겠습니까?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 백엔드 삭제 요청 (GraphQL)
+        deleteWarehouse(
+            {warehouseId: selectedWarehouse.warehouseId}
+        ).then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = warehouseList.filter(f => f.id !== selectedWarehouse.id);
+                setWarehouseList(updatedList);
+                setSelectedWarehouse(null);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
+      }
+    });
+  };
+
+  // 창고 목록 그리드 버튼
+  const warehouseGridButtons = [
+    { label: '등록', onClick: handleAddRow, icon: <AddIcon /> },
+    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
+    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
+  ];
 
   function handleProcessRowUpdate(newRow, oldRow) {
     const isNewRow = oldRow.id.startsWith('NEW_');
@@ -145,425 +436,6 @@ const WarehouseManagement = (props) => {
 
     return { ...oldRow, ...newRow };
   }
-
-
-  // 검색 실행 함수
-  const handleSearch = (data) => {
-    setUpdatedRows([]);
-    setAddRows([]);
-
-    const query = `
-      query getWarehouse($filter: WarehouseFilter) {
-        getWarehouse(filter: $filter) {
-          factoryId
-          factoryName
-          warehouseId
-          warehouseName
-          warehouseType
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        {filter: data}
-    ).then((data) => {
-      if (data.errors) {
-      } else {
-        const rowsWithId = data.getWarehouse.map((row, index) => ({
-          ...row,
-          id: row.warehouseId ,
-          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
-          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
-        }));
-        setWarehouseList(rowsWithId);
-        // setRefreshKey(prev => prev + 1);
-      }
-      setIsLoading(false);
-    }).catch((err) => {
-      setIsLoading(false);
-    });
-  };
-
-  // 창고 선택 핸들러
-  const handleWarehouseSelect = (params) => {
-    const warehouse = warehouseList.find(w => w.id === params.id);
-    setSelectedWarehouse(warehouse);
-  };
-
-  // 행 추가 핸들러
-  const handleAddRow = () => {
-    const newWarehouse = {
-      id: `NEW_${Date.now()}`,
-      factoryId: '',
-      factoryName: '',
-      warehouseId: '자동입력',
-      warehouseName: '',
-      warehouseType: '',
-      // flagActive: 'Y',
-      createUser: '자동입력',
-      createDate: '자동입력',
-      updateUser: '자동입력',
-      updateDate: '자동입력'
-    };
-    
-    setWarehouseList([newWarehouse, ...warehouseList]);
-  };
-
-
-  const transformRowForMutation = (row) => ({
-    factoryId: row.factoryId,
-    warehouseName: row.warehouseName,
-    warehouseType: row.warehouseType,
-    // flagActive: row.flagActive
-  });
-
-  const transformRowForUpdate = (row) => ({
-    warehouseId: row.warehouseId,
-    factoryId: row.factoryId,
-    warehouseName: row.warehouseName,
-    warehouseType: row.warehouseType,
-    // flagActive: row.flagActive
-  });
-
-
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
-    const addRowQty = addRows.length;
-    const updateRowQty = updatedRows.length;
-
-    if(addRowQty + updateRowQty === 0 ){
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '변경사항이 존재하지 않습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    // 필수 필드 검증 함수
-    const validateRequiredFields = (rows, fieldMapping) => {
-      for (const row of rows) {
-        for (const field of Object.keys(fieldMapping)) {
-          if (row[field] === undefined || row[field] === null || row[field] === '') {
-            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
-            return false;
-          }
-        }
-      }
-      return true;
-    };
-
-    // 필수 필드 검증
-    const requiredFields = {
-      warehouseName: '창고명'
-    };
-
-    if (!validateRequiredFields(addRows, requiredFields) ||
-        !validateRequiredFields(updatedRows, requiredFields)) {
-      return;
-    }
-
-
-
-    const createWarehouseMutation = `
-      mutation saveWarehouse($createdRows: [WarehouseInput], $updatedRows: [WarehouseUpdate]) {
-        saveWarehouse(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
-    const createdWarehouseInputs = addRows.map(transformRowForMutation);
-    const updatedWarehouseInputs = updatedRows.map(transformRowForUpdate);
-
-    graphFetch(
-        createWarehouseMutation,
-        {
-          createdRows: createdWarehouseInputs,
-          updatedRows: updatedWarehouseInputs,
-        }
-    ).then((data) => {
-          if (data.errors) {
-            console.error("GraphQL errors:", data.errors);
-          } else {
-            handleSearch(getValues());
-            Swal.fire({
-              icon: 'success',
-              title: '성공',
-              text: '저장되었습니다.',
-              confirmButtonText: '확인'
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error save factory:", error);
-        });
-  };
-
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
-    if (!selectedWarehouse) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 창고를 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedWarehouse.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedWarehouse.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedWarehouse.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedWarehouse.id);
-      setUpdatedRows(updatedRowsLit)
-    }
-
-    const deleteWarehouseMutation = `
-      mutation deleteWarehouse($warehouseId: String!) {
-        deleteWarehouse(warehouseId: $warehouseId)
-      }
-    `;
-
-    Swal.fire({
-      title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // 백엔드 삭제 요청 (GraphQL)
-
-
-        graphFetch(
-            deleteWarehouseMutation,
-            {warehouseId: selectedWarehouse.warehouseId}
-        ).then((data) => {
-              if (data.errors) {
-                console.error("GraphQL errors:", data.errors);
-                Swal.fire({
-                  icon: 'error',
-                  title: '삭제 실패',
-                  text: '삭제 중 오류가 발생했습니다.'
-                });
-              } else {
-                // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = warehouseList.filter(f => f.id !== selectedWarehouse.id);
-                setWarehouseList(updatedList);
-                setSelectedWarehouse(null);
-                Swal.fire({
-                  icon: 'success',
-                  title: '성공',
-                  text: '삭제되었습니다.',
-                  confirmButtonText: '확인'
-                });
-              }
-            })
-            .catch((error) => {
-              console.error("Error deleting factory:", error);
-              Swal.fire({
-                icon: 'error',
-                title: '삭제 실패',
-                text: '삭제 중 예외가 발생했습니다.'
-              });
-            });
-      }
-    });
-  };
-
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      const query = `
-      query getWarehouse($filter: WarehouseFilter) {
-        getWarehouse(filter: $filter) {
-          factoryId
-          factoryName
-          warehouseId
-          warehouseName
-          warehouseType
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-      graphFetch(
-          query,
-          {filter: getValues() }
-      ).then((data) => {
-        if (data.errors) {
-        } else {
-          const rowsWithId = data.getWarehouse.map((row, index) => ({
-            ...row,
-            id: row.warehouseId ,
-            createDate: row.createDate ? row.createDate.replace("T", " ") : "",
-            updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
-          }));
-          setWarehouseList(rowsWithId);
-        }
-        setIsLoading(false);
-      })
-          .catch((err) => {
-            setIsLoading(false);
-          });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const query = `
-      query getGridCodes($codeClassId: String!) {
-        getGridCodes(codeClassId: $codeClassId) {
-          codeId
-          codeName
-        }
-      }
-    `;
-
-    // filter 객체에 vendor type 코드 그룹을 지정합니다.
-    const variables = {
-      codeClassId: "CD20250401114109083"
-    };
-
-    graphFetch(
-        query,
-        variables
-    ).then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-          } else {
-            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getGridCodes.map((row) => ({
-              value: row.codeId,
-              label: row.codeName
-            }));
-            setWarehouseTypeOptions(options);
-          }
-        })
-        .catch((err) => console.error(err));
-  }, []);
-
-  useEffect(() => {
-    const query = `
-      query getGridFactory {
-        getGridFactory {
-          factoryId
-          factoryName
-          factoryCode
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-    ).then((data) => {
-      if (data.errors) {
-        console.error(data.errors);
-      } else {
-        // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.getGridFactory.map((row) => ({
-          value: row.factoryId,
-          label: row.factoryId
-        }));
-        setFactoryTypeOptions(options);
-
-        const models = data.getGridFactory.map((row) => ({
-          factoryId: row.factoryId,
-          factoryName: row.factoryName,
-          factoryCode: row.factoryCode
-        }));
-        setFactoryModel(models);
-
-      }
-    }).catch((err) => console.error(err));
-  }, []);
-
-  // 창고 목록 그리드 컬럼 정의
-  const warehouseColumns = [
-    {
-      field: 'factoryId',
-      headerName: '공장 ID',
-      width: 100,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: factoryTypeOptions,
-      flex:1
-    },
-    { field: 'factoryName', headerName: '공장명', width: 150 },
-    { field: 'warehouseId', headerName: '창고 ID', width: 100, flex: 1 },
-    {
-      field: 'warehouseName',
-      headerName: '창고 명',
-      width: 100,
-      editable: true,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    {
-      field: 'warehouseType',
-      headerName: '창고 유형',
-      width: 150,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: warehouseTypeOptions,
-    },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 90,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //     { value: 'Y', label: '사용' },
-    //     { value: 'N', label: '미사용' }
-    //   ]
-    // },
-    { field: 'createUser', headerName: '등록자', width: 100 },
-    { field: 'createDate', headerName: '등록일', width: 150 },
-    { field: 'updateUser', headerName: '수정자', width: 100 },
-    { field: 'updateDate', headerName: '수정일', width: 150 }
-  ];
-
-  // 창고 목록 그리드 버튼
-  const warehouseGridButtons = [
-    { label: '등록', onClick: handleAddRow, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
-  ];
-
-
-
-
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -669,28 +541,6 @@ const WarehouseManagement = (props) => {
             )}
           />
         </Grid>
-        {/*<Grid item xs={12} sm={6} md={3}>*/}
-        {/*  <Controller*/}
-        {/*    name="flagActive"*/}
-        {/*    control={control}*/}
-        {/*    render={({ field }) => (*/}
-        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
-        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
-        {/*        <Select*/}
-        {/*          {...field}*/}
-        {/*          labelId="flagActive-label"*/}
-        {/*          label="사용여부"*/}
-        {/*          displayEmpty*/}
-        {/*          notched*/}
-        {/*        >*/}
-        {/*          <MenuItem value={null}>전체</MenuItem>*/}
-        {/*          <MenuItem value="Y">사용</MenuItem>*/}
-        {/*          <MenuItem value="N">미사용</MenuItem>*/}
-        {/*        </Select>*/}
-        {/*      </FormControl>*/}
-        {/*    )}*/}
-        {/*  />*/}
-        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}

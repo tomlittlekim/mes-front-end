@@ -8,6 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ShiftTypeChip from './ShiftTypeChip';
+import ProductMaterialSelector from '../../../ProductionManagement/ProductionPlan/editors/ProductMaterialSelector';
 
 /**
  * 작업지시 목록 그리드 컴포넌트
@@ -24,6 +25,7 @@ import ShiftTypeChip from './ShiftTypeChip';
  * @param {Function} props.onStartWork - 작업 시작 핸들러
  * @param {Function} props.onCompleteWork - 작업 완료 핸들러
  * @param {string} props.tabId - 탭 ID
+ * @param {Array} props.productMaterials - 제품 정보 목록
  * @returns {JSX.Element}
  */
 const WorkOrderList = ({
@@ -37,7 +39,8 @@ const WorkOrderList = ({
   onDeleteWorkOrder,
   onStartWork,
   onCompleteWork,
-  tabId
+  tabId,
+  productMaterials = []
 }) => {
   // 상태 옵션 정의
   const stateOptions = [
@@ -73,9 +76,12 @@ const WorkOrderList = ({
       field: 'productId',
       headerName: '제품ID*',
       width: 150,
-      editable: true,
+      editable: false,
       headerAlign: 'center',
       align: 'center',
+      renderEditCell: (params) => (
+        <ProductMaterialSelector {...params} productMaterials={productMaterials} />
+      ),
       renderCell: (params) => {
         // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
         const isNewRow = params.row.id?.toString().startsWith('NEW_');
@@ -83,9 +89,49 @@ const WorkOrderList = ({
         // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
         const showRequired = isNewRow && (!params.value || params.value === '');
 
+        // productId(systemMaterialId)에 해당하는 userMaterialId 찾기
+        const material = productMaterials.find(m => m.systemMaterialId === params.value);
+        const displayValue = material ? material.userMaterialId : params.value;
+
         return (
             <Typography variant="body2" sx={{ color: showRequired ? '#f44336' : 'inherit' }}>
-              {showRequired ? '필수 입력' : params.value || ''}
+              {showRequired ? '필수 입력' : displayValue || ''}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'productName',
+      headerName: '제품명',
+      width: 180,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        // productId를 이용해 제품명 찾기
+        const material = productMaterials.find(m => m.systemMaterialId === params.row.productId);
+        const displayValue = material ? material.materialName : '';
+
+        return (
+            <Typography variant="body2">
+              {displayValue}
+            </Typography>
+        );
+      }
+    },
+    {
+      field: 'materialCategory',
+      headerName: '제품유형',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        // productId를 이용해 제품유형 찾기
+        const material = productMaterials.find(m => m.systemMaterialId === params.row.productId);
+        const displayValue = material ? material.materialCategory : '';
+
+        return (
+            <Typography variant="body2">
+              {displayValue}
             </Typography>
         );
       }
@@ -107,7 +153,7 @@ const WorkOrderList = ({
       field: 'shiftType',
       headerName: '근무타입',
       width: 120,
-      editable: true,
+      editable: false,
       headerAlign: 'center',
       align: 'center',
       renderEditCell: (params) => (
@@ -243,7 +289,7 @@ const WorkOrderList = ({
         }
       }
     }
-  ]), [shiftOptions, stateOptions]);
+  ]), [shiftOptions, stateOptions, productMaterials]);
 
   // 작업지시 목록 그리드 버튼
   const workOrderGridButtons = useMemo(() => ([

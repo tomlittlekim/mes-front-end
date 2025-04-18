@@ -26,6 +26,10 @@ import HelpModal from '../Common/HelpModal';
 import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
 import {graphFetch} from "../../api/fetchConfig";
+import {deleteEquipment, getEquipments, saveEquipment} from "../../api/standardInfo/equipmentApi";
+import {getGridFactory} from "../../api/standardInfo/factoryApi";
+import {getLineOptions} from "../../api/standardInfo/lineApi";
+import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
 
 const EquipmentManagement = (props) => {
   // 현재 테마 가져오기
@@ -69,14 +73,7 @@ const EquipmentManagement = (props) => {
     }
     return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
   };
-  
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-  
+
   const getBorderColor = () => {
     if (domain === DOMAINS.PEMS) {
       return isDarkMode ? '#3d2814' : '#f5e8d7';
@@ -84,388 +81,17 @@ const EquipmentManagement = (props) => {
     return isDarkMode ? '#1e3a5f' : '#e0e0e0';
   };
 
-  // 초기화 함수
-  const handleReset = () => {
-    reset({
-      factoryId: '',
-      factoryName: '',
-      lineId: '',
-      lineName: '',
-      equipmentId: '',
-      equipmentName: '',
-      equipmentSn: '',
-      equipmentType: '',
-    });
-  };
-
-  function handleProcessRowUpdate(newRow, oldRow) {
-    const isNewRow = oldRow.id.startsWith('NEW_');
-
-    if (newRow.equipmentBuyDate && /^\d{8}$/.test(newRow.equipmentBuyDate)) {
-      const raw = newRow.equipmentBuyDate;
-      newRow.equipmentBuyDate = `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`;
-    } else if (newRow.equipmentBuyDate && newRow.equipmentBuyDate !== oldRow.equipmentBuyDate) {
-      Message.showError({ message: `입력형식을 일치해주세요 (YYYYMMDD)` });
-      return oldRow; // rollback
-    }
-
-    if (newRow.factoryId !== oldRow.factoryId) {
-      const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
-      if (selectedFactory) {
-        newRow = {
-          ...newRow,
-          factoryName: selectedFactory.factoryName,
-          factoryCode: selectedFactory.factoryCode,
-        };
-      }
-    }
-
-    if (newRow.lineId !== oldRow.lineId) {
-      const selectedLine = lineOptions.find(opt => opt.lineId === newRow.lineId);
-      if (selectedLine) {
-        newRow = {
-          ...newRow,
-          lineName: selectedLine.lineName,
-        };
-      }
-    }
-
-    setEquipmentList((prev) => {
-      return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
-      );
-    });
-
-    if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
-      setAddRows((prevAddRows) => {
-        const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-          return [...prevAddRows, newRow];
-        }
-      });
-    }else {
-      setUpdatedRows(prevUpdatedRows => {
-        const existingIndex = prevUpdatedRows.findIndex(row => row.equipmentId === newRow.equipmentId);
-
-        if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
-          const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
-          return updated;
-        } else {
-
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
-        }
-      });
-    }
-
-    return { ...oldRow, ...newRow };
-  }
-
-  // 검색 실행 함수
-  const handleSearch = (data) => {
-    setUpdatedRows([]);
-    setAddRows([]);
-
-    const query = `
-      query getEquipments($filter: EquipmentFilter) {
-        getEquipments(filter: $filter) {
-          factoryId
-          factoryName
-          lineId
-          lineName
-          equipmentId
-          equipmentBuyDate
-          equipmentBuyVendor
-          equipmentSn
-          equipmentType
-          equipmentName
-          equipmentStatus
-          remark
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        {filter: data}
-    ).then((data) => {
-      if (data.errors) {
-      } else {
-        const rowsWithId = data.getEquipments.map((row, index) => ({
-          ...row,
-          id: row.equipmentId,
-          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
-          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
-        }));
-        setEquipmentList(rowsWithId);
-        // setRefreshKey(prev => prev + 1);
-      }
-      setIsLoading(false);
-    }).catch((err) => {
-      setIsLoading(false);
-    });
-  };
-
-  // 설비 선택 핸들러
-  const handleEquipmentSelect = (params) => {
-    const equipment = equipmentList.find(e => e.id === params.id);
-    setSelectedEquipment(equipment);
-  };
-
-
-  const transformRowForMutation = (row) => ({
-    factoryId: row.factoryId,
-    lineId: row.lineId,
-    equipmentBuyDate: row.equipmentBuyDate,
-    equipmentBuyVendor: row.equipmentBuyVendor,
-    equipmentSn: row.equipmentSn,
-    equipmentType: row.equipmentType,
-    equipmentName: row.equipmentName,
-    equipmentStatus: row.equipmentStatus,
-    remark: row.remark
-  });
-
-  const transformRowForUpdate = (row) => ({
-    factoryId: row.factoryId,
-    lineId: row.lineId,
-    equipmentId: row.equipmentId,
-    equipmentBuyDate: row.equipmentBuyDate,
-    equipmentBuyVendor: row.equipmentBuyVendor,
-    equipmentSn: row.equipmentSn,
-    equipmentType: row.equipmentType,
-    equipmentName: row.equipmentName,
-    equipmentStatus: row.equipmentStatus,
-    remark: row.remark
-  });
-
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
-    const addRowQty = addRows.length;
-    const updateRowQty = updatedRows.length;
-
-    if(addRowQty + updateRowQty === 0 ){
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '변경사항이 존재하지 않습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const createEquipmentMutation = `
-      mutation saveEquipment($createdRows: [EquipmentInput], $updatedRows: [EquipmentUpdate]) {
-        saveEquipment(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
-    // 필수 필드 검증 함수
-    const validateRequiredFields = (rows, fieldMapping) => {
-      for (const row of rows) {
-        for (const field of Object.keys(fieldMapping)) {
-          if (row[field] === undefined || row[field] === null || row[field] === '') {
-            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
-            return false;
-          }
-        }
-      }
-      return true;
-    };
-
-    // 필수 필드 검증
-    const requiredFields = {
-      equipmentName: '설비명'
-    };
-
-    if (!validateRequiredFields(addRows, requiredFields) ||
-        !validateRequiredFields(updatedRows, requiredFields)) {
-      return;
-    }
-
-
-    const createdEquipmentInputs = addRows.map(transformRowForMutation);
-    const updatedEquipmentInputs = updatedRows.map(transformRowForUpdate);
-
-    graphFetch(
-        createEquipmentMutation,
-        {
-          createdRows: createdEquipmentInputs,
-          updatedRows: updatedEquipmentInputs,
-        }
-    ).then((data) => {
-          if (data.errors) {
-            console.error("GraphQL errors:", data.errors);
-          } else {
-            handleSearch(getValues());
-            Swal.fire({
-              icon: 'success',
-              title: '성공',
-              text: '저장되었습니다.',
-              confirmButtonText: '확인'
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error save Equipment:", error);
-        });
-  };
-
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
-    if (!selectedEquipment) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 설비를 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const deleteEquipmentMutation = `
-      mutation deleteEquipment($equipmentId: String!) {
-        deleteEquipment(equipmentId: $equipmentId)
-      }
-    `;
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedEquipment.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedEquipment.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedEquipment.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedEquipment.id);
-      setUpdatedRows(updatedRowsLit)
-    }
-
-    Swal.fire({
-      title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // 백엔드 삭제 요청 (GraphQL)
-
-        graphFetch(
-            deleteEquipmentMutation,
-            {equipmentId: selectedEquipment.equipmentId}
-        ).then((data) => {
-              if (data.errors) {
-                console.error("GraphQL errors:", data.errors);
-                Swal.fire({
-                  icon: 'error',
-                  title: '삭제 실패',
-                  text: '삭제 중 오류가 발생했습니다.'
-                });
-              } else {
-                // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = equipmentList.filter(f => f.id !== selectedEquipment.id);
-                setEquipmentList(updatedList);
-                setSelectedEquipment(null);
-                Swal.fire({
-                  icon: 'success',
-                  title: '성공',
-                  text: '삭제되었습니다.',
-                  confirmButtonText: '확인'
-                });
-              }
-            })
-            .catch((error) => {
-              console.error("Error deleting factory:", error);
-              Swal.fire({
-                icon: 'error',
-                title: '삭제 실패',
-                text: '삭제 중 예외가 발생했습니다.'
-              });
-            });
-      }
-    });
-  };
-
-  // 등록 버튼 클릭 핸들러
-  const handleAdd = () => {
-    const newEquipment = {
-      id: `NEW_${Date.now()}`,
-      factoryId: '',
-      factoryName: '',
-      lineId: '',
-      lineName: '',
-      equipmentId: '자동입력',
-      equipmentBuyDate: '',
-      equipmentBuyVendor: '',
-      equipmentSn: '',
-      equipmentType: '',
-      equipmentName: '',
-      equipmentStatus: '',
-      remark: '',
-      createUser: '자동입력',
-      createDate: '자동입력',
-      updateUser: '자동입력',
-      updateDate: '자동입력'
-    };
-    
-    setEquipmentList([newEquipment, ...equipmentList]);
-    setSelectedEquipment(newEquipment);
-  };
-
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getEquipments($filter: EquipmentFilter) {
-        getEquipments(filter: $filter) {
-          factoryId
-          factoryName
-          lineId
-          lineName
-          equipmentId
-          equipmentBuyDate
-          equipmentBuyVendor
-          equipmentSn
-          equipmentType
-          equipmentName
-          equipmentStatus
-          remark
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
 
-
-      graphFetch(
-          query,
-          {filter: getValues()}
+      getEquipments(
+          getValues()
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.getEquipments.map((row, index) => ({
+          const rowsWithId = data.map((row, index) => ({
             ...row,
             id: row.equipmentId,
             createDate: row.createDate ? row.createDate.replace("T", " ") : "",
@@ -485,56 +111,34 @@ const EquipmentManagement = (props) => {
 
   //공장 정보 불러오기
   useEffect(() => {
-    const query = `
-      query getGridFactory {
-        getGridFactory {
-          factoryId
-          factoryName
-          factoryCode
-        }
-      }
-    `;
+    getGridFactory()
+        .then((data) => {
+          if (data.errors) {
+            console.error(data.errors);
+          } else {
+            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
+            const options = data.map((row) => ({
+              value: row.factoryId,
+              label: row.factoryId
+            }));
+            setFactoryTypeOptions(options);
 
-    graphFetch(
-        query,
-    ).then((data) => {
-      if (data.errors) {
-        console.error(data.errors);
-      } else {
-        // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-        const options = data.getGridFactory.map((row) => ({
-          value: row.factoryId,
-          label: row.factoryId
-        }));
-        setFactoryTypeOptions(options);
+            const models = data.map((row) => ({
+              factoryId: row.factoryId,
+              factoryName: row.factoryName,
+              factoryCode: row.factoryCode
+            }));
+            setFactoryModel(models);
 
-        const models = data.getGridFactory.map((row) => ({
-          factoryId: row.factoryId,
-          factoryName: row.factoryName,
-          factoryCode: row.factoryCode
-        }));
-        setFactoryModel(models);
-
-      }
-    }).catch((err) => console.error(err));
+          }
+        }).catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
-    const query = `
-    query getLineOptions {
-      getLineOptions {
-        factoryId
-        lineId
-        lineName
-      }
-    }
-  `;
-
-    graphFetch(
-        query,
-    ).then((data) => {
+    getLineOptions()
+        .then((data) => {
           if (!data.errors) {
-            setLineOptions(data.getLineOptions);
+            setLineOptions(data);
           }
         })
         .catch((err) => console.error(err));
@@ -544,17 +148,6 @@ const EquipmentManagement = (props) => {
     fetchGridCodesByCodeClassId("CD20250402135319458", setEquipmentStatusOptions);
     fetchGridCodesByCodeClassId("CD20250402135319708", setEquipmentTypeOptions);
   }, []);
-
-
-  useEffect(()=>{
-    console.log("addRows: ", addRows )
-  },[addRows])
-
-
-  useEffect(()=>{
-    console.log("updatedRows: ", updatedRows )
-  },[updatedRows])
-
 
   // 설비 목록 그리드 컬럼 정의
   const equipmentColumns = [
@@ -649,6 +242,214 @@ const EquipmentManagement = (props) => {
     { field: 'updateDate', headerName: '수정일', width: 130 }
   ];
 
+  // 초기화 함수
+  const handleReset = () => {
+    reset({
+      factoryId: '',
+      factoryName: '',
+      lineId: '',
+      lineName: '',
+      equipmentId: '',
+      equipmentName: '',
+      equipmentSn: '',
+      equipmentType: '',
+    });
+  };
+
+  // 검색 실행 함수
+  const handleSearch = (data) => {
+    setUpdatedRows([]);
+    setAddRows([]);
+
+    getEquipments(
+        data
+    ).then((data) => {
+      if (data.errors) {
+      } else {
+        const rowsWithId = data.map((row, index) => ({
+          ...row,
+          id: row.equipmentId,
+          createDate: row.createDate ? row.createDate.replace("T", " ") : "",
+          updateDate: row.updateDate ? row.updateDate.replace("T", " ") : ""
+        }));
+        setEquipmentList(rowsWithId);
+        // setRefreshKey(prev => prev + 1);
+      }
+      setIsLoading(false);
+    }).catch((err) => {
+      setIsLoading(false);
+    });
+  };
+
+  // 설비 선택 핸들러
+  const handleEquipmentSelect = (params) => {
+    const equipment = equipmentList.find(e => e.id === params.id);
+    setSelectedEquipment(equipment);
+  };
+
+  // 저장 버튼 클릭 핸들러
+  const handleSave = () => {
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      equipmentName: '설비명'
+    };
+
+    if (!validateRequiredFields(addRows, requiredFields) ||
+        !validateRequiredFields(updatedRows, requiredFields)) {
+      return;
+    }
+
+    const createdEquipmentInputs = addRows.map(transformRowForMutation);
+    const updatedEquipmentInputs = updatedRows.map(transformRowForUpdate);
+
+    saveEquipment(
+        {
+          createdRows: createdEquipmentInputs,
+          updatedRows: updatedEquipmentInputs,
+        }
+    ).then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleSearch(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save Equipment:", error);
+        });
+  };
+
+  // 삭제 버튼 클릭 핸들러
+  const handleDelete = () => {
+    if (!selectedEquipment) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '삭제할 설비를 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const isDeleteAddRows = addRows.find(f => f.id === selectedEquipment.id)
+    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedEquipment.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addRows.filter(f => f.id !== selectedEquipment.id);
+      setAddRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedEquipment.id);
+      setUpdatedRows(updatedRowsLit)
+    }
+
+    Swal.fire({
+      title: '삭제 확인',
+      text: '정말 삭제하시겠습니까?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 백엔드 삭제 요청 (GraphQL)
+
+        deleteEquipment(
+            {equipmentId: selectedEquipment.equipmentId}
+        ).then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = equipmentList.filter(f => f.id !== selectedEquipment.id);
+                setEquipmentList(updatedList);
+                setSelectedEquipment(null);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
+      }
+    });
+  };
+
+  // 등록 버튼 클릭 핸들러
+  const handleAdd = () => {
+    const newEquipment = {
+      id: `NEW_${Date.now()}`,
+      factoryId: '',
+      factoryName: '',
+      lineId: '',
+      lineName: '',
+      equipmentId: '자동입력',
+      equipmentBuyDate: '',
+      equipmentBuyVendor: '',
+      equipmentSn: '',
+      equipmentType: '',
+      equipmentName: '',
+      equipmentStatus: '',
+      remark: '',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력'
+    };
+    
+    setEquipmentList([newEquipment, ...equipmentList]);
+    setSelectedEquipment(newEquipment);
+  };
+
   // 설비 목록 그리드 버튼
   const equipmentGridButtons = [
     { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
@@ -656,33 +457,104 @@ const EquipmentManagement = (props) => {
     { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
   ];
 
-  function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
-    const query = `
-    query getGridCodes($codeClassId: String!) {
-      getGridCodes(codeClassId: $codeClassId) {
-        codeId
-        codeName
+  const transformRowForMutation = (row) => ({
+    factoryId: row.factoryId,
+    lineId: row.lineId,
+    equipmentBuyDate: row.equipmentBuyDate,
+    equipmentBuyVendor: row.equipmentBuyVendor,
+    equipmentSn: row.equipmentSn,
+    equipmentType: row.equipmentType,
+    equipmentName: row.equipmentName,
+    equipmentStatus: row.equipmentStatus,
+    remark: row.remark
+  });
+
+  const transformRowForUpdate = (row) => ({
+    factoryId: row.factoryId,
+    lineId: row.lineId,
+    equipmentId: row.equipmentId,
+    equipmentBuyDate: row.equipmentBuyDate,
+    equipmentBuyVendor: row.equipmentBuyVendor,
+    equipmentSn: row.equipmentSn,
+    equipmentType: row.equipmentType,
+    equipmentName: row.equipmentName,
+    equipmentStatus: row.equipmentStatus,
+    remark: row.remark
+  });
+
+  function handleProcessRowUpdate(newRow, oldRow) {
+    const isNewRow = oldRow.id.startsWith('NEW_');
+
+    if (newRow.equipmentBuyDate && /^\d{8}$/.test(newRow.equipmentBuyDate)) {
+      const raw = newRow.equipmentBuyDate;
+      newRow.equipmentBuyDate = `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`;
+    } else if (newRow.equipmentBuyDate && newRow.equipmentBuyDate !== oldRow.equipmentBuyDate) {
+      Message.showError({ message: `입력형식을 일치해주세요 (YYYYMMDD)` });
+      return oldRow; // rollback
+    }
+
+    if (newRow.factoryId !== oldRow.factoryId) {
+      const selectedFactory = factoryModel.find(opt => opt.factoryId === newRow.factoryId);
+      if (selectedFactory) {
+        newRow = {
+          ...newRow,
+          factoryName: selectedFactory.factoryName,
+          factoryCode: selectedFactory.factoryCode,
+        };
       }
     }
-  `;
 
-    graphFetch(
-        query,
-        {codeClassId:codeClassId}
-    ).then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-          } else {
-            const options = data.getGridCodes.map((row) => ({
-              value: row.codeId,
-              label: row.codeName,
-            }));
-            setOptions(options);
-          }
-        })
-        .catch((err) => console.error(err));
+    if (newRow.lineId !== oldRow.lineId) {
+      const selectedLine = lineOptions.find(opt => opt.lineId === newRow.lineId);
+      if (selectedLine) {
+        newRow = {
+          ...newRow,
+          lineName: selectedLine.lineName,
+        };
+      }
+    }
+
+    setEquipmentList((prev) => {
+      return prev.map((row) =>
+          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
+          row.id === oldRow.id ? { ...row, ...newRow } : row
+      );
+    });
+
+    if (isNewRow) {
+      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
+      setAddRows((prevAddRows) => {
+        const existingIndex = prevAddRows.findIndex(
+            (row) => row.id === newRow.id
+        );
+        if (existingIndex !== -1) {
+          const updated = [...prevAddRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+          return [...prevAddRows, newRow];
+        }
+      });
+    }else {
+      setUpdatedRows(prevUpdatedRows => {
+        const existingIndex = prevUpdatedRows.findIndex(row => row.equipmentId === newRow.equipmentId);
+
+        if (existingIndex !== -1) {
+
+          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
+          const updated = [...prevUpdatedRows];
+          updated[existingIndex] = newRow;
+          return updated;
+        } else {
+
+          // 없다면 새로 추가
+          return [...prevUpdatedRows, newRow];
+        }
+      });
+    }
+
+    return { ...oldRow, ...newRow };
   }
-
 
   return (
     <Box sx={{ p: 0, minHeight: '100vh' }}>

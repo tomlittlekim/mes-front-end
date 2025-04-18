@@ -6,7 +6,7 @@ import React from 'react';
 const InventoryMovementReport = (props) => {
   const columns = [
     { field: 'id', headerName: 'ID', width: 70, hide: true },
-    { field: 'itemName', headerName: '품목명', width: 250 },
+    { field: 'materialName', headerName: '자재명', width: 250 },
     { field: 'openingStock', headerName: '기초재고', width: 120, type: 'number', align: 'right', headerAlign: 'right' },
     { field: 'inQty', headerName: '입고수량', width: 120, type: 'number', align: 'right', headerAlign: 'right' },
     { field: 'outQty', headerName: '출고수량', width: 120, type: 'number', align: 'right', headerAlign: 'right' },
@@ -20,7 +20,7 @@ const InventoryMovementReport = (props) => {
         columnVisibilityModel: { id: false },
       },
       sorting: {
-        sortModel: [{ field: 'itemName', sort: 'asc' }],
+        sortModel: [{ field: 'materialName', sort: 'asc' }],
       },
     },
     ...props.gridProps

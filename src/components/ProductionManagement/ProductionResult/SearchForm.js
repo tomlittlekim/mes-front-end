@@ -1,5 +1,13 @@
 import React from 'react';
-import { Grid, TextField, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import {
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Typography
+} from '@mui/material';
 import { Controller } from 'react-hook-form';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -12,10 +20,11 @@ import DateRangePicker from '../../Common/DateRangePicker';
  * @param {Object} props - 컴포넌트 속성
  * @param {Object} props.control - React Hook Form control 객체
  * @param {Array} props.equipmentOptions - 설비 옵션 목록
+ * @param {Array} props.productOptions - 제품 옵션 목록
  * @param {Function} props.handleDateRangeChange - 날짜 범위 변경 핸들러
  * @returns {JSX.Element}
  */
-const SearchForm = ({ control, equipmentOptions, handleDateRangeChange }) => {
+const SearchForm = ({ control, equipmentOptions, productOptions = [], handleDateRangeChange }) => {
   return (
       <>
         <Grid item xs={12} sm={6} md={3}>
@@ -39,14 +48,30 @@ const SearchForm = ({ control, equipmentOptions, handleDateRangeChange }) => {
               name="productId"
               control={control}
               render={({ field }) => (
-                  <TextField
-                      {...field}
-                      label="제품ID"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      placeholder="제품ID를 입력하세요"
-                  />
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="product-label">제품ID</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="product-label"
+                        label="제품ID"
+                    >
+                      <MenuItem value="">전체</MenuItem>
+                      {productOptions.map(option => (
+                          <MenuItem
+                              key={option.systemMaterialId}
+                              value={option.systemMaterialId}  // value는 systemMaterialId(실제 값)
+                          >
+                            {/* 보여지는 값은 userMaterialId(제품ID)와 materialName(제품명) */}
+                            {option.userMaterialId || ''} {option.materialName ? `(${option.materialName})` : ''}
+                            {option.materialType ? (
+                                <Typography variant="caption" color="textSecondary" style={{ display: 'block' }}>
+                                  {option.materialTypeDisplay || option.materialType}
+                                </Typography>
+                            ) : null}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
               )}
           />
         </Grid>
@@ -66,6 +91,11 @@ const SearchForm = ({ control, equipmentOptions, handleDateRangeChange }) => {
                       {equipmentOptions.map(option => (
                           <MenuItem key={option.value} value={option.value}>
                             {option.label}
+                            {option.factoryName && option.lineName ? (
+                                <Typography variant="caption" color="textSecondary" style={{ display: 'block' }}>
+                                  {option.factoryName} &gt; {option.lineName}
+                                </Typography>
+                            ) : null}
                           </MenuItem>
                       ))}
                     </Select>

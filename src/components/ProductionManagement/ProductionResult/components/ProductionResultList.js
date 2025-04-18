@@ -1,27 +1,18 @@
-import React, {useMemo} from 'react';
-import {Typography} from '@mui/material';
-import {format} from 'date-fns';
-import {EnhancedDataGridWrapper} from '../../../Common';
+import React, { useMemo } from 'react';
+import { Typography, Button, Stack } from '@mui/material';
+import { format } from 'date-fns';
+import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import Swal from 'sweetalert2';
+import ProductMaterialSelector from '../editors/ProductMaterialSelector';
 
 /**
  * 생산실적 목록 컴포넌트
  *
  * @param {Object} props - 컴포넌트 속성
- * @param {Array} props.productionResultList - 생산실적 목록 데이터
- * @param {Object} props.selectedWorkOrder - 선택된 작업지시 객체
- * @param {Function} props.onRowClick - 행 클릭 핸들러
- * @param {Function} props.onCreateResult - 생산실적 생성 핸들러
- * @param {Function} props.onSave - 저장 핸들러
- * @param {Function} props.onDelete - 삭제 핸들러
- * @param {Array} props.equipmentOptions - 설비 옵션 목록
- * @param {Function} props.setProductionResultList - 생산실적 목록 업데이트 함수
- * @param {Function} props.setProductionResult - 선택된 생산실적 업데이트 함수
- * @param {Function} props.onRowEdit - 행 편집 이벤트 핸들러 (선택 사항)
- * @param {String} props.tabId - 탭 ID
  * @returns {JSX.Element}
  */
 const ProductionResultList = ({
@@ -29,9 +20,11 @@ const ProductionResultList = ({
   selectedWorkOrder,
   onRowClick,
   onCreateResult,
+  onCreateIndependentResult, // 작업지시 없는 생산실적 생성 함수 추가
   onSave,
   onDelete,
   equipmentOptions,
+  productOptions, // 제품 옵션 목록 추가
   setProductionResultList,
   setProductionResult,
   productionResult,
@@ -50,6 +43,48 @@ const ProductionResultList = ({
       renderCell: (params) => (
           <Typography variant="body2">
             {params.value || '자동입력'}
+          </Typography>
+      )
+    },
+    // 제품ID 필드 추가 (필수 입력 필드, ProductMaterialSelector 사용)
+    {
+      field: 'productId',
+      headerName: '제품ID',
+      width: 180,
+      headerAlign: 'center',
+      align: 'center',
+      editable: true,
+      renderEditCell: (params) => (
+          <ProductMaterialSelector {...params} productMaterials={productOptions} />
+      ),
+      renderCell: (params) => {
+        // systemMaterialId(실제 값)를 이용해 제품 찾기
+        const product = productOptions?.find(p => p.systemMaterialId === params.value);
+        if (product) {
+          return (
+              <Typography variant="body2">
+                {/* 보여지는 값은 userMaterialId, 괄호 안에 materialName 표시 */}
+                {product.userMaterialId || ''} {product.materialName ? `(${product.materialName})` : ''}
+              </Typography>
+          );
+        }
+        return (
+            <Typography variant="body2" color="error">
+              {params.value ? params.value : '필수 입력'}
+            </Typography>
+        );
+      },
+      description: '필수 입력 항목'
+    },
+    {
+      field: 'workOrderId',
+      headerName: '작업지시ID',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+          <Typography variant="body2">
+            {params.value || '없음'}
           </Typography>
       )
     },
@@ -86,6 +121,27 @@ const ProductionResultList = ({
       )
     },
     {
+      field: 'productionQty',
+      headerName: '생산수량',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      description: '양품수량과 불량수량의 합계',
+      sortable: false,
+      renderCell: (params) => {
+        // 렌더링 시점에 직접 계산
+        const goodQty = Number(params.row.goodQty) || 0;
+        const defectQty = Number(params.row.defectQty) || 0;
+        const total = goodQty + defectQty;
+
+        return (
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {total.toLocaleString()}
+            </Typography>
+        );
+      }
+    },
+    {
       field: 'progressRate',
       headerName: '진척률',
       width: 100,
@@ -118,7 +174,7 @@ const ProductionResultList = ({
     {
       field: 'equipmentId',
       headerName: '설비ID',
-      width: 150,
+      width: 180,  // 너비 증가
       headerAlign: 'center',
       align: 'center',
       editable: true,
@@ -128,12 +184,20 @@ const ProductionResultList = ({
         const equipment = equipmentOptions.find(e => e.value === params.value);
         return (
             <Typography variant="body2">
-              {equipment ? equipment.label : params.value || ''}
+              {equipment ? (
+                  <span>
+            {equipment.label}
+                    {equipment.factoryName && equipment.lineName ? (
+                        <span style={{ fontSize: '0.85em', color: 'gray', display: 'block' }}>
+                {equipment.factoryName} &gt; {equipment.lineName}
+              </span>
+                    ) : null}
+          </span>
+              ) : params.value || ''}
             </Typography>
         );
       }
     },
-
     {
       field: 'createDate',
       headerName: '등록일시',
@@ -157,14 +221,39 @@ const ProductionResultList = ({
         }
       }
     }
-  ]), [equipmentOptions]);
+  ]), [equipmentOptions, productOptions]);
 
-  // 생산실적 목록 그리드 버튼
-  const productionResultButtons = useMemo(() => ([
-    {label: '등록', onClick: onCreateResult, icon: <AddIcon/>},
-    {label: '저장', onClick: onSave, icon: <SaveIcon/>},
-    {label: '삭제', onClick: onDelete, icon: <DeleteIcon/>}
-  ]), [onCreateResult, onSave, onDelete]);
+  // 생산실적 목록 그리드 버튼: 독립형 생산실적 버튼 추가
+  const productionResultButtons = useMemo(() => {
+    const buttons = [];
+
+    // "독립 생산실적" 버튼 (작업지시 없이 생성)
+    buttons.push({
+      label: '독립 생산실적',
+      onClick: onCreateIndependentResult,
+      icon: <NoteAddIcon/>,
+      tooltip: '작업지시 없이 생산실적을 등록합니다',
+      color: 'secondary'
+    });
+
+    // 일반 버튼들 추가
+    buttons.push(
+        {label: '등록', onClick: onCreateResult, icon: <AddIcon/>, tooltip: '선택된 작업지시에 생산실적을 등록합니다'},
+        {label: '저장', onClick: onSave, icon: <SaveIcon/>},
+        {label: '삭제', onClick: onDelete, icon: <DeleteIcon/>}
+    );
+
+    return buttons;
+  }, [onCreateResult, onCreateIndependentResult, onSave, onDelete]);
+
+  // 생산실적 목록 그리드 커스텀 헤더
+  const CustomHeader = () => (
+      <Stack direction="column" spacing={0.5} width="100%">
+        <Typography variant="subtitle1" fontWeight="600">
+          생산실적 목록 {selectedWorkOrder ? '- ' + selectedWorkOrder.workOrderId : ''}
+        </Typography>
+      </Stack>
+  );
 
   // 셀 값 변경 핸들러
   const handleCellEditCommit = (params) => {
@@ -191,6 +280,17 @@ const ProductionResultList = ({
         });
         updatedValue = 0;
       }
+    }
+
+    // 제품ID 변경 시 필수 입력 확인
+    if (field === 'productId' && !value) {
+      Swal.fire({
+        title: '입력 오류',
+        text: '제품ID는 필수 입력 항목입니다.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
+      return;
     }
 
     // 행 업데이트
@@ -221,8 +321,6 @@ const ProductionResultList = ({
     onCellEditCommit: handleCellEditCommit,
     // 셀 편집 완료 후 처리를 위한 processRowUpdate 추가
     processRowUpdate: (newRow, oldRow) => {
-      console.log("processRowUpdate 호출됨:", { newRow, oldRow });
-
       // 음수 값 방지
       if (newRow.goodQty < 0) {
         newRow.goodQty = 0;
@@ -240,7 +338,6 @@ const ProductionResultList = ({
 
       // 현재 수정한 행이 선택된 행이라면 productionResult도 업데이트
       if (productionResult && productionResult.id === newRow.id) {
-        console.log("선택된 행 업데이트:", newRow);
         setProductionResult(newRow);
 
         // onRowEdit 핸들러가 제공된 경우 호출
@@ -253,7 +350,6 @@ const ProductionResultList = ({
     },
     // 에러 처리
     onProcessRowUpdateError: (error) => {
-      console.error("행 업데이트 오류:", error);
       Swal.fire({
         title: '오류',
         text: '데이터 업데이트 중 오류가 발생했습니다.',
@@ -265,8 +361,7 @@ const ProductionResultList = ({
 
   return (
       <EnhancedDataGridWrapper
-          title={`생산실적 목록 ${selectedWorkOrder ? '- '
-              + selectedWorkOrder.workOrderId : ''}`}
+          title={<CustomHeader />}
           rows={productionResultList}
           columns={productionResultColumns}
           buttons={productionResultButtons}

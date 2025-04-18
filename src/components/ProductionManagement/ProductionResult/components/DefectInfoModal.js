@@ -34,12 +34,6 @@ import Swal from 'sweetalert2';
  * 불량정보 등록 모달 컴포넌트
  *
  * @param {Object} props - 컴포넌트 속성
- * @param {boolean} props.open - 모달 열림 여부
- * @param {Function} props.onClose - 모달 닫기 핸들러
- * @param {Function} props.onSave - 저장 핸들러
- * @param {Object} props.productionResult - 생산실적 객체
- * @param {Object} props.selectedWorkOrder - 선택된 작업지시 객체
- * @param {Array} props.defectTypes - 불량유형 옵션 목록
  * @returns {JSX.Element}
  */
 const DefectInfoModal = ({
@@ -93,7 +87,9 @@ const DefectInfoModal = ({
     }
 
     // 총 불량수량 계산
-    const totalDefectInfoQty = defectInfoList.reduce((sum, item) => sum + (Number(item.defectQty) || 0), 0);
+    const totalDefectInfoQty = defectInfoList.reduce((sum, item) => {
+      return sum + (Number(item.defectQty) || 0);
+    }, 0) || 0;
 
     // 총 불량수량이 생산실적의 불량수량과 같은지 확인
     const isQtyValid = Math.abs(totalDefectInfoQty - totalDefectQty) < 0.001;
@@ -229,7 +225,7 @@ const DefectInfoModal = ({
     }
   };
 
-  // 모달 닫기 확인 핸들러 - 수정
+  // 모달 닫기 확인 핸들러
   const handleCloseConfirm = () => {
     // 변경 사항이 있는 경우 확인 대화상자 표시
     if (defectInfoList.length > 0) {
@@ -244,14 +240,14 @@ const DefectInfoModal = ({
         if (result.isConfirmed) {
           // onClose 함수를 직접 호출하여 모달 닫기
           if (typeof onClose === 'function') {
-            onClose(); // 수정된 부분
+            onClose();
           }
         }
       });
     } else {
       // 변경 사항이 없으면 바로 닫기
       if (typeof onClose === 'function') {
-        onClose(); // 수정된 부분
+        onClose();
       }
     }
   };
@@ -280,11 +276,15 @@ const DefectInfoModal = ({
       return;
     }
 
+    // 작업지시 정보 또는 생산실적 정보 가져오기 (작업지시 없이도 동작하도록 수정)
+    const workOrderId = selectedWorkOrder?.workOrderId || productionResult?.workOrderId || null;
+    const productId = productionResult?.productId || selectedWorkOrder?.productId || null;
+
     // 불량정보 리스트 서버 형식으로 변환
     const defectInfos = defectInfoList.map(item => ({
-      workOrderId: selectedWorkOrder.workOrderId,
+      workOrderId: workOrderId,
       prodResultId: productionResult.prodResultId,
-      productId: selectedWorkOrder.productId,
+      productId: productId,
       defectQty: Number(item.defectQty),
       defectType: item.defectType,
       defectCause: item.defectCause,
@@ -292,8 +292,6 @@ const DefectInfoModal = ({
       state: 'NEW',
       flagActive: true
     }));
-
-    console.log('저장될 불량정보:', defectInfos);
 
     // 부모 컴포넌트의 저장 함수 호출
     if (typeof onSave === 'function') {
@@ -306,10 +304,16 @@ const DefectInfoModal = ({
     return defectType ? defectType.label : code;
   };
 
+  // 작업지시 정보 또는 생산실적 정보 가져오기
+  const productInfo = {
+    workOrderId: selectedWorkOrder?.workOrderId || productionResult?.workOrderId || null,
+    productId: productionResult?.productId || selectedWorkOrder?.productId || null
+  };
+
   return (
       <Dialog
           open={open}
-          onClose={handleCloseConfirm} // 수정된 부분
+          onClose={handleCloseConfirm}
           fullWidth
           maxWidth="md"
           PaperProps={{
@@ -330,7 +334,7 @@ const DefectInfoModal = ({
             불량정보 등록
           </Typography>
           <IconButton
-              onClick={handleCloseConfirm} // 수정된 부분
+              onClick={handleCloseConfirm}
               aria-label="close"
           >
             <CloseIcon />
@@ -339,21 +343,23 @@ const DefectInfoModal = ({
 
         <DialogContent dividers sx={{ p: 3 }}>
           <Grid container spacing={3}>
-            {/* 작업지시 및 생산실적 정보 */}
+            {/* 생산실적 정보 */}
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ p: 2, mb: 3, bgcolor: isDarkMode ? 'rgba(66, 66, 66, 0.2)' : 'rgba(240, 240, 240, 0.5)' }}>
                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  작업지시 및 생산실적 정보
+                  생산실적 정보
                 </Typography>
                 <Grid container spacing={2}>
+                  {productInfo.workOrderId && (
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="body2">
+                          <strong>작업지시ID:</strong> {productInfo.workOrderId}
+                        </Typography>
+                      </Grid>
+                  )}
                   <Grid item xs={12} sm={4}>
                     <Typography variant="body2">
-                      <strong>작업지시ID:</strong> {selectedWorkOrder?.workOrderId || ''}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2">
-                      <strong>제품ID:</strong> {selectedWorkOrder?.productId || ''}
+                      <strong>제품ID:</strong> {productInfo.productId}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>

@@ -233,14 +233,14 @@ export const useProductionResultInquiry = (tabId) => {
     const init = () => {
       if (isMounted) {
         // 기본 날짜 범위 설정 (오늘부터 1주일)
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 7);
-
-        setValue('dateRange', {
-          startDate,
-          endDate
-        });
+        // const endDate = new Date();
+        // const startDate = new Date();
+        // startDate.setDate(endDate.getDate() - 7);
+        //
+        // setValue('dateRange', {
+        //   startDate,
+        //   endDate
+        // });
 
         // 초기 데이터 로드 (완료된 작업지시만)
         loadWorkOrders({

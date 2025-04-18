@@ -3,17 +3,11 @@ import './CommonCodeManagement.css';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Grid,
   Box,
   Typography,
   useTheme,
-  Stack,
-  Button,
-  FormHelperText, alpha, IconButton
+  alpha, IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -21,11 +15,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { SearchCondition, EnhancedDataGridWrapper } from '../Common';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import {GRAPHQL_URL} from "../../config";
 import Message from "../../utils/message/Message";
-import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
+import {deleteCode, getCodeClass, getCodeList, saveCode, saveCodeClass} from "../../api/standardInfo/commonCodeApi";
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -63,36 +56,82 @@ const CommonCodeManagement = (props) => {
   const [addCodeRows,setAddCodeRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
   const [updatedCodeRows, setUpdatedCodeRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
 
+  // 코드 그룹 DataGrid 컬럼 정의
+  const codeGroupColumns = [
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
+    {
+      field: 'codeClassName',
+      headerName: '코드그룹명',
+      width: 130,
+      editable: true,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
+  ];
+
+  // 코드 DataGrid 컬럼 정의
+  const codeColumns = [
+    { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
+    { field: 'codeId', headerName: '코드ID', width: 150 },
+    {
+      field: 'codeName',
+      headerName: '코드명',
+      width: 80,
+      editable: true
+      ,
+      renderCell: (params) => {
+        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
+        const isNewRow = params.row.id?.toString().startsWith('NEW_');
+
+        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
+        const showRequired = isNewRow && (!params.value || params.value === '');
+
+        return (
+            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
+              {showRequired ? '필수 입력' : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
+    { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
+    { field: 'createUser', headerName: '작성자', width: 90},
+    { field: 'createDate', headerName: '작성일', width: 135},
+    { field: 'updateUser', headerName: '수정자', width: 90},
+    { field: 'updateDate', headerName: '수정일', width: 135}
+  ];
+
   useEffect(() => {
     // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
     const timer = setTimeout(() => {
-      const query = `
-      query getCodeClass($filter: CodeClassFilter) {
-        getCodeClass(filter: $filter) {
-          codeClassId
-          codeClassName
-          codeClassDesc
-        }
-      }
-    `;
 
-      graphFetch(
-          query,
-          { filter: getValues() }
+      getCodeClass(
+          getValues()
       ).then((data) => {
         if (data.errors) {
         } else {
-          const rowsWithId = data.getCodeClass.map((row, index) => ({
+          const rowsWithId = data.map((row, index) => ({
             ...row,
             id: row.codeClassId  // 또는 row.factoryId || index + 1
           }));
           setCodeGroups(rowsWithId)
         }
         setIsLoading(false);
-      })
-          .catch((err) => {
+      }).catch((err) => {
             setIsLoading(false);
-          });
+      });
     }, 100);
 
     return () => clearTimeout(timer);
@@ -105,31 +144,19 @@ const CommonCodeManagement = (props) => {
     setAddCodeClassRows([]);
     setAddCodeRows([]);
 
-    const query = `
-      query getCodeClass($filter: CodeClassFilter) {
-        getCodeClass(filter: $filter) {
-          codeClassId
-          codeClassName
-          codeClassDesc
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        { filter: data }
+    getCodeClass(
+        data
     ).then((data) => {
       if (data.errors) {
       } else {
-        const rowsWithId = data.getCodeClass.map((row, index) => ({
+        const rowsWithId = data.map((row, index) => ({
           ...row,
           id: row.codeClassId  // 또는 row.factoryId || index + 1
         }));
         setCodeGroups(rowsWithId)
       }
       setIsLoading(false);
-    })
-        .catch((err) => {
+    }).catch((err) => {
           setIsLoading(false);
         });
   };
@@ -141,6 +168,338 @@ const CommonCodeManagement = (props) => {
       codeClassName: '',
     });
   };
+
+  // 코드 그룹 저장 핸들러
+  const handleSaveCodeGroup = () => {
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      codeClassName: '코드그룹명'
+    };
+
+    if (!validateRequiredFields(addCodeClassRows, requiredFields) ||
+        !validateRequiredFields(updatedCodeClassRows, requiredFields)) {
+      return;
+    }
+
+    const createdCodeClassInputs = addCodeClassRows.map(transformRowForMutation);
+    const updatedCodeClassInputs = updatedCodeClassRows.map(transformRowForUpdate);
+
+    const addRowQty =  addCodeClassRows.length;
+    const updateRowQty = updatedCodeClassRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    saveCodeClass(
+        {
+          createdRows: createdCodeClassInputs,
+          updatedRows: updatedCodeClassInputs,
+        }
+    ).then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            onSubmit(getValues());
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
+  };
+
+  // 코드 그룹 선택 시 이벤트 핸들러 - 우측 그리드 조회
+  const handleCodeGroupSelect = (params) => {
+    const codeGroup = codeGroups.find(cg => cg.id === params.id);
+    setSelectedCodeGroup(codeGroup);
+
+    setAddCodeRows([]);
+    setUpdatedCodeRows([]);
+
+    getCodeList(
+        { codeClassId: codeGroup.codeClassId }
+    ).then((data) => {
+          if (data.errors) {
+            console.error("GraphQL Errors:", data.errors);
+          } else {
+            const rowsWithId = data.map((row) => ({
+              ...row,
+              id: row.codeId
+            }));
+            setCodes(rowsWithId);
+          }
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error("Fetch failed:", err);
+          setIsLoading(false);
+        });
+  };
+
+  //코드 선택 핸들러
+  const handleCodeSelect = (params) => {
+    const code = codes.find(c => c.id === params.id);
+    setSelectedCode(code);
+  }
+
+
+  // 코드 추가 핸들러
+  const handleAddCode = () => {
+    if (!selectedCodeGroup) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '코드 그룹을 먼저 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const newCode = {
+      id: `NEW_${Date.now()}`, // 임시 ID
+      codeClassId: selectedCodeGroup.codeClassId,
+      codeId: '자동입력',
+      codeName: '',
+      codeDesc: '',
+      sortOrder: 0,
+      // flagActive: 'Y',
+      createUser: '자동입력',
+      createDate: '자동입력',
+      updateUser: '자동입력',
+      updateDate: '자동입력',
+    };
+
+    setCodes([newCode, ...codes]);
+  };
+
+  // 코드 저장 핸들러
+  const handleSaveCode = () => {
+    const addRowQty =  addCodeRows.length;
+    const updateRowQty = updatedCodeRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '변경사항이 존재하지 않습니다.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    // 필수 필드 검증 함수
+    const validateRequiredFields = (rows, fieldMapping) => {
+      for (const row of rows) {
+        for (const field of Object.keys(fieldMapping)) {
+          if (row[field] === undefined || row[field] === null || row[field] === '') {
+            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // 필수 필드 검증
+    const requiredFields = {
+      codeName: '코드명'
+    };
+
+    if (!validateRequiredFields(addCodeRows, requiredFields) ||
+        !validateRequiredFields(updatedCodeRows, requiredFields)) {
+      return;
+    }
+
+    const createdCodeInputs = addCodeRows.map(transformCodeRowForMutation);
+    const updatedCodeInputs = updatedCodeRows.map(transformCodeRowForUpdate);
+
+    saveCode(
+        {
+          createdRows: createdCodeInputs,
+          updatedRows: updatedCodeInputs,
+        }
+    ).then((data) => {
+          if (data.errors) {
+            console.error("GraphQL errors:", data.errors);
+          } else {
+            handleCodeGroupSelect(selectedCodeGroup);
+            Swal.fire({
+              icon: 'success',
+              title: '성공',
+              text: '저장되었습니다.',
+              confirmButtonText: '확인'
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error save factory:", error);
+        });
+  };
+
+  // 코드 삭제 핸들러
+  const handleDeleteCode = () => {
+
+    if (!selectedCode) {
+      Swal.fire({
+        icon: 'warning',
+        title: '알림',
+        text: '삭제할 코드를 선택해주세요.',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    const isDeleteAddRows = addCodeRows.find(f => f.id === selectedCode.id)
+    const isDeleteUpdateRows = updatedCodeRows.find(f => f.id === selectedCode.id)
+
+    if(isDeleteAddRows) {
+      const updateAddList = addCodeRows.filter(f => f.id !== selectedCode.id);
+      setAddCodeRows(updateAddList);
+    }
+
+    if(isDeleteUpdateRows) {
+      const updatedRowsLit = updatedCodeRows.filter(f => f.id !== selectedCode.id);
+      setUpdatedCodeRows(updatedRowsLit)
+    }
+
+    Swal.fire({
+      title: '삭제 확인',
+      text: '선택한 코드를 삭제하시겠습니까?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 백엔드 삭제 요청 (GraphQL)
+        deleteCode(
+            { codeId: selectedCode.codeId }
+        ).then((data) => {
+              if (data.errors) {
+                console.error("GraphQL errors:", data.errors);
+                Swal.fire({
+                  icon: 'error',
+                  title: '삭제 실패',
+                  text: '삭제 중 오류가 발생했습니다.'
+                });
+              } else {
+                // 삭제 성공 시, 로컬 상태 업데이트
+                const updatedList = codes.filter(f => f.id !== selectedCode.id);
+                setCodes(updatedList);
+                Swal.fire({
+                  icon: 'success',
+                  title: '성공',
+                  text: '삭제되었습니다.',
+                  confirmButtonText: '확인'
+                });
+                setSelectedCode(null);
+              }
+            })
+            .catch((error) => {
+              console.error("Error deleting factory:", error);
+              Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: '삭제 중 예외가 발생했습니다.'
+              });
+            });
+      }
+    });
+  };
+
+  // 코드 그룹 등록 핸들러
+  const handleAddCodeGroup = () => {
+    const newCodeGroup = {
+      id: `NEW_${Date.now()}`, // 임시 ID
+      codeClassId: '자동입력',
+      codeClassName: '',
+      codeClassDesc: '',
+    };
+
+    setCodeGroups([newCodeGroup,...codeGroups]);
+  };
+
+  // 코드 그룹 그리드 버튼
+  const codeGroupButtons = [
+    { label: '등록', onClick: handleAddCodeGroup, icon: <AddIcon /> },
+    { label: '저장', onClick: handleSaveCodeGroup, icon: <SaveIcon /> }
+  ];
+
+  // 코드 그리드 버튼
+  const codeButtons = [
+    { label: '등록', onClick: handleAddCode, icon: <AddIcon /> },
+    { label: '저장', onClick: handleSaveCode, icon: <SaveIcon /> },
+    { label: '삭제', onClick: handleDeleteCode, icon: <DeleteIcon /> }
+  ];
+
+  // 도메인별 색상 설정
+  const getTextColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  };
+
+  const getBorderColor = () => {
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  };
+
+  const transformRowForMutation = (row) => ({
+    codeClassName: row.codeClassName,
+    codeClassDesc: row.codeClassDesc,
+  });
+
+  const transformCodeRowForMutation = (row) => ({
+    codeClassId: row.codeClassId,
+    codeName: row.codeName,
+    codeDesc: row.codeDesc,
+    sortOrder: row.sortOrder,
+    // flagActive: row.flagActive
+  });
+
+  const transformRowForUpdate = (row) => ({
+    codeClassId: row.codeClassId,
+    codeClassName: row.codeClassName,
+    codeClassDesc: row.codeClassDesc,
+  });
+
+  const transformCodeRowForUpdate = (row) => ({
+    codeClassId: row.codeClassId,
+    codeId: row.codeId,
+    codeName: row.codeName,
+    codeDesc: row.codeDesc,
+    sortOrder: row.sortOrder,
+  });
 
   //코드 클레스 행 변화 (추가, 수정)
   function codeClassRowUpdate(newRow, oldRow) {
@@ -235,465 +594,7 @@ const CommonCodeManagement = (props) => {
   }
 
 
-  // 코드 그룹 저장 핸들러
-  const handleSaveCodeGroup = () => {
-    const creatCodeClassMutation = `
-      mutation saveCodeClass($createdRows: [CodeClassInput], $updatedRows: [CodeClassUpdate]) {
-        saveCodeClass(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
 
-    // 필수 필드 검증 함수
-    const validateRequiredFields = (rows, fieldMapping) => {
-      for (const row of rows) {
-        for (const field of Object.keys(fieldMapping)) {
-          if (row[field] === undefined || row[field] === null || row[field] === '') {
-            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
-            return false;
-          }
-        }
-      }
-      return true;
-    };
-
-    // 필수 필드 검증
-    const requiredFields = {
-      codeClassName: '코드그룹명'
-    };
-
-    if (!validateRequiredFields(addCodeClassRows, requiredFields) ||
-        !validateRequiredFields(updatedCodeClassRows, requiredFields)) {
-      return;
-    }
-
-    const createdCodeClassInputs = addCodeClassRows.map(transformRowForMutation);
-    const updatedCodeClassInputs = updatedCodeClassRows.map(transformRowForUpdate);
-
-    const addRowQty =  addCodeClassRows.length;
-    const updateRowQty = updatedCodeClassRows.length;
-
-    if(addRowQty + updateRowQty === 0 ){
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '변경사항이 존재하지 않습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-
-    graphFetch(
-        creatCodeClassMutation,
-        {
-          createdRows: createdCodeClassInputs,
-          updatedRows: updatedCodeClassInputs,
-        }
-    ).then((data) => {
-          if (data.errors) {
-            console.error("GraphQL errors:", data.errors);
-          } else {
-            onSubmit(getValues());
-            Swal.fire({
-              icon: 'success',
-              title: '성공',
-              text: '저장되었습니다.',
-              confirmButtonText: '확인'
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error save factory:", error);
-        });
-  };
-
-  // 코드 그룹 선택 시 이벤트 핸들러 - 우측 그리드 조회
-  const handleCodeGroupSelect = (params) => {
-    const codeGroup = codeGroups.find(cg => cg.id === params.id);
-    setSelectedCodeGroup(codeGroup);
-
-    setAddCodeRows([]);
-    setUpdatedCodeRows([]);
-
-    const query = `
-      query getCodes($codeClassId: String!) {
-        getCodes(codeClassId: $codeClassId) {
-          codeClassId
-          codeId
-          codeName
-          codeDesc
-          sortOrder
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `;
-
-    graphFetch(
-        query,
-        { codeClassId: codeGroup.codeClassId }
-    ).then((data) => {
-          if (data.errors) {
-            console.error("GraphQL Errors:", data.errors);
-          } else {
-            console.log(data);
-            const rowsWithId = data.getCodes.map((row) => ({
-              ...row,
-              id: row.codeId
-            }));
-            setCodes(rowsWithId);
-          }
-          setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error("Fetch failed:", err);
-          setIsLoading(false);
-        });
-  };
-
-
-  //코드 선택 핸들러
-  const handleCodeSelect = (params) => {
-    const code = codes.find(c => c.id === params.id);
-    setSelectedCode(code);
-  }
-
-
-  // 코드 추가 핸들러
-  const handleAddCode = () => {
-    if (!selectedCodeGroup) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '코드 그룹을 먼저 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const newCode = {
-      id: `NEW_${Date.now()}`, // 임시 ID
-      codeClassId: selectedCodeGroup.codeClassId,
-      codeId: '자동입력',
-      codeName: '',
-      codeDesc: '',
-      sortOrder: 0,
-      // flagActive: 'Y',
-      createUser: '자동입력',
-      createDate: '자동입력',
-      updateUser: '자동입력',
-      updateDate: '자동입력',
-    };
-
-    setCodes([newCode, ...codes]);
-  };
-
-  // 코드 저장 핸들러
-  const handleSaveCode = () => {
-    const addRowQty =  addCodeRows.length;
-    const updateRowQty = updatedCodeRows.length;
-
-    if(addRowQty + updateRowQty === 0 ){
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '변경사항이 존재하지 않습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    // 필수 필드 검증 함수
-    const validateRequiredFields = (rows, fieldMapping) => {
-      for (const row of rows) {
-        for (const field of Object.keys(fieldMapping)) {
-          if (row[field] === undefined || row[field] === null || row[field] === '') {
-            Message.showError({ message: `${fieldMapping[field]} 필드는 필수 입력값입니다.` });
-            return false;
-          }
-        }
-      }
-      return true;
-    };
-
-    // 필수 필드 검증
-    const requiredFields = {
-      codeName: '코드명'
-    };
-
-    if (!validateRequiredFields(addCodeRows, requiredFields) ||
-        !validateRequiredFields(updatedCodeRows, requiredFields)) {
-      return;
-    }
-
-    const createCodeMutation = `
-      mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
-        saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
-    }
-  `;
-
-    const createdCodeInputs = addCodeRows.map(transformCodeRowForMutation);
-    const updatedCodeInputs = updatedCodeRows.map(transformCodeRowForUpdate);
-
-    graphFetch(
-        createCodeMutation,
-        {
-          createdRows: createdCodeInputs,
-          updatedRows: updatedCodeInputs,
-        }
-    ).then((data) => {
-          if (data.errors) {
-            console.error("GraphQL errors:", data.errors);
-          } else {
-            handleCodeGroupSelect(selectedCodeGroup);
-            Swal.fire({
-              icon: 'success',
-              title: '성공',
-              text: '저장되었습니다.',
-              confirmButtonText: '확인'
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error save factory:", error);
-        });
-  };
-
-  // 코드 삭제 핸들러
-  const handleDeleteCode = () => {
-
-    if (!selectedCode) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 코드를 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    const deleteCodeMutation = `
-      mutation DeleteCode($codeId: String!) {
-        deleteCode(codeId: $codeId)
-      }
-    `;
-
-    const isDeleteAddRows = addCodeRows.find(f => f.id === selectedCode.id)
-    const isDeleteUpdateRows = updatedCodeRows.find(f => f.id === selectedCode.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addCodeRows.filter(f => f.id !== selectedCode.id);
-      setAddCodeRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedCodeRows.filter(f => f.id !== selectedCode.id);
-      setUpdatedCodeRows(updatedRowsLit)
-    }
-
-    Swal.fire({
-      title: '삭제 확인',
-      text: '선택한 코드를 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // 백엔드 삭제 요청 (GraphQL)
-        graphFetch(
-            deleteCodeMutation,
-            { codeId: selectedCode.codeId }
-        ).then((data) => {
-              if (data.errors) {
-                console.error("GraphQL errors:", data.errors);
-                Swal.fire({
-                  icon: 'error',
-                  title: '삭제 실패',
-                  text: '삭제 중 오류가 발생했습니다.'
-                });
-              } else {
-                // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = codes.filter(f => f.id !== selectedCode.id);
-                setCodes(updatedList);
-                Swal.fire({
-                  icon: 'success',
-                  title: '성공',
-                  text: '삭제되었습니다.',
-                  confirmButtonText: '확인'
-                });
-                setSelectedCode(null);
-              }
-            })
-            .catch((error) => {
-              console.error("Error deleting factory:", error);
-              Swal.fire({
-                icon: 'error',
-                title: '삭제 실패',
-                text: '삭제 중 예외가 발생했습니다.'
-              });
-            });
-      }
-    });
-  };
-
-  // 코드 그룹 등록 핸들러
-  const handleAddCodeGroup = () => {
-    const newCodeGroup = {
-      id: `NEW_${Date.now()}`, // 임시 ID
-      codeClassId: '자동입력',
-      codeClassName: '',
-      codeClassDesc: '',
-    };
-
-    setCodeGroups([newCodeGroup,...codeGroups]);
-  };
-
-  // 컴포넌트 마운트 시 초기 데이터 로드
-  useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 코드 그룹 DataGrid 컬럼 정의
-  const codeGroupColumns = [
-    { field: 'codeClassId', headerName: '코드그룹 ID', width: 130, flex: 1 },
-    {
-      field: 'codeClassName',
-      headerName: '코드그룹명',
-      width: 130,
-      editable: true,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    { field: 'codeClassDesc', headerName: '설명', width: 200, flex: 1,editable: true },
-  ];
-
-  // 코드 DataGrid 컬럼 정의
-  const codeColumns = [
-    { field: 'codeClassId', headerName: '코드그룹 ID', width: 150 },
-    { field: 'codeId', headerName: '코드ID', width: 150 },
-    {
-      field: 'codeName',
-      headerName: '코드명',
-      width: 80,
-      editable: true
-      ,
-      renderCell: (params) => {
-        // 새로 추가된 행인지 확인 (id가 NEW_로 시작하는지)
-        const isNewRow = params.row.id?.toString().startsWith('NEW_');
-
-        // 새로 추가된 행이고 값이 없는 경우에만 '필수 입력' 표시
-        const showRequired = isNewRow && (!params.value || params.value === '');
-
-        return (
-            <Typography variant="body2" sx={{color: showRequired ? '#f44336' : 'inherit'}}>
-              {showRequired ? '필수 입력' : params.value || ''}
-            </Typography>
-        );
-      }
-    },
-    { field: 'codeDesc', headerName: '설명', width: 150, editable: true },
-    // {
-    //   field: 'flagActive',
-    //   headerName: '사용여부',
-    //   width: 85,
-    //   editable: true,
-    //   type: 'singleSelect',
-    //   valueOptions: [
-    //     { value: 'Y', label: '사용' },
-    //     { value: 'N', label: '미사용' }
-    //   ]
-    // },
-    { field: 'sortOrder', headerName: '정렬순서', width: 90, type: 'number', editable: true },
-    { field: 'createUser', headerName: '작성자', width: 90},
-    { field: 'createDate', headerName: '작성일', width: 135},
-    { field: 'updateUser', headerName: '수정자', width: 90},
-    { field: 'updateDate', headerName: '수정일', width: 135}
-  ];
-
-  // 코드 그룹 그리드 버튼
-  const codeGroupButtons = [
-    { label: '등록', onClick: handleAddCodeGroup, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSaveCodeGroup, icon: <SaveIcon /> }
-  ];
-
-  // 코드 그리드 버튼
-  const codeButtons = [
-    { label: '등록', onClick: handleAddCode, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSaveCode, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDeleteCode, icon: <DeleteIcon /> }
-  ];
-
-  // 도메인별 색상 설정
-  const getTextColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
-    }
-    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
-
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-
-  const getBorderColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#f5e8d7';
-    }
-    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
-  };
-
-
-  const transformRowForMutation = (row) => ({
-    codeClassName: row.codeClassName,
-    codeClassDesc: row.codeClassDesc,
-  });
-
-  const transformCodeRowForMutation = (row) => ({
-    codeClassId: row.codeClassId,
-    codeName: row.codeName,
-    codeDesc: row.codeDesc,
-    sortOrder: row.sortOrder,
-    // flagActive: row.flagActive
-  });
-
-  const transformRowForUpdate = (row) => ({
-    codeClassId: row.codeClassId,
-    codeClassName: row.codeClassName,
-    codeClassDesc: row.codeClassDesc,
-  });
-
-  const transformCodeRowForUpdate = (row) => ({
-    codeClassId: row.codeClassId,
-    codeId: row.codeId,
-    codeName: row.codeName,
-    codeDesc: row.codeDesc,
-    sortOrder: row.sortOrder,
-    // flagActive: row.flagActive
-  });
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -767,26 +668,6 @@ const CommonCodeManagement = (props) => {
                     />
                 )}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            {/*<Controller*/}
-            {/*  name="useYn"*/}
-            {/*  control={control}*/}
-            {/*  render={({ field }) => (*/}
-            {/*    <FormControl variant="outlined" size="small" fullWidth>*/}
-            {/*      <InputLabel id="useYn-label">사용여부</InputLabel>*/}
-            {/*      <Select*/}
-            {/*        {...field}*/}
-            {/*        labelId="useYn-label"*/}
-            {/*        label="사용여부"*/}
-            {/*      >*/}
-            {/*        <MenuItem value="all">전체</MenuItem>*/}
-            {/*        <MenuItem value="Y">사용</MenuItem>*/}
-            {/*        <MenuItem value="N">미사용</MenuItem>*/}
-            {/*      </Select>*/}
-            {/*    </FormControl>*/}
-            {/*  )}*/}
-            {/*/>*/}
           </Grid>
         </SearchCondition>
 

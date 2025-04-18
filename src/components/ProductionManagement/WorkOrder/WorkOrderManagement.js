@@ -44,7 +44,8 @@ const WorkOrderManagement = (props) => {
     handleProcessRowUpdate,
     getTextColor,
     getBgColor,
-    getBorderColor
+    getBorderColor,
+    productMaterials
   } = useWorkOrderManagement(props.tabId);
 
   return (
@@ -96,6 +97,7 @@ const WorkOrderManagement = (props) => {
                     refreshKey={refreshKey}
                     onRowClick={handlePlanSelect}
                     tabId={props.tabId}
+                    productMaterials={productMaterials}
                 />
               </Grid>
 
@@ -113,6 +115,7 @@ const WorkOrderManagement = (props) => {
                     onStartWork={handleStartWork}
                     onCompleteWork={handleCompleteWork}
                     tabId={props.tabId}
+                    productMaterials={productMaterials}
                 />
               </Grid>
             </Grid>
