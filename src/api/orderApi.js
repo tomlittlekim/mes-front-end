@@ -11,6 +11,7 @@
         orderNo
         orderDate
         orderer
+        orderQuantity
         customerId
         totalAmount
         vatAmount

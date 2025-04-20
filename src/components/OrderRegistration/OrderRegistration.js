@@ -303,6 +303,14 @@ const OrderRegistration = () => {
       type: 'boolean',
       renderCell: (params) => params.value ? '예' : '아니오'
     },
+    {
+      field: 'orderQuantity',
+      headerName: '주문수량',
+      width: 120,
+      editable: false,
+      type: 'number',
+      renderCell: (params) => params.value || '자동계산'
+    },
     { 
       field: 'totalAmount', 
       headerName: '총금액', 
