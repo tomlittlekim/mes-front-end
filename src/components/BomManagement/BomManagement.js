@@ -42,9 +42,9 @@ import {useGridDataCall} from '../../utils/grid/useGridDataCall';
 import {useGridRow} from '../../utils/grid/useGridRow';
 import CustomModal from '../Common/CustomModal';
 import Message from "../../utils/message/Message";
-import {format} from "date-fns";
 import CellButton from "../Common/grid-piece/CellButton";
 import {useMaterialData} from '../MaterialManagement/hooks/useMaterialData';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 /** GraphQL 쿼리 정의 */
 //BOM 좌측 그리드
@@ -91,61 +91,6 @@ const BOM_COLUMNS = [
     // {field: 'createDate', headerName: '등록일', width: 150},
     // {field: 'updateUser', headerName: '수정자', width: 100},
     // {field: 'updateDate', headerName: '수정일', width: 150}
-];
-
-/** 신규 데이터 추가 시 생성되는 구조 */
-//BOM(팝업)
-const BOM_MODAL_FIELDS = [
-    {
-        id: 'materialType',
-        label: '종류',
-        type: 'select',
-        required: true,
-        lockOnEdit: true,
-        options: [
-            {value: 'COMPLETE_PRODUCT', label: '완제품'},
-            {value: 'HALF_PRODUCT', label: '반제품'}
-        ],
-        relation: {
-            targetField: 'systemMaterialId',
-            query: GET_MATERIALS_BY_TYPE,
-            params: ['materialType'],
-            mapping: {
-                value: 'systemMaterialId',
-                label: 'materialName'
-            }
-        }
-    },
-    {
-        id: 'systemMaterialId',
-        label: '제품 선택',
-        type: 'select',
-        required: true,
-        lockOnEdit: true,
-        options: [],
-        relation: {
-            query: GET_MATERIALS_BY_TYPE,
-            params: ['materialType'],
-            mapping: {
-                value: 'systemMaterialId',
-                label: 'materialName'
-            },
-            onSelect: (selectedValue, allValues) => {
-                const selectedOption = allValues.find(opt => opt.systemMaterialId === selectedValue);
-                return {
-                    userMaterialId: selectedOption?.userMaterialId || '',
-                    materialName: selectedOption?.materialName || '',
-                    materialStandard: selectedOption?.materialStandard || '',
-                    unit: selectedOption?.unit || ''
-                };
-            }
-        }
-    },
-    {id: 'userMaterialId', label: '제품ID', type: 'text', required: true, lock: true},
-    {id: 'materialStandard', label: '규격', type: 'text', lock: true},
-    {id: 'unit', label: '단위', type: 'text', required: true, lock: true},
-    {id: 'bomName', label: 'BOM 명', type: 'text', required: true},
-    {id: 'remark', label: '비고', type: 'textarea', rows: 6}
 ];
 
 //BOM DETAIL(행추가)
@@ -440,27 +385,73 @@ const useMaterialSelect = (setBomDetailList, materialData) => {
 };
 
 const BomManagement = (props) => {
-    // Theme 및 Context 관련
     const theme = useTheme();
     const {domain} = useDomain();
     const isDarkMode = theme.palette.mode === 'dark';
     const {executeQuery, executeMutation} = useGraphQL();
-    const {
-        materials,
-        isLoading: isMaterialLoading,
-        getCategoriesByType,
-        getMaterialsByTypeAndCategory,
-        getMaterialById,
-        refresh: refreshMaterialData
-    } = useMaterialData(executeQuery);
+    const { materials, getMaterialsByType, getMaterialById, loadMaterials } = useMaterialData(executeQuery);
 
     // materialData 객체 생성
     const materialData = {
         materials,
-        getCategoriesByType,
-        getMaterialsByTypeAndCategory,
         getMaterialById
     };
+
+    // 모달 필드의 relation 함수 정의
+    const getMaterialOptions = (materialType) => {
+        const materials = getMaterialsByType(materialType);
+        return materials.map(m => ({
+            value: m.systemMaterialId,
+            label: m.materialName
+        }));
+    };
+
+    const getMaterialDetails = (systemMaterialId) => {
+        const material = getMaterialById(systemMaterialId);
+        return {
+            userMaterialId: material?.userMaterialId || '',
+            materialName: material?.materialName || '',
+            materialStandard: material?.materialStandard || '',
+            unit: material?.unit || ''
+        };
+    };
+
+    // BOM_MODAL_FIELDS 정의
+    const BOM_MODAL_FIELDS = [
+        {
+            id: 'materialType',
+            label: '종류',
+            type: 'select',
+            required: true,
+            lockOnEdit: true,
+            options: [
+                {value: 'COMPLETE_PRODUCT', label: '완제품'},
+                {value: 'HALF_PRODUCT', label: '반제품'}
+            ],
+            relation: {
+                targetField: 'systemMaterialId',
+                getOptions: getMaterialOptions,
+                onSelect: getMaterialDetails
+            }
+        },
+        {
+            id: 'systemMaterialId',
+            label: '제품 선택',
+            type: 'select',
+            required: true,
+            lockOnEdit: true,
+            options: [],
+            relation: {
+                getOptions: getMaterialOptions,
+                onSelect: getMaterialDetails
+            }
+        },
+        {id: 'userMaterialId', label: '제품ID', type: 'text', required: true, lock: true},
+        {id: 'materialStandard', label: '규격', type: 'text', lock: true},
+        {id: 'unit', label: '단위', type: 'text', required: true, lock: true},
+        {id: 'bomName', label: 'BOM 명', type: 'text', required: true},
+        {id: 'remark', label: '비고', type: 'textarea', rows: 6}
+    ];
 
     // 스타일 관련 함수
     const getTextColor = () => domain === DOMAINS.PEMS ?
@@ -779,6 +770,7 @@ const BomManagement = (props) => {
     // 모달 필드 변경 핸들러
     const handleModalFieldChange = async (fieldId, value) => {
         const field = BOM_MODAL_FIELDS.find(f => f.id === fieldId);
+        if (!field) return;
 
         // 먼저 값을 설정
         setModalConfig(prev => ({
@@ -791,24 +783,11 @@ const BomManagement = (props) => {
 
         if (field?.relation) {
             try {
-                const {targetField, query, params, mapping, onSelect} = field.relation;
+                const { targetField, getOptions, onSelect } = field.relation;
 
-                if (targetField) {
-                    // materialType 선택 시에만 서버 요청
-                    const queryParams = {};
-                    params.forEach(param => {
-                        queryParams[param] = modalConfig.values[param] || value;
-                    });
-
-                    const result = await executeQuery(query, queryParams);
-
-                    // materialType 선택 시 systemMaterialId 목록 업데이트
-                    const options = result.data.getMaterialsByType.map(item => ({
-                        value: item[mapping.value],
-                        label: item[mapping.label]
-                    }));
-
-                    // systemMaterialId 필드만 업데이트
+                if (targetField && getOptions) {
+                    const options = getOptions(value);
+                    
                     setModalConfig(prev => ({
                         ...prev,
                         fields: prev.fields.map(f => {
@@ -820,17 +799,10 @@ const BomManagement = (props) => {
                                 };
                             }
                             return f;
-                        }),
-                        values: {
-                            ...prev.values,
-                            [`${targetField}_options`]: options,
-                            [`${targetField}_raw_data`]: result.data.getMaterialsByType
-                        }
+                        })
                     }));
                 } else if (onSelect && value) {
-                    // systemMaterialId 선택 시 이미 불러온 원본 데이터에서 찾기
-                    const rawData = modalConfig.values[`${fieldId}_raw_data`] || [];
-                    const additionalValues = onSelect(value, rawData);
+                    const additionalValues = onSelect(value);
                     setModalConfig(prev => ({
                         ...prev,
                         values: {
@@ -1043,6 +1015,11 @@ const BomManagement = (props) => {
         handleParentSelect,
         handleComplete
     } = useMaterialSelect(setBomDetailList, materialData);
+
+    // 리프레시 버튼 추가
+    const handleRefresh = async () => {
+        await loadMaterials();
+    };
 
     return (
         <Box sx={{p: 0, minHeight: '100vh'}}>
@@ -1257,6 +1234,16 @@ const BomManagement = (props) => {
                     {materialSelectModal.isNewRow ? '제품 등록' : '제품 수정'}
                 </DialogTitle>
                 <DialogContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                        <Button
+                            startIcon={<RefreshIcon />}
+                            onClick={handleRefresh}
+                            // disabled={isMaterialLoading}
+                            size="small"
+                        >
+                            자재 목록 새로고침
+                        </Button>
+                    </Box>
                     <Box sx={{display: 'flex', gap: 4, mt: 2}}>
                         {/* 부모 제품 선택 영역 */}
                         <Box sx={{flex: 1}}>
