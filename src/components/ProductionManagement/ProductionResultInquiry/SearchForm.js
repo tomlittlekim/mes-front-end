@@ -85,7 +85,7 @@ const SearchForm = ({ control, equipmentOptions, handleDateRangeChange }) => {
                         onRangeChange={handleDateRangeChange}
                         startLabel="시작일"
                         endLabel="종료일"
-                        label="작업일자"
+                        label="생산일자"
                         size="small"
                     />
                 )}
