@@ -2,15 +2,32 @@ import { format } from 'date-fns';
 import Message from '../../../../utils/message/Message';
 
 /**
+ * 날짜 포맷 함수
+ * 
+ * @param {String} dateString - 날짜 문자열
+ * @returns {String} 포맷된 날짜 문자열 또는 '-'
+ */
+const formatDateDisplay = (dateString) => {
+  if (!dateString) return '-';
+  
+  try {
+    const date = new Date(dateString);
+    return !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm:ss') : '-';
+  } catch (e) {
+    return '-';
+  }
+};
+
+/**
  * 생산실적 데이터 인쇄 유틸리티
  *
- * @param {Object} selectedWorkOrder - 선택된 작업지시 객체
+ * @param {Object} selectedWorkOrder - 선택된 작업지시 객체 (없을 수 있음)
  * @param {Array} productionResultList - 생산실적 목록
  * @param {String} userName - 현재 사용자 이름
  */
 export const printProductionResult = (selectedWorkOrder, productionResultList, userName) => {
-  if (!selectedWorkOrder) {
-    Message.showWarning('출력할 생산실적을 선택해주세요.');
+  if (productionResultList.length === 0) {
+    Message.showWarning('출력할 생산실적이 없습니다.');
     return;
   }
 
@@ -18,14 +35,16 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
     // 생산실적 데이터를 출력 가능한 형태로 준비
     const printData = productionResultList.map(item => ({
       생산실적ID: item.prodResultId || '-',
-      작업지시ID: selectedWorkOrder.workOrderId || '-',
-      제품ID: selectedWorkOrder.productId || '-',
+      작업지시ID: item.workOrderId || '-',
+      제품ID: item.productId || '-',
       양품수량: item.goodQty || 0,
       불량수량: item.defectQty || 0,
       진척률: `${item.progressRate || 0}%`,
       불량률: `${item.defectRate || 0}%`,
       설비: item.equipmentId || '-',
-      등록일시: item.createDate ? format(new Date(item.createDate), 'yyyy-MM-dd HH:mm:ss') : '-',
+      생산시작일시: formatDateDisplay(item.prodStartTime),
+      생산종료일시: formatDateDisplay(item.prodEndTime),
+      등록일시: formatDateDisplay(item.createDate),
       등록자: item.createUser || '-'
     }));
 
@@ -36,11 +55,14 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
       return;
     }
 
+    // 타이틀 설정
+    const title = `생산실적 출력 - ${format(new Date(), 'yyyy-MM-dd')}`;
+
     // 인쇄할 HTML 생성
     printWindow.document.write(`
       <html>
       <head>
-        <title>생산실적 출력 - ${selectedWorkOrder.workOrderId}</title>
+        <title>${title}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h1 { color: #333; text-align: center; font-size: 18px; margin-bottom: 20px; }
@@ -69,14 +91,8 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
         
         <table class="info-table">
           <tr>
-            <th>작업지시ID</th>
-            <td>${selectedWorkOrder.workOrderId || '-'}</td>
-            <th>제품ID</th>
-            <td>${selectedWorkOrder.productId || '-'}</td>
-          </tr>
-          <tr>
-            <th>계획수량</th>
-            <td>${selectedWorkOrder.orderQty || 0}</td>
+            <th>생산실적 건수</th>
+            <td>${productionResultList.length}건</td>
             <th>출력일시</th>
             <td>${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}</td>
           </tr>
@@ -86,11 +102,15 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
           <thead>
             <tr>
               <th>생산실적ID</th>
+              <th>작업지시ID</th>
+              <th>제품ID</th>
               <th>양품수량</th>
               <th>불량수량</th>
               <th>진척률</th>
               <th>불량률</th>
               <th>설비</th>
+              <th>생산시작일시</th>
+              <th>생산종료일시</th>
               <th>등록일시</th>
               <th>등록자</th>
             </tr>
@@ -99,11 +119,15 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
             ${printData.map(item => `
               <tr>
                 <td>${item.생산실적ID}</td>
+                <td>${item.작업지시ID}</td>
+                <td>${item.제품ID}</td>
                 <td>${item.양품수량}</td>
                 <td>${item.불량수량}</td>
                 <td>${item.진척률}</td>
                 <td>${item.불량률}</td>
                 <td>${item.설비}</td>
+                <td>${item.생산시작일시}</td>
+                <td>${item.생산종료일시}</td>
                 <td>${item.등록일시}</td>
                 <td>${item.등록자}</td>
               </tr>
@@ -140,7 +164,7 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
 /**
  * 생산실적 데이터를 CSV로 내보내는 유틸리티
  *
- * @param {Object} selectedWorkOrder - 선택된 작업지시 객체
+ * @param {Object} selectedWorkOrder - 선택된 작업지시 객체 (없을 수 있음)
  * @param {Array} productionResultList - 생산실적 목록
  */
 export const exportProductionResultToCSV = (selectedWorkOrder, productionResultList) => {
@@ -151,25 +175,25 @@ export const exportProductionResultToCSV = (selectedWorkOrder, productionResultL
 
   try {
     // 파일명 생성
-    const fileName = selectedWorkOrder
-        ? `생산실적_${selectedWorkOrder.workOrderId}_${format(new Date(), 'yyyyMMdd')}.csv`
-        : `생산실적_전체_${format(new Date(), 'yyyyMMdd')}.csv`;
+    const fileName = `생산실적_${format(new Date(), 'yyyyMMdd')}.csv`;
 
     // CSV 헤더 생성
-    let csvContent = "생산실적ID,작업지시ID,제품ID,양품수량,불량수량,진척률,불량률,설비,등록일시,등록자\n";
+    let csvContent = "생산실적ID,작업지시ID,제품ID,양품수량,불량수량,진척률,불량률,설비,생산시작일시,생산종료일시,등록일시,등록자\n";
 
     // 데이터 행 추가
     productionResultList.forEach(item => {
       const row = [
         item.prodResultId || '',
-        selectedWorkOrder?.workOrderId || '',
-        selectedWorkOrder?.productId || '',
+        item.workOrderId || '',
+        item.productId || '',
         item.goodQty || 0,
         item.defectQty || 0,
         `${item.progressRate || 0}%`,
         `${item.defectRate || 0}%`,
         item.equipmentId || '',
-        item.createDate ? format(new Date(item.createDate), 'yyyy-MM-dd HH:mm:ss') : '',
+        formatDateDisplay(item.prodStartTime),
+        formatDateDisplay(item.prodEndTime),
+        formatDateDisplay(item.createDate),
         item.createUser || ''
       ].map(cell => {
         // CSV 형식에 맞게 셀 데이터 처리 (콤마나 따옴표 처리)
