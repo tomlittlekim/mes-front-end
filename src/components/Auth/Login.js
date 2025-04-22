@@ -111,14 +111,20 @@ const Login = () => {
 
       if (res.status === 200) { // 명시적 상태 코드 확인
         setUserInfo(res);
+        
+        // 성공 메시지를 보여주고 자동으로 다음 화면으로 이동
         Swal.fire({
           icon: 'success',
           title: '성공',
           text: '로그인 성공.',
-          confirmButtonText: '확인'
-        }).then(() => {
-          window.location.href = '/';
+          timer: 1000,
+          showConfirmButton: false
         });
+        
+        // 타이머와 동시에 리다이렉트 처리
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
       } else {
         Swal.fire('로그인 실패', res.message, 'error');
       }
