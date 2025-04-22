@@ -1,521 +1,770 @@
-import React, { useState, useEffect } from 'react';
-import './ShipmentManagement.css';
-import { useForm, Controller } from 'react-hook-form';
-import { 
-  TextField, 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
-  Select,
-  Grid, 
-  Box, 
-  Typography, 
-  useTheme,
-  Stack,
-  Chip,
-  IconButton,
-  alpha
-} from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Paper, Collapse, Button, Stack, IconButton, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { EnhancedDataGridWrapper } from '../Common';
+import SearchCondition from '../Common/SearchCondition';
+import {
+  getShipmentHeaders,
+  getShipmentDetails,
+  prepareShipmentDetailsForEntry,
+  upsertShipmentDetails,
+  softDeleteShipment,
+  getVendors,
+  getShipmentStatus
+} from '../../api/shipmentApi';
+import Message from '../../utils/message/Message';
+import { format, parse } from 'date-fns';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { MuiDataGridWrapper, SearchCondition } from '../Common';
-import Swal from 'sweetalert2';
-import { useDomain, DOMAINS } from '../../contexts/DomainContext';
-import HelpModal from '../Common/HelpModal';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import koLocale from 'date-fns/locale/ko';
+import UseSystemStatusManager from "../../hook/UseSystemStatusManager";
 
-const ShipmentManagement = (props) => {
-  // 현재 테마 가져오기
-  const theme = useTheme();
-  const { domain } = useDomain();
-  const isDarkMode = theme.palette.mode === 'dark';
+const ShipmentManagement = () => {
+  const { userGroup } = UseSystemStatusManager();
   
-  // React Hook Form 설정
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      orderId: '',
-      customerName: '',
-      productName: '',
-      outputStatus: '',
-      fromDate: null,
-      toDate: null
-    }
+  // 상태 관리
+  const [searchParams, setSearchParams] = useState({
+    orderNo: null,
+    fromDate: null,
+    toDate: null,
+    customerId: null,
+    shipmentStatus: null
   });
 
-  // 상태 관리
-  const [isLoading, setIsLoading] = useState(true);
-  const [shipmentList, setShipmentList] = useState([]);
-  const [selectedShipment, setSelectedShipment] = useState(null);
-  const [shipmentDetail, setShipmentDetail] = useState(null);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [orderNoInput, setOrderNoInput] = useState('');
+  const [headerRows, setHeaderRows] = useState([]);
+  const [selectedHeader, setSelectedHeader] = useState(null);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const [detailRows, setDetailRows] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [shipmentStatus, setShipmentStatus] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isNewDetailRow, setIsNewDetailRow] = useState(false);
+  const [preparedDetails, setPreparedDetails] = useState([]);
+  const [modifiedRows, setModifiedRows] = useState(new Set());
 
-  // 도메인별 색상 설정
-  const getTextColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
-    }
-    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
-  };
-  
-  const getBgColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
-    }
-    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
-  };
-  
-  const getBorderColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#3d2814' : '#f5e8d7';
-    }
-    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
-  };
-
-  // 초기화 함수
-  const handleReset = () => {
-    reset({
-      orderId: '',
-      customerName: '',
-      productName: '',
-      outputStatus: '',
-      fromDate: null,
-      toDate: null
-    });
-  };
-
-  // 검색 실행 함수
-  const handleSearch = (data) => {
-    console.log('검색 조건:', data);
-    
-    // API 호출 대신 더미 데이터 사용
-    const dummyData = [
-      { id: '0000001', orderDate: '2024-03-15', customer: '(주)한국전자', product: '[T55VD] 보라 VIOLET', totalAmount: 500000, shipmentStatus: '부분출하', orderQuantity: 2000, shippedQuantity: 1500, remainingQuantity: 500, note: '특이사항 없음' },
-      { id: '0000002', orderDate: '2024-03-16', customer: '대림산업', product: 'PFI-050M_빨강', totalAmount: 350000, shipmentStatus: '출하완료', orderQuantity: 1000, shippedQuantity: 1000, remainingQuantity: 0, note: '출하완료' },
-      { id: '0000003', orderDate: '2024-03-17', customer: '에이원', product: '모조지70g', totalAmount: 780000, shipmentStatus: '부분출하', orderQuantity: 5000, shippedQuantity: 3000, remainingQuantity: 2000, note: '일부 긴급출하' },
-      { id: '0000004', orderDate: '2024-03-18', customer: '신한물산', product: '포장비닐', totalAmount: 120000, shipmentStatus: '미출하', orderQuantity: 500, shippedQuantity: 0, remainingQuantity: 500, note: '출하 대기중' }
-    ];
-    
-    setShipmentList(dummyData);
-    setSelectedShipment(null);
-    setShipmentDetail(null);
-  };
-
-  // 출하 선택 핸들러
-  const handleShipmentSelect = (params) => {
-    const shipment = shipmentList.find(s => s.id === params.id);
-    setSelectedShipment(shipment);
-    
-    if (!shipment) return;
-    
-    // 출하 내역 상세 정보 (실제로는 API 호출)
-    const detailData = [
-      { id: '00001', shipmentDate: '2024-03-25', productName: '과자', spec: '박스형', unit: 'BOX', orderQuantity: 1500, shippedQuantity: 800, remainingQuantity: 700, stockQuantity: 20, currentShipmentQuantity: 20, warehouse: '재품창고', shippedBy: '홍길동', note: '일반출하' },
-      { id: '00002', shipmentDate: '2024-03-25', productName: '사과', spec: '샘플용', unit: 'EA', orderQuantity: 500, shippedQuantity: 500, remainingQuantity: 0, stockQuantity: 0, currentShipmentQuantity: 0, warehouse: '신선창고', shippedBy: '김철수', note: '급출하 요청' }
-    ];
-    
-    setShipmentDetail(detailData);
-  };
-
-  // 출하등록 버튼 클릭 핸들러
-  const handleAddShipment = () => {
-    if (!selectedShipment) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '출하할 주문을 먼저 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-    
-    const newShipment = {
-      id: `NEW_${Date.now()}`,
-      shipmentDate: new Date().toISOString().split('T')[0],
-      productName: selectedShipment.product,
-      spec: '',
-      unit: '',
-      orderQuantity: selectedShipment.orderQuantity,
-      shippedQuantity: selectedShipment.shippedQuantity,
-      remainingQuantity: selectedShipment.remainingQuantity,
-      stockQuantity: 0,
-      currentShipmentQuantity: 0,
-      warehouse: '',
-      shippedBy: '시스템',
-      note: ''
-    };
-    
-    setShipmentDetail([...(shipmentDetail || []), newShipment]);
-  };
-
-  // 저장 버튼 클릭 핸들러
-  const handleSave = () => {
-    if (!selectedShipment) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '저장할 주문을 먼저 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-    
-    if (!shipmentDetail || shipmentDetail.length === 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '저장할 출하 내역이 없습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-    
-    Swal.fire({
-      icon: 'success',
-      title: '성공',
-      text: '저장되었습니다.',
-      confirmButtonText: '확인'
-    });
-  };
-
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = () => {
-    if (!selectedShipment) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 주문을 먼저 선택해주세요.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-    
-    if (!shipmentDetail || shipmentDetail.length === 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: '알림',
-        text: '삭제할 출하 내역이 없습니다.',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-    
-    Swal.fire({
-      title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setShipmentDetail(null);
-        Swal.fire({
-          icon: 'success',
-          title: '성공',
-          text: '삭제되었습니다.',
-          confirmButtonText: '확인'
-        });
-      }
-    });
-  };
-
-  // 컴포넌트 마운트 시 초기 데이터 로드
+  // 초기 데이터 로딩
   useEffect(() => {
-    // 약간의 딜레이를 주어 DOM 요소가 완전히 렌더링된 후에 그리드 데이터를 설정
-    const timer = setTimeout(() => {
-      handleSearch({});
-      setIsLoading(false);
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    loadInitialData();
   }, []);
 
-  // 주문 목록 그리드 컬럼 정의
-  const shipmentColumns = [
-    { field: 'id', headerName: '주문ID', width: 100 },
-    { field: 'orderDate', headerName: '주문일자', width: 110 },
-    { field: 'customer', headerName: '고객사', width: 150 },
-    { field: 'product', headerName: '제품', width: 180, flex: 1 },
-    { field: 'totalAmount', headerName: '제품최종금액', width: 120, type: 'number' },
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      const [vendorList, status, headers] = await Promise.all([
+        getVendors(),
+        getShipmentStatus(),
+        getShipmentHeaders({})
+      ]);
+      
+      setVendors(vendorList || []);
+      setShipmentStatus(status || []);
+      setHeaderRows(headers || []);
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 검색 조건 변경 시 헤더 데이터 조회
+  const handleSearch = async (newParams, isButtonClick = false) => {
+    try {
+      setLoading(true);
+      const cleanedParams = Object.fromEntries(
+        Object.entries(newParams).map(([key, value]) => [
+          key,
+          value === '' ? null : value
+        ])
+      );
+
+      const finalParams = isButtonClick 
+        ? { ...cleanedParams, orderNo: orderNoInput || null }
+        : { ...cleanedParams, orderNo: searchParams.orderNo };
+      
+      setSearchParams(finalParams);
+      const headers = await getShipmentHeaders(finalParams);
+      setHeaderRows(headers || []);
+      setSelectedHeader(null);
+      setDetailRows([]);
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 초기화 핸들러
+  const handleReset = () => {
+    const initialParams = {
+      orderNo: null,
+      fromDate: null,
+      toDate: null,
+      customerId: null,
+      shipmentStatus: null
+    };
+    setOrderNoInput('');
+    handleSearch(initialParams);
+  };
+
+  // 날짜 포맷 변환 함수
+  const formatDate = (date) => {
+    if (!date) return '';
+    return format(new Date(date), 'yyyy-MM-dd');
+  };
+
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    return parse(dateStr, 'yyyy-MM-dd', new Date());
+  };
+
+  // 날짜 선택 컴포넌트
+  const DatePickerCell = ({ value, field, id, api }) => {
+    return (
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={koLocale}>
+        <DatePicker
+          value={parseDate(value)}
+          onChange={(newValue) => {
+            api.setEditCellValue({ id, field, value: formatDate(newValue) });
+          }}
+          slotProps={{
+            textField: {
+              size: "small",
+              fullWidth: true,
+              variant: "outlined"
+            }
+          }}
+          format="yyyy-MM-dd"
+        />
+      </LocalizationProvider>
+    );
+  };
+
+  // 헤더 그리드 컬럼 정의
+  const headerColumns = [
+    { 
+      field: 'orderNo', 
+      headerName: '주문번호', 
+      width: 150,
+      editable: false
+    },
+    { 
+      field: 'orderDate', 
+      headerName: '주문일자', 
+      width: 120,
+      editable: false,
+      renderCell: (params) => params?.value ? formatDate(params.value) : '-'
+    },
+    { 
+      field: 'customerId', 
+      headerName: '고객사', 
+      width: 150,
+      editable: false,
+      renderCell: (params) => {
+        const vendor = vendors.find(v => v.vendorId === params.value);
+        return vendor?.vendorName || params.value;
+      }
+    },
+    { 
+      field: 'orderer', 
+      headerName: '주문자', 
+      width: 120,
+      editable: false,
+      valueOptions: userGroup.map(u => ({
+        value: u.loginId,
+        label: u.userName
+      })),
+      renderCell: (params) => {
+        const user = userGroup.find(u => u.loginId === params.value);
+        return user?.userName || params.value;
+      }
+    },
+    {
+      field: 'orderQuantity',
+      headerName: '주문수량',
+      width: 120,
+      editable: false,
+      type: 'number'
+    },
+    { 
+      field: 'totalAmount', 
+      headerName: '총금액', 
+      width: 120,
+      type: 'number',
+      editable: false,
+      renderCell: (params) => params.value?.toLocaleString()
+    },
     { 
       field: 'shipmentStatus', 
       headerName: '출하상태', 
-      width: 110,
+      width: 120,
+      editable: false,
+      valueOptions: shipmentStatus.map(u => ({
+        value: u.codeId,
+        label: u.codeName,
+      })),
       renderCell: (params) => {
-        let color = 'default';
-        if (params.value === '미출하') color = 'error';
-        else if (params.value === '부분출하') color = 'warning';
-        else if (params.value === '출하완료') color = 'success';
-        
-        return (
-          <Chip 
-            label={params.value} 
-            color={color} 
-            size="small" 
-            variant="outlined"
-          />
-        );
+        const user = shipmentStatus.find(u => u.codeId === params.value);
+        return user?.codeName || params.value;
       }
     },
-    { field: 'orderQuantity', headerName: '주문수량', width: 100, type: 'number' },
-    { field: 'shippedQuantity', headerName: '출하수량', width: 100, type: 'number' },
-    { field: 'remainingQuantity', headerName: '미출하수량', width: 100, type: 'number' },
-    { field: 'note', headerName: '비고사항', width: 150 }
-  ];
-  
-  // 출하 상세 정보 그리드 컬럼 정의
-  const detailColumns = [
-    { field: 'shipmentDate', headerName: '출하일자', width: 110, editable: true },
-    { field: 'id', headerName: '출하ID', width: 100 },
-    { field: 'productName', headerName: '품목명', width: 120, editable: true },
-    { field: 'spec', headerName: '규격', width: 100, editable: true },
-    { field: 'unit', headerName: '단위', width: 80, editable: true },
-    { field: 'orderQuantity', headerName: '주문수량', width: 100, type: 'number' },
-    { field: 'shippedQuantity', headerName: '출하수량', width: 100, type: 'number' },
-    { field: 'remainingQuantity', headerName: '미출하수량', width: 100, type: 'number' },
-    { field: 'stockQuantity', headerName: '재고수량', width: 100, type: 'number' },
-    { field: 'currentShipmentQuantity', headerName: '금회출하수량', width: 120, type: 'number', editable: true,
-      cellClassName: 'editable-cell'
+    { 
+      field: 'shippedQuantity', 
+      headerName: '출하수량', 
+      width: 120,
+      type: 'number',
+      editable: false
     },
-    { field: 'warehouse', headerName: '출하창고', width: 120, editable: true },
-    { field: 'shippedBy', headerName: '출하처리자', width: 120, editable: true },
-    { field: 'note', headerName: '비고사항', width: 150, editable: true }
+    { 
+      field: 'unshippedQuantity', 
+      headerName: '미출하수량', 
+      width: 120,
+      type: 'number',
+      editable: false
+    },
+    { 
+      field: 'remark', 
+      headerName: '비고사항', 
+      width: 200,
+      editable: false,
+      renderCell: (params) => params?.value ? formatDate(params.value) : '-'
+    }
   ];
 
-  // 출하 목록 그리드 버튼
-  const shipmentGridButtons = [
-    { label: '조회', onClick: handleSubmit(handleSearch), icon: <SearchIcon /> }
+  // 상세 그리드 컬럼 정의
+  const detailColumns = [
+    { 
+      field: 'shipmentDate', 
+      headerName: '출하일자(*)', 
+      width: 120,
+      editable: true,
+      required: true,
+      renderCell: (params) => renderRequiredCell(params, 'shipmentDate'),
+      renderEditCell: (params) => <DatePickerCell {...params} />,
+      valueFormatter: (params) => params?.value ? formatDate(params.value) : ''
+    },
+    { 
+      field: 'systemMaterialId', 
+      headerName: '품목ID(*)', 
+      width: 150,
+      editable: true,
+      required: true,
+      type: 'singleSelect',
+      valueOptions: preparedDetails.map(entry => ({
+        value: entry.systemMaterialId,
+        label: entry.materialName
+      })),
+      renderCell: (params) => renderRequiredCell(params, 'systemMaterialId')
+    },
+    { 
+      field: 'materialName', 
+      headerName: '품목명', 
+      width: 200,
+      editable: false
+    },
+    { 
+      field: 'materialStandard', 
+      headerName: '규격', 
+      width: 120,
+      editable: false
+    },
+    { 
+      field: 'unit', 
+      headerName: '단위', 
+      width: 80,
+      editable: false
+    },
+    { 
+      field: 'quantity', 
+      headerName: '주문수량', 
+      width: 100,
+      type: 'number',
+      editable: false
+    },
+    { 
+      field: 'stockQuantity', 
+      headerName: '재고수량', 
+      width: 100,
+      type: 'number',
+      editable: false
+    },
+    { 
+      field: 'shippedQuantity', 
+      headerName: '출하수량', 
+      width: 100,
+      type: 'number',
+      editable: false
+    },
+    { 
+      field: 'unshippedQuantity', 
+      headerName: '미출하수량', 
+      width: 100,
+      type: 'number',
+      editable: false
+    },
+    { 
+      field: 'cumulativeShipmentQuantity', 
+      headerName: '금회출하수량(*)', 
+      width: 120,
+      type: 'number',
+      editable: true,
+      required: true,
+      renderCell: (params) => renderRequiredCell(params, 'cumulativeShipmentQuantity'),
+      preProcessEditCellProps: (params) => {
+        const hasError = params.props.value > params.row.stockQuantity || 
+                        params.props.value > params.row.unshippedQuantity;
+        return { ...params.props, error: hasError };
+      }
+    },
+    { 
+      field: 'shipmentWarehouse', 
+      headerName: '출하창고', 
+      width: 120,
+      editable: false
+    },
+    { 
+      field: 'shipmentHandler', 
+      headerName: '출하처리자(*)', 
+      width: 120,
+      editable: true,
+      required: true,
+      type: 'singleSelect',
+      valueOptions: userGroup.map(u => ({
+        value: u.loginId,
+        label: u.userName
+      })),
+      renderCell: (params) => renderRequiredCell(params, 'shipmentHandler')
+    },
+    { 
+      field: 'remark', 
+      headerName: '비고사항', 
+      width: 200,
+      editable: true
+    }
   ];
 
-  // 출하 상세 그리드 버튼
-  const detailGridButtons = [
-    { label: '출하등록', onClick: handleAddShipment, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> }
-  ];
+  // 필수 필드 렌더링 함수
+  const renderRequiredCell = (params, field) => {
+    if (!params.value) {
+      return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
+    }
+    
+    switch (field) {
+      case 'systemMaterialId':
+        const product = shipmentStatus.find(p => p.systemMaterialId === params.value);
+        return product?.materialName || params.value;
+      case 'shipmentHandler':
+        const user = userGroup.find(u => u.loginId === params.value);
+        return user?.userName || params.value;
+      default:
+        return params.value;
+    }
+  };
+
+  // 헤더 row 클릭 핸들러
+  const handleHeaderRowClick = async (params) => {
+    setSelectedHeader(params.row);
+    if (params.row.id) {
+      try {
+        setLoading(true);
+        const [details, prepared] = await Promise.all([
+          getShipmentDetails(params.row.id),
+          prepareShipmentDetailsForEntry(params.row.orderNo)
+        ]);
+        setDetailRows(details || []);
+        setPreparedDetails(prepared || []);
+      } catch (error) {
+        Message.showError(error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setDetailRows([]);
+      setPreparedDetails([]);
+    }
+  };
+
+  // 상세 row 클릭 핸들러
+  const handleDetailRowClick = (params) => {
+    setSelectedDetail(params.row);
+  };
+
+  // 행 수정 처리 - 상세
+  const processDetailRowUpdate = async (newRow, oldRow) => {
+    // 품목ID가 변경된 경우
+    if (newRow.systemMaterialId !== oldRow.systemMaterialId) {
+      const selectedDetail = preparedDetails.find(d => d.systemMaterialId === newRow.systemMaterialId);
+      if (selectedDetail) {
+        const updatedRow = { 
+          ...newRow,
+          ...selectedDetail,
+          id: newRow.id
+        };
+        // 수정된 row 추적
+        setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+        return updatedRow;
+      }
+    }
+
+    // 금회출하수량 체크
+    if (newRow.field === 'cumulativeShipmentQuantity') {
+      // 재고수량 체크
+      if (newRow.cumulativeShipmentQuantity > newRow.stockQuantity) {
+        Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
+        return oldRow;
+      }
+      
+      // 미출하수량 체크
+      if (newRow.cumulativeShipmentQuantity > newRow.unshippedQuantity) {
+        Message.showWarning('금회출하수량은 미출하수량을 초과할 수 없습니다.');
+        return oldRow;
+      }
+    }
+
+    const updatedRow = { ...newRow };
+    // 수정된 row 추적
+    setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+    setDetailRows(prev => prev.map(row => 
+      row.id === oldRow.id ? updatedRow : row
+    ));
+    return updatedRow;
+  };
+
+  // 상세 추가 핸들러
+  const handleAddDetail = () => {
+    if (!selectedHeader?.orderNo) {
+      Message.showWarning('주문을 먼저 선택해주세요.');
+      return;
+    }
+
+    if (isNewDetailRow) {
+      Message.showWarning('이미 추가된 신규 행이 있습니다.');
+      return;
+    }
+
+    // 음수 ID 생성 (현재 시간의 음수값 사용)
+    const newId = -Date.now();
+    
+    const newRow = {
+      id: newId,
+      orderNo: selectedHeader.orderNo,
+      shipmentDate: null,
+      systemMaterialId: null,
+      shipmentHandler: null,
+      cumulativeShipmentQuantity: null
+    };
+
+    setDetailRows([...detailRows, newRow]);
+    setIsNewDetailRow(true);
+  };
+
+  // 상세 삭제 핸들러
+  const handleDeleteDetail = async () => {
+    if (!selectedDetail) {
+      Message.showWarning('삭제할 출하 상세를 선택해주세요.');
+      return;
+    }
+
+    // 신규 row인 경우 바로 삭제 (음수 ID 체크)
+    if (selectedDetail.id < 0) {
+      setDetailRows(prev => prev.filter(row => row.id !== selectedDetail.id));
+      setSelectedDetail(null);
+      setIsNewDetailRow(false);
+      return;
+    }
+
+    // 최신 데이터가 아니거나 flagPrint가 true인 경우 삭제 불가
+    if (selectedDetail.flagPrint) {
+      Message.showWarning('이미 출력된 출하정보는 삭제할 수 없습니다.');
+      return;
+    }
+
+    Message.showDeleteConfirm(async () => {
+      try {
+        setLoading(true);
+        await softDeleteShipment(selectedDetail.id);
+        Message.showSuccess('출하 상세 삭제 성공', async () => {
+          // 헤더 데이터 재조회
+          const headers = await getShipmentHeaders(searchParams);
+          setHeaderRows(headers || []);
+          
+          // 현재 선택된 헤더 정보 업데이트
+          const updatedHeader = headers?.find(h => h.id === selectedHeader.id);
+          setSelectedHeader(updatedHeader || null);
+          
+          // 상세 데이터 재조회
+          if (updatedHeader) {
+            const [details, prepared] = await Promise.all([
+              getShipmentDetails(updatedHeader.id),
+              prepareShipmentDetailsForEntry(updatedHeader.orderNo)
+            ]);
+            setDetailRows(details || []);
+            setPreparedDetails(prepared || []);
+          } else {
+            setDetailRows([]);
+            setPreparedDetails([]);
+          }
+          setSelectedDetail(null);
+        });
+      } catch (error) {
+        Message.showError(error);
+      } finally {
+        setLoading(false);
+      }
+    });
+  };
+
+  // 상세 저장 핸들러
+  const handleSaveDetail = async () => {
+    try {
+      setLoading(true);
+      
+      // 수정된 row와 신규 row만 필터링
+      const rowsToSave = detailRows.filter(row => 
+        row.id < 0 || modifiedRows.has(row.id)
+      );
+
+      if (rowsToSave.length === 0) {
+        Message.showWarning('저장할 데이터가 없습니다.');
+        return;
+      }
+
+      // 필수 필드 체크
+      const invalidRows = rowsToSave.filter(row => {
+        return !row.shipmentDate || !row.systemMaterialId || 
+               !row.cumulativeShipmentQuantity || !row.shipmentHandler;
+      });
+
+      if (invalidRows.length > 0) {
+        Message.showWarning('필수 입력 항목을 모두 입력해주세요.');
+        return;
+      }
+
+      // 금회출하수량 체크
+      const invalidQuantityRows = rowsToSave.filter(row => {
+        const isOverStock = row.cumulativeShipmentQuantity > row.stockQuantity;
+        const isOverUnshipped = row.cumulativeShipmentQuantity > row.unshippedQuantity;
+        return isOverStock || isOverUnshipped;
+      });
+
+      if (invalidQuantityRows.length > 0) {
+        const overStockRows = invalidQuantityRows.filter(row => row.cumulativeShipmentQuantity > row.stockQuantity);
+        const overUnshippedRows = invalidQuantityRows.filter(row => row.cumulativeShipmentQuantity > row.unshippedQuantity);
+        
+        if (overStockRows.length > 0) {
+          Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
+          return;
+        }
+        
+        if (overUnshippedRows.length > 0) {
+          Message.showWarning('금회출하수량은 미출하수량을 초과할 수 없습니다.');
+          return;
+        }
+      }
+
+      // 저장할 데이터 준비
+      const dataToSave = rowsToSave.map(row => ({
+        ...row,
+        shipmentId: selectedHeader.id,
+        id: row.id < 0 ? null : row.id
+      }));
+
+      await upsertShipmentDetails(dataToSave);
+      
+      // 저장 성공 후 데이터 리로드
+      const [headers, details, prepared] = await Promise.all([
+        getShipmentHeaders(searchParams),
+        getShipmentDetails(selectedHeader.id),
+        prepareShipmentDetailsForEntry(selectedHeader.orderNo)
+      ]);
+
+      // 헤더 데이터 업데이트
+      setHeaderRows(headers || []);
+      
+      // 현재 선택된 헤더 정보 업데이트
+      const updatedHeader = headers?.find(h => h.id === selectedHeader.id);
+      setSelectedHeader(updatedHeader || null);
+      
+      // 상세 데이터 업데이트
+      setDetailRows(details || []);
+      setPreparedDetails(prepared || []);
+      setIsNewDetailRow(false);
+      // 수정된 row 추적 초기화
+      setModifiedRows(new Set());
+      Message.showSuccess('출하 정보 저장 성공');
+    } catch (error) {
+      Message.showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Box sx={{ p: 0, minHeight: '100vh' }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: 2,
-        borderBottom: `1px solid ${getBorderColor()}`,
-        pb: 1
-      }}>
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            fontWeight: 600,
-            color: getTextColor()
-          }}
+    <Box sx={{ height: '100%', width: '100%', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* 검색 조건 영역 */}
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={koLocale}>
+        <SearchCondition
+          title="출하 검색"
+          onSearch={() => handleSearch(searchParams, true)}
+          onReset={handleReset}
         >
-          출하관리
-        </Typography>
-        <IconButton
-          onClick={() => setIsHelpModalOpen(true)}
-          sx={{
-            ml: 1,
-            color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: isDarkMode 
-                ? alpha(theme.palette.primary.light, 0.1)
-                : alpha(theme.palette.primary.main, 0.05)
-            }
-          }}
-        >
-          <HelpOutlineIcon />
-        </IconButton>
-      </Box>
-
-      {/* 검색 조건 영역 - 공통 컴포넌트 사용 */}
-      <SearchCondition 
-        onSearch={handleSubmit(handleSearch)}
-        onReset={handleReset}
-      >
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="orderId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="주문ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="주문ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="customerName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="고객사"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="고객사를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="productName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="제품"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="제품명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="outputStatus"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="outputStatus-label">출하상태</InputLabel>
-                <Select
-                  {...field}
-                  labelId="outputStatus-label"
-                  label="출하상태"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  <MenuItem value="미출하">미출하</MenuItem>
-                  <MenuItem value="부분출하">부분출하</MenuItem>
-                  <MenuItem value="출하완료">출하완료</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={12} md={6}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Controller
-                name="fromDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="시작일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
-              />
-              <Typography variant="body2" sx={{ mx: 1 }}>~</Typography>
-              <Controller
-                name="toDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    label="종료일"
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                )}
-              />
-            </Stack>
-          </LocalizationProvider>
-        </Grid>
-      </SearchCondition>
-      
-      {/* 그리드 영역 */}
-      {!isLoading && (
-        <Grid container spacing={2}>
-          {/* 주문 정보 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title="주문정보"
-              rows={shipmentList}
-              columns={shipmentColumns}
-              buttons={shipmentGridButtons}
-              height={450}
-              onRowClick={handleShipmentSelect}
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              size="small"
+              label="주문번호"
+              name="orderNo"
+              value={orderNoInput}
+              onChange={(e) => setOrderNoInput(e.target.value)}
             />
           </Grid>
-          
-          {/* 출하등록 그리드 */}
-          <Grid item xs={12} md={6}>
-            <MuiDataGridWrapper
-              title={`출하등록 ${selectedShipment ? '- ' + selectedShipment.product : ''}`}
-              rows={shipmentDetail || []}
-              columns={detailColumns}
-              buttons={detailGridButtons}
-              height={450}
-              gridProps={{
-                editMode: 'row'
+          <Grid item xs={12} sm={6} md={3}>
+            <DatePicker
+              label="From"
+              value={parseDate(searchParams.fromDate)}
+              onChange={(newValue) => handleSearch({ ...searchParams, fromDate: formatDate(newValue) })}
+              slotProps={{
+                textField: {
+                  size: "small",
+                  fullWidth: true
+                }
               }}
             />
           </Grid>
-        </Grid>
-      )}
-      
-      {/* 하단 정보 영역 */}
-      <Box mt={2} p={2} sx={{ 
-        bgcolor: getBgColor(), 
-        borderRadius: 1,
-        border: `1px solid ${getBorderColor()}`
-      }}>
-        <Stack spacing={1}>
-          <Typography variant="body2" color={getTextColor()}>
-            • 출하관리 화면에서는 상단 주문정보와 하단 출하처리된 목록을 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 출하처리는 금회출하수량 입력만 가능하며, 필요시 수량을 조정하여 저장할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()}>
-            • 출하처리가 완료되면 상단 출하상태와 미출하수량이 자동 계산되어 업데이트됩니다.
-          </Typography>
-        </Stack>
-      </Box>
+          <Grid item xs={12} sm={6} md={3}>
+            <DatePicker
+              label="To"
+              value={parseDate(searchParams.toDate)}
+              onChange={(newValue) => handleSearch({ ...searchParams, toDate: formatDate(newValue) })}
+              slotProps={{
+                textField: {
+                  size: "small",
+                  fullWidth: true
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>고객사</InputLabel>
+              <Select
+                value={searchParams.customerId || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? null : e.target.value;
+                  handleSearch({ ...searchParams, customerId: value });
+                }}
+                label="고객사"
+              >
+                <MenuItem value="">전체</MenuItem>
+                {vendors.map(vendor => (
+                  <MenuItem key={vendor.vendorId} value={vendor.vendorId}>
+                    {vendor.vendorName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>출하상태</InputLabel>
+              <Select
+                value={searchParams.shipmentStatus || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? null : e.target.value;
+                  handleSearch({ ...searchParams, shipmentStatus: value });
+                }}
+                label="출하상태"
+              >
+                <MenuItem value="">전체</MenuItem>
+                <MenuItem value="not">미출하</MenuItem>
+                <MenuItem value="partial">부분출하</MenuItem>
+                <MenuItem value="complete">출하완료</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </SearchCondition>
+      </LocalizationProvider>
 
-      {/* 도움말 모달 */}
-      <HelpModal
-        open={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="출하관리 도움말"
-      >
-        <Typography variant="body2" color={getTextColor()}>
-          • 출하관리에서는 완제품의 출하 정보를 등록하고 관리할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 출하일자, 출하수량, 거래처 정보 등을 관리하여 출하 현황을 파악할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" color={getTextColor()}>
-          • 출하 정보는 재고 관리와 매출 관리의 기초 데이터로 활용됩니다.
-        </Typography>
-      </HelpModal>
+      {/* 주문정보 영역 */}
+      <Paper sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+            <Box component="h3" sx={{ m: 0 }}>주문정보</Box>
+          </Stack>
+        </Box>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          <EnhancedDataGridWrapper
+            rows={headerRows}
+            columns={headerColumns}
+            onRowClick={handleHeaderRowClick}
+            loading={loading}
+            hideToolbar
+            gridProps={{
+              getRowId: (row) => row.id,
+              disableSelectionOnClick: true,
+              autoHeight: false
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* 출하등록 영역 */}
+      <Collapse in={Boolean(selectedHeader)}>
+        <Paper sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+              <Box component="h3" sx={{ m: 0 }}>출하등록</Box>
+              <Stack direction="row" spacing={1}>
+                <Button 
+                  startIcon={<AddIcon />} 
+                  onClick={handleAddDetail}
+                  disabled={isNewDetailRow}
+                >
+                  등록
+                </Button>
+                <Button 
+                  startIcon={<SaveIcon />} 
+                  onClick={handleSaveDetail}
+                >
+                  저장
+                </Button>
+                <Button
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDeleteDetail}
+                  disabled={!selectedDetail}
+                  color="error"
+                >
+                  삭제
+                </Button>
+              </Stack>
+            </Stack>
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <EnhancedDataGridWrapper
+              rows={detailRows}
+              columns={detailColumns}
+              loading={loading}
+              hideToolbar
+              onRowClick={handleDetailRowClick}
+              gridProps={{
+                editMode: 'cell',
+                getRowId: (row) => row.id,
+                processRowUpdate: processDetailRowUpdate,
+                isCellEditable: (params) => {
+                  const editableFields = ['shipmentDate', 'systemMaterialId', 'cumulativeShipmentQuantity', 'shipmentHandler', 'remark'];
+                  return editableFields.includes(params.field) && (params.row.id < 0 || !params.row.flagPrint);
+                },
+                disableSelectionOnClick: false,
+                autoHeight: false,
+                selectionModel: selectedDetail ? [selectedDetail.id] : []
+              }}
+            />
+          </Box>
+        </Paper>
+      </Collapse>
     </Box>
   );
 };
