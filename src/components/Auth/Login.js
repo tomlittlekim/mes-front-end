@@ -116,7 +116,7 @@ const Login = () => {
         Swal.fire({
           icon: 'success',
           title: '성공',
-          text: '로그인 성공.',
+          text: '로그인 성공',
           timer: 1000,
           showConfirmButton: false
         });
