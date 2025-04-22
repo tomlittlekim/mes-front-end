@@ -9,6 +9,7 @@ import { SearchCondition } from '../../Common';
 import SearchForm from './SearchForm';
 import ProductionResultList from './components/ProductionResultList';
 import { useProductionResultInquiry } from './hooks/useProductionResultInquiry';
+import { useForm } from 'react-hook-form';
 
 /**
  * 생산실적조회 컴포넌트
@@ -23,21 +24,72 @@ const ProductionResultInquiry = (props) => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const { domain } = useDomain();
 
-  // 커스텀 훅 사용
+  // react-hook-form 설정
   const {
-    // 검색폼 관련
     control,
     handleSubmit,
-    handleDateRangeChange,
-    handleReset,
-    handleSearch,
+    reset,
+    setValue,
+    watch,
+    getValues,
+  } = useForm({
+    defaultValues: {
+      prodResultId: '',
+      workOrderId: '',
+      productId: '',
+      equipmentId: '',
+      startDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      endDateRange: {
+        startDate: null,
+        endDate: null
+      }
+    }
+  });
 
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = (fieldName, startDate, endDate) => {
+    setValue(fieldName, { startDate, endDate });
+  };
+
+  // 이전 버전과의 호환성을 위한 핸들러
+  const handleStartDateRangeChange = (startDate, endDate) => {
+    handleDateRangeChange('startDateRange', startDate, endDate);
+  };
+
+  const handleEndDateRangeChange = (startDate, endDate) => {
+    handleDateRangeChange('endDateRange', startDate, endDate);
+  };
+
+  // 초기화 핸들러
+  const handleReset = () => {
+    reset({
+      prodResultId: '',
+      workOrderId: '',
+      productId: '',
+      equipmentId: '',
+      startDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      endDateRange: {
+        startDate: null,
+        endDate: null
+      }
+    });
+  };
+
+  // 커스텀 훅 사용
+  const {
     // 생산실적 관련
     isLoading,
     productionResultList,
     handlePrint,
     handleExport,
     errorMessage,
+    handleSearch,
 
     // 색상 및 테마
     getTextColor,
@@ -51,6 +103,12 @@ const ProductionResultInquiry = (props) => {
     // 리프레시 키
     refreshKey
   } = useProductionResultInquiry(props.tabId);
+
+  // 검색 이벤트 핸들러
+  const onSearch = (data) => {
+    // 검색 실행
+    handleSearch(data);
+  };
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -97,7 +155,7 @@ const ProductionResultInquiry = (props) => {
                       color="inherit"
                       size="small"
                       startIcon={<RefreshIcon />}
-                      onClick={handleSubmit(handleSearch)}
+                      onClick={handleSubmit(onSearch)}
                   >
                     다시 시도
                   </Button>
@@ -109,14 +167,18 @@ const ProductionResultInquiry = (props) => {
 
         {/* 검색 조건 영역 */}
         <SearchCondition
-            onSearch={handleSubmit(handleSearch)}
+            onSearch={handleSubmit(onSearch)}
             onReset={handleReset}
         >
-          <SearchForm
-              control={control}
-              equipmentOptions={equipmentOptions}
-              handleDateRangeChange={handleDateRangeChange}
-          />
+          {SearchForm({
+              control,
+              equipmentOptions,
+              productOptions,
+              handleDateRangeChange,
+              handleStartDateRangeChange,
+              handleEndDateRangeChange,
+              onSearch: handleSubmit(onSearch)
+          })}
         </SearchCondition>
 
         {/* 로딩 표시 */}

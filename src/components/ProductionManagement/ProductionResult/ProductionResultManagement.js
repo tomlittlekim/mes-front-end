@@ -49,6 +49,7 @@ const ProductionResultManagement = (props) => {
     handleDateRangeChange,
     handleReset,
     handleSearch,
+    handleSearchSubmit,
 
     // 작업지시 관련
     isLoading,
@@ -149,7 +150,7 @@ const ProductionResultManagement = (props) => {
 
         {/* 검색 조건 영역 */}
         <SearchCondition
-            onSearch={handleSubmit(handleSearch)}
+            onSearch={handleSubmit(handleSearchSubmit)}
             onReset={handleReset}
         >
           <SearchForm

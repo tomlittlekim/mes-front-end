@@ -190,6 +190,15 @@ export const useProductionResultManagement = (tabId) => {
     }
   }, [workOrderList, loadProductionResults, selectedWorkOrder]);
 
+  // 조회버튼 연결 핸들러 - 직접 refreshWorkOrderList 사용
+  const handleSearchSubmit = useCallback((data) => {
+    // 먼저 기존 handleSearch 함수 호출
+    handleSearch(data);
+    
+    // 추가로 작업지시 목록 명시적 갱신
+    refreshWorkOrderList();
+  }, [handleSearch, refreshWorkOrderList]);
+
   // 생산실적 생성 핸들러 (작업지시 기반)
   const handleCreateResult = useCallback(() => {
     if (!selectedWorkOrder) {
@@ -273,27 +282,6 @@ export const useProductionResultManagement = (tabId) => {
     loadInitialData();
   }, [loadProductMaterials, loadEquipments, loadWorkOrders, setIsLoading, productOptions]);
 
-  // 작업지시 목록 자동 갱신을 위한 useEffect - 별도로 분리하여 중복 호출 방지
-  useEffect(() => {
-    let intervalId = null;
-
-    // 초기 데이터가 로드되었고 로딩 중이 아닐 때만 인터벌 시작
-    if (isInitialDataLoaded.current && !isLoading && !isLoadingRef.current) {
-      intervalId = setInterval(() => {
-        // 로딩 중이 아닐 때만 갱신
-        if (!isLoadingRef.current) {
-          refreshWorkOrderList();
-        }
-      }, 60000); // 1분마다 갱신
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [isLoading, refreshWorkOrderList]);
-
   return {
     // 검색폼 관련
     control,
@@ -303,6 +291,7 @@ export const useProductionResultManagement = (tabId) => {
     handleDateRangeChange,
     handleReset,
     handleSearch,
+    handleSearchSubmit,
 
     // 작업지시 관련
     isLoading,

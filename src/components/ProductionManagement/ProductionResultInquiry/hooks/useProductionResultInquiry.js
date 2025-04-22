@@ -69,10 +69,15 @@ export const useProductionResultInquiry = (tabId) => {
   // React Hook Form 설정
   const { control, handleSubmit, reset, setValue } = useForm({
     defaultValues: {
+      prodResultId: '',
       workOrderId: '',
       productId: '',
       equipmentId: '',
-      dateRange: {
+      startDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      endDateRange: {
         startDate: null,
         endDate: null
       }
@@ -182,9 +187,14 @@ export const useProductionResultInquiry = (tabId) => {
     }
   }, [executeQuery, isEquipmentsLoading, equipmentOptions.length]);
 
-  // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = useCallback((startDate, endDate) => {
-    setValue('dateRange', { startDate, endDate });
+  // 생산시작일시 범위 변경 핸들러
+  const handleStartDateRangeChange = useCallback((startDate, endDate) => {
+    setValue('startDateRange', { startDate, endDate });
+  }, [setValue]);
+
+  // 생산종료일시 범위 변경 핸들러
+  const handleEndDateRangeChange = useCallback((startDate, endDate) => {
+    setValue('endDateRange', { startDate, endDate });
   }, [setValue]);
 
   // 생산실적 목록 로드 함수
@@ -226,10 +236,15 @@ export const useProductionResultInquiry = (tabId) => {
   // 초기화 함수
   const handleReset = useCallback(() => {
     reset({
+      prodResultId: '',
       workOrderId: '',
       productId: '',
       equipmentId: '',
-      dateRange: {
+      startDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      endDateRange: {
         startDate: null,
         endDate: null
       }
@@ -251,6 +266,11 @@ export const useProductionResultInquiry = (tabId) => {
       flagActive: true
     };
 
+    // 생산실적ID가 있으면 추가
+    if (data.prodResultId) {
+      filter.prodResultId = data.prodResultId;
+    }
+
     // workOrderId가 있으면 추가
     if (data.workOrderId) {
       filter.workOrderId = data.workOrderId;
@@ -266,21 +286,40 @@ export const useProductionResultInquiry = (tabId) => {
       filter.equipmentId = data.equipmentId;
     }
 
-    // dateRange 객체에서 시작일/종료일을 추출하여 필터 데이터로 변환
-    if (data.dateRange) {
-      if (data.dateRange.startDate) {
+    // 생산시작일시 범위가 있으면 추가
+    if (data.startDateRange) {
+      if (data.startDateRange.startDate) {
         try {
-          filter.prodStartTimeFrom = format(data.dateRange.startDate, 'yyyy-MM-dd');
+          filter.prodStartTimeFrom = format(data.startDateRange.startDate, 'yyyy-MM-dd');
         } catch (error) {
-          console.error("Invalid startDate:", error);
+          console.error("Invalid startDate for prodStartTimeFrom:", error);
         }
       }
 
-      if (data.dateRange.endDate) {
+      if (data.startDateRange.endDate) {
         try {
-          filter.prodStartTimeTo = format(data.dateRange.endDate, 'yyyy-MM-dd');
+          filter.prodStartTimeTo = format(data.startDateRange.endDate, 'yyyy-MM-dd');
         } catch (error) {
-          console.error("Invalid endDate:", error);
+          console.error("Invalid endDate for prodStartTimeTo:", error);
+        }
+      }
+    }
+
+    // 생산종료일시 범위가 있으면 추가
+    if (data.endDateRange) {
+      if (data.endDateRange.startDate) {
+        try {
+          filter.prodEndTimeFrom = format(data.endDateRange.startDate, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid startDate for prodEndTimeFrom:", error);
+        }
+      }
+
+      if (data.endDateRange.endDate) {
+        try {
+          filter.prodEndTimeTo = format(data.endDateRange.endDate, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error("Invalid endDate for prodEndTimeTo:", error);
         }
       }
     }
@@ -390,7 +429,8 @@ export const useProductionResultInquiry = (tabId) => {
     // 검색폼 관련
     control,
     handleSubmit,
-    handleDateRangeChange,
+    handleStartDateRangeChange,
+    handleEndDateRangeChange,
     handleReset,
     handleSearch,
 

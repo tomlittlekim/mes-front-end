@@ -142,10 +142,7 @@ const DateRangePicker = ({
 
   // 적용 버튼 클릭 핸들러
   const handleApply = () => {
-    if (onStartDateChange) onStartDateChange(tempStartDate);
-    if (onEndDateChange) onEndDateChange(tempEndDate);
     if (onRangeChange) onRangeChange(tempStartDate, tempEndDate);
-
     setAnchorEl(null);
   };
 
