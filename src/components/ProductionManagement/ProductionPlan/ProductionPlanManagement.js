@@ -57,6 +57,11 @@ const ProductionPlanManagement = (props) => {
     productMaterials,
     isProductMaterialsLoaded,
 
+    // 고객사 정보
+    vendors,
+    isVendorsLoaded,
+    vendorMap,
+
     // 에디터 컴포넌트
     CustomDateEditor,
     ShiftTypeEditor,
@@ -106,7 +111,7 @@ const ProductionPlanManagement = (props) => {
     isCellEditable: (params) => {
       // 새로 추가된 행이거나 기존 행의 편집 가능 컬럼인 경우에만 편집 가능
       return params.row.id?.toString().startsWith('NEW_') ||
-          ['orderId', 'productId', 'productName', 'shiftType', 'planQty', 'planStartDate', 'planEndDate'].includes(params.field);
+          ['orderId', 'orderDetailId', 'productId', 'productName', 'planQty', 'shiftType', 'planStartDate', 'planEndDate'].includes(params.field);
     }
   };
 
@@ -126,7 +131,8 @@ const ProductionPlanManagement = (props) => {
   const searchFormItems = SearchForm({ 
     control, 
     handleDateRangeChange,
-    onSearch: handleSubmit(handleSearch)
+    onSearch: handleSubmit(handleSearch),
+    productOptions: productMaterials
   });
 
   return (
@@ -187,6 +193,7 @@ const ProductionPlanManagement = (props) => {
                     tabId={props.tabId}
                     gridProps={gridProps}
                     productMaterials={productMaterials} // 명시적으로 전달
+                    vendorMap={vendorMap} // 고객사 정보 매핑 객체 전달
                 />
               </Grid>
             </Grid>

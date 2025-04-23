@@ -31,9 +31,14 @@ export const getMaterialTypeDisplay = (typeCode) => {
 export const enrichProductWithDisplayValues = (product) => {
   if (!product) return null;
 
+  // unit 필드만 사용하도록 수정 (materialUnit 참조 제거)
+  const unit = product.unit || '';
+
   return {
     ...product,
-    materialTypeDisplay: getMaterialTypeDisplay(product.materialType)
+    materialTypeDisplay: getMaterialTypeDisplay(product.materialType),
+    materialUnit: unit, // 호환성을 위해 materialUnit 필드 추가
+    unit // unit 필드 추가
   };
 };
 

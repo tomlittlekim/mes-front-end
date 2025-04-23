@@ -30,8 +30,6 @@ export const useWorkOrderManagement = (tabId) => {
       productId: '',
       productName: '',
       materialCategory: '',
-      workOrderId: '',
-      state: '',
       planStartDateRange: {
         startDate: null,
         endDate: null
@@ -253,8 +251,6 @@ export const useWorkOrderManagement = (tabId) => {
       productId: '',
       productName: '',
       materialCategory: '',
-      workOrderId: '',
-      state: '',
       planStartDateRange: {
         startDate: null,
         endDate: null

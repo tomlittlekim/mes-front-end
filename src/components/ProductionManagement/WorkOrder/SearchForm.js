@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   TextField,
@@ -7,6 +7,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Typography
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -20,17 +21,10 @@ import DateRangePicker from '../../Common/DateRangePicker';
  * @param {Object} props - 컴포넌트 속성
  * @param {Function} props.onSearch - 검색 함수
  * @param {Function} props.onReset - 초기화 함수
+ * @param {Array} props.productOptions - 제품 옵션 목록
  * @returns {JSX.Element}
  */
-const SearchForm = ({ onSearch, onReset }) => {
-  // 상태 옵션 정의
-  const stateOptions = [
-    { value: 'PLANNED', label: '계획됨' },
-    { value: 'IN_PROGRESS', label: '진행중' },
-    { value: 'COMPLETED', label: '완료됨' },
-    { value: 'CANCELED', label: '취소됨' }
-  ];
-
+const SearchForm = ({ onSearch, onReset, productOptions = [] }) => {
   // React Hook Form 설정
   const { control, handleSubmit, setValue } = useForm({
     defaultValues: {
@@ -38,8 +32,6 @@ const SearchForm = ({ onSearch, onReset }) => {
       productId: '',
       productName: '',
       materialCategory: '',
-      workOrderId: '',
-      state: '',
       planStartDateRange: {
         startDate: null,
         endDate: null
@@ -50,6 +42,37 @@ const SearchForm = ({ onSearch, onReset }) => {
       }
     }
   });
+
+  // 제품 목록 필터링: 완제품과 반제품만 표시
+  const filteredProductOptions = useMemo(() => {
+    return productOptions.filter(product => 
+      product.materialType === 'COMPLETE_PRODUCT' || product.materialType === 'HALF_PRODUCT'
+    );
+  }, [productOptions]);
+
+  // 제품 목록에서 고유한 materialCategory 값들을 추출하여 옵션 목록 생성
+  // 필터링된 제품 목록에서만 카테고리 추출
+  const materialCategoryOptions = useMemo(() => {
+    const categories = [...new Set(filteredProductOptions
+      .filter(product => product.materialCategory)
+      .map(product => product.materialCategory))];
+    
+    return categories.map(category => ({
+      value: category,
+      label: category
+    }));
+  }, [filteredProductOptions]);
+
+  // MaterialType 코드값을 한글로 변환하는 함수
+  const getMaterialTypeDisplay = (typeCode) => {
+    const materialTypeMap = {
+      'COMPLETE_PRODUCT': '완제품',
+      'HALF_PRODUCT': '반제품',
+      'RAW_MATERIAL': '원자재',
+      'SUB_MATERIAL': '부자재'
+    };
+    return materialTypeMap[typeCode] || typeCode || '';
+  };
 
   // 날짜 범위 변경 핸들러
   const handleDateRangeChange = (fieldName, startDate, endDate) => {
@@ -91,15 +114,32 @@ const SearchForm = ({ onSearch, onReset }) => {
               name="productId"
               control={control}
               render={({ field }) => (
-                  <TextField
-                      {...field}
-                      label="제품ID"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      placeholder="제품ID를 입력하세요"
-                      onKeyDown={handleKeyDown}
-                  />
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="product-label">제품ID</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="product-label"
+                        label="제품ID"
+                        onKeyDown={handleKeyDown}
+                    >
+                      <MenuItem value="">전체</MenuItem>
+                      {filteredProductOptions.map(option => (
+                          <MenuItem
+                              key={option.systemMaterialId}
+                              value={option.systemMaterialId}
+                          >
+                            {/* 보여지는 값은 userMaterialId(제품ID) */}
+                            {option.userMaterialId || ''}
+                            {option.materialType ? (
+                                <Typography variant="caption" color="textSecondary" style={{ display: 'block' }}>
+                                  {/* materialType 코드값을 한글로 변환하여 표시 */}
+                                  {getMaterialTypeDisplay(option.materialType)}
+                                </Typography>
+                            ) : null}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
               )}
           />
         </Grid>
@@ -108,15 +148,32 @@ const SearchForm = ({ onSearch, onReset }) => {
               name="productName"
               control={control}
               render={({ field }) => (
-                  <TextField
-                      {...field}
-                      label="제품명"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      placeholder="제품명을 입력하세요"
-                      onKeyDown={handleKeyDown}
-                  />
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="productName-label">제품명</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="productName-label"
+                        label="제품명"
+                        onKeyDown={handleKeyDown}
+                    >
+                      <MenuItem value="">전체</MenuItem>
+                      {filteredProductOptions.map(option => (
+                          <MenuItem
+                              key={option.systemMaterialId}
+                              value={option.materialName || ''}
+                          >
+                            {/* 보여지는 값은 materialName(제품명)과 userMaterialId(제품ID) */}
+                            {option.materialName || ''} {option.userMaterialId ? `(${option.userMaterialId})` : ''}
+                            {option.materialType ? (
+                                <Typography variant="caption" color="textSecondary" style={{ display: 'block' }}>
+                                  {/* materialType 코드값을 한글로 변환하여 표시 */}
+                                  {getMaterialTypeDisplay(option.materialType)}
+                                </Typography>
+                            ) : null}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
               )}
           />
         </Grid>
@@ -125,50 +182,16 @@ const SearchForm = ({ onSearch, onReset }) => {
               name="materialCategory"
               control={control}
               render={({ field }) => (
-                  <TextField
-                      {...field}
-                      label="제품유형"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      placeholder="제품유형을 입력하세요"
-                      onKeyDown={handleKeyDown}
-                  />
-              )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-              name="workOrderId"
-              control={control}
-              render={({ field }) => (
-                  <TextField
-                      {...field}
-                      label="작업지시ID"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      placeholder="작업지시ID를 입력하세요"
-                      onKeyDown={handleKeyDown}
-                  />
-              )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-              name="state"
-              control={control}
-              render={({ field }) => (
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="state-select-label">상태</InputLabel>
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="materialCategory-label">제품유형</InputLabel>
                     <Select
                         {...field}
-                        labelId="state-select-label"
-                        label="상태"
+                        labelId="materialCategory-label"
+                        label="제품유형"
                         onKeyDown={handleKeyDown}
                     >
                       <MenuItem value="">전체</MenuItem>
-                      {stateOptions.map(option => (
+                      {materialCategoryOptions.map(option => (
                           <MenuItem key={option.value} value={option.value}>
                             {option.label}
                           </MenuItem>

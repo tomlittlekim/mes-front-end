@@ -40,13 +40,18 @@ const ProductionResultManagement = (props) => {
     { value: 'OTHER', label: '기타' }
   ]);
 
+  // 근무타입 목록 추가
+  const [workTypeOptions, setWorkTypeOptions] = useState([
+    { value: 'DAY', label: '주간' },
+    { value: 'NIGHT', label: '야간' },
+  ]);
+
   const {
     // 검색폼 관련
     control,
     handleSubmit,
     reset,
     setValue,
-    handleDateRangeChange,
     handleReset,
     handleSearch,
     handleSearchSubmit,
@@ -155,9 +160,8 @@ const ProductionResultManagement = (props) => {
         >
           <SearchForm
               control={control}
-              equipmentOptions={equipmentOptions}
               productOptions={productOptions}
-              handleDateRangeChange={handleDateRangeChange}
+              workTypeOptions={workTypeOptions}
           />
         </SearchCondition>
 
