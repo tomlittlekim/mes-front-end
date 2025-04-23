@@ -49,10 +49,20 @@ const GET_SHIPMENT_DETAILS = `
   }
 `;
 
-// 출하 상세 등록을 위한 데이터 준비 쿼리
+// 품목ID로 창고 조회 쿼리 추가
+const GET_WAREHOUSE_BY_MATERIAL_ID = `
+  query GetWarehouseByMaterialId($materialId: String!) {
+    getWarehouseByMaterialId(materialId: $materialId) {
+      warehouseId
+      warehouseName
+    }
+  }
+`;
+
+// 출하 상세 등록을 위한 데이터 준비 쿼리 수정
 const PREPARE_SHIPMENT_DETAILS = `
-  query PrepareShipmentDetailsForEntry($orderNo: String) {
-    prepareShipmentDetailsForEntry(orderNo: $orderNo) {
+  query PrepareShipmentDetailsForEntry($req: ShipmentDetailEntryRequest!) {
+    prepareShipmentDetailsForEntry(req: $req) {
       id
       site
       compCd
@@ -108,6 +118,16 @@ const initialCodeQuery = `
   }
 `;
 
+// 주문번호로 품목 조회 쿼리 추가
+const GET_MATERIAL_BY_ORDER_NO = `
+  query GetMaterialByOrderNo($orderNo: String!) {
+    getMaterialByOrderNo(orderNo: $orderNo) {
+      systemMaterialId
+      materialName
+    }
+  }
+`;
+
 // API 함수들
 export const getShipmentHeaders = async (searchParams = {}) => {
   const result = await graphFetch(GET_SHIPMENT_HEADERS, { req: searchParams });
@@ -119,9 +139,19 @@ export const getShipmentDetails = async (id) => {
   return result.getShipmentDetails;
 };
 
-export const prepareShipmentDetailsForEntry = async (orderNo) => {
-  const result = await graphFetch(PREPARE_SHIPMENT_DETAILS, { orderNo });
+export const prepareShipmentDetailsForEntry = async (orderNo, warehouseId) => {
+  const result = await graphFetch(PREPARE_SHIPMENT_DETAILS, { 
+    req: { 
+      orderNo,
+      warehouseId
+    } 
+  });
   return result.prepareShipmentDetailsForEntry;
+};
+
+export const getWarehouseByMaterialId = async (materialId) => {
+  const result = await graphFetch(GET_WAREHOUSE_BY_MATERIAL_ID, { materialId });
+  return result.getWarehouseByMaterialId;
 };
 
 export const upsertShipmentDetails = async (list) => {
@@ -145,3 +175,9 @@ export const getShipmentStatus = async () => {
   const result = await graphFetch(initialCodeQuery, {codeClassId: 'SHIPMENT_STATUS'});
   return result.getInitialCodes;
 }
+
+// getMaterialByOrderNo 함수 추가
+export const getMaterialByOrderNo = async (orderNo) => {
+  const result = await graphFetch(GET_MATERIAL_BY_ORDER_NO, { orderNo });
+  return result.getMaterialByOrderNo;
+};
