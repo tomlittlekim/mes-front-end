@@ -360,13 +360,31 @@ const ShipmentManagement = () => {
   // 필수 필드 렌더링 함수
   const renderRequiredCell = (params, field) => {
     if (!params.value) {
-      return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
+      switch (field) {
+        case 'systemMaterialId':
+          return <Box sx={{ color: 'primary.main', fontWeight: 'bold' }}>우선선택</Box>;
+        case 'shipmentWarehouse':
+          if (params.row.systemMaterialId) {
+            return <Box sx={{ color: 'primary.main', fontWeight: 'bold' }}>우선선택</Box>;
+          } else {
+            return <Box sx={{ color: 'text.secondary', fontWeight: 'bold' }}>품목ID 선택 필요</Box>;
+          }
+        case 'shipmentDate':
+        case 'cumulativeShipmentQuantity':
+        case 'shipmentHandler':
+          return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
+        default:
+          return null;
+      }
     }
     
     switch (field) {
       case 'systemMaterialId':
-        const product = shipmentStatus.find(p => p.systemMaterialId === params.value);
-        return product?.materialName || params.value;
+        const material = materials.find(m => m.systemMaterialId === params.value);
+        return material?.materialName || params.value;
+      case 'shipmentWarehouse':
+        const warehouse = warehouses.find(w => w.warehouseId === params.value);
+        return warehouse?.warehouseName || params.value;
       case 'shipmentHandler':
         const user = userGroup.find(u => u.loginId === params.value);
         return user?.userName || params.value;
@@ -424,19 +442,21 @@ const ShipmentManagement = () => {
             const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
             setWarehouses(warehouseInfo || []);
             
-            // prepareShipmentDetailsForEntry 호출
-            const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, warehouseInfo[0]?.warehouseId);
-            if (prepared) {
-              const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
-              if (selectedDetail) {
-                const updatedRow = { 
-                  ...newRow,
-                  ...selectedDetail,
-                  id: newRow.id
-                };
-                // 수정된 row 추적
-                setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-                return updatedRow;
+            // 출하창고가 이미 선택된 경우에만 prepareShipmentDetailsForEntry 호출
+            if (newRow.shipmentWarehouse) {
+              const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, newRow.shipmentWarehouse);
+              if (prepared) {
+                const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
+                if (selectedDetail) {
+                  const updatedRow = { 
+                    ...newRow,
+                    ...selectedDetail,
+                    id: newRow.id
+                  };
+                  // 수정된 row 추적
+                  setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+                  return updatedRow;
+                }
               }
             }
           }
@@ -450,19 +470,21 @@ const ShipmentManagement = () => {
     // 출하창고가 변경된 경우
     if (newRow.shipmentWarehouse !== oldRow.shipmentWarehouse) {
       try {
-        // prepareShipmentDetailsForEntry 호출
-        const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, newRow.shipmentWarehouse);
-        if (prepared) {
-          const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
-          if (selectedDetail) {
-            const updatedRow = { 
-              ...newRow,
-              ...selectedDetail,
-              id: newRow.id
-            };
-            // 수정된 row 추적
-            setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-            return updatedRow;
+        // 품목ID가 선택된 경우에만 prepareShipmentDetailsForEntry 호출
+        if (newRow.systemMaterialId) {
+          const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, newRow.shipmentWarehouse);
+          if (prepared) {
+            const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
+            if (selectedDetail) {
+              const updatedRow = { 
+                ...newRow,
+                ...selectedDetail,
+                id: newRow.id
+              };
+              // 수정된 row 추적
+              setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+              return updatedRow;
+            }
           }
         }
       } catch (error) {
