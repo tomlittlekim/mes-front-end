@@ -34,7 +34,7 @@ const ProductMaterialSelector = (props) => {
       materialType: product.materialType || '',
       materialTypeDisplay: materialTypeMap[product.materialType] || product.materialType || '기타', // 한글 표시값 추가
       materialStandard: product.materialStandard || '',
-      unit: product.unit || ''
+      materialUnit: product.materialUnit || ''
     }));
   }, [productMaterials, materialTypeMap]);
 
@@ -84,6 +84,7 @@ const ProductMaterialSelector = (props) => {
         productId: newValue.id,  // systemMaterialId 저장 (백엔드 처리용)
         productName: newValue.materialName,
         materialCategory: newValue.materialCategory || '', // 제품유형 필드 업데이트
+        materialUnit: newValue.materialUnit || '', // 단위 필드 업데이트
         // 여기서는 userMaterialId는 표시용으로만 사용하고, 실제 저장되는 값은 systemMaterialId
       };
 

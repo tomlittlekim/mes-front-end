@@ -1,0 +1,64 @@
+/* 불량조회 컴포넌트 스타일 */
+.MuiDataGrid-root .defect-highlight {
+    color: #f44336 !important;
+    font-weight: 600;
+}
+
+/* 불량 상태 셀 스타일 */
+.status-cell {
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    display: inline-block;
+    min-width: 80px;
+}
+
+.status-active {
+    background-color: rgba(84, 214, 44, 0.16);
+    color: #229A16;
+}
+
+.status-inactive {
+    background-color: rgba(255, 72, 66, 0.16);
+    color: #B71D18;
+}
+
+.status-pending {
+    background-color: rgba(255, 193, 7, 0.16);
+    color: #B78103;
+}
+
+/* 다크모드 상태별 스타일 */
+.dark-mode .status-active {
+    background-color: rgba(84, 214, 44, 0.24);
+    color: #5BE584;
+}
+
+.dark-mode .status-inactive {
+    background-color: rgba(255, 72, 66, 0.24);
+    color: #FF7D73;
+}
+
+.dark-mode .status-pending {
+    background-color: rgba(255, 193, 7, 0.24);
+    color: #FFD666;
+}
+
+/* 필터 영역 스타일 */
+.filter-container {
+    margin-bottom: 20px;
+}
+
+/* 인쇄 모드 스타일 */
+@media print {
+    .MuiDataGrid-columnHeaders {
+        box-shadow: none !important;
+    }
+    
+    .MuiDataGrid-root .MuiDataGrid-cell {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.12) !important;
+    }
+} 

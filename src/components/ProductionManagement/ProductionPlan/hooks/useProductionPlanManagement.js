@@ -22,6 +22,7 @@ const PRODUCTION_PLANS_QUERY = gql`
             compCd
             prodPlanId
             orderId
+            orderDetailId
             productId
             productName
             shiftType
@@ -48,6 +49,26 @@ const PRODUCT_MATERIALS_QUERY = gql`
             materialCategory
             materialType
             unit
+        }
+    }
+`;
+
+// 고객사 정보 조회 쿼리 추가
+const VENDORS_QUERY = gql`
+    query getVendors($filter: VendorFilter) {
+        getVendors(filter: $filter) {
+            vendorId
+            vendorName
+            vendorType
+            businessRegNo
+            ceoName
+            businessType
+            address
+            telNo
+            createUser
+            createDate
+            updateUser
+            updateDate
         }
     }
 `;
@@ -81,6 +102,7 @@ export const useProductionPlanManagement = (tabId) => {
     defaultValues: {
       prodPlanId: '',
       orderId: '',
+      orderDetailId: '',
       productId: '',
       productName: '',
       materialCategory: '',
@@ -105,6 +127,10 @@ export const useProductionPlanManagement = (tabId) => {
   // 제품 정보 상태 추가
   const [productMaterials, setProductMaterials] = useState([]);
   const [isProductMaterialsLoaded, setIsProductMaterialsLoaded] = useState(false);
+  
+  // 고객사 정보 상태 추가
+  const [vendors, setVendors] = useState([]);
+  const [isVendorsLoaded, setIsVendorsLoaded] = useState(false);
 
   // 제품 정보를 ID 기준으로 맵핑하는 객체 생성 (메모이제이션)
   const productMap = useMemo(() => {
@@ -118,6 +144,17 @@ export const useProductionPlanManagement = (tabId) => {
     });
     return map;
   }, [productMaterials]);
+
+  // 고객사 정보를 ID 기준으로 맵핑하는 객체 생성 (메모이제이션)
+  const vendorMap = useMemo(() => {
+    const map = {};
+    vendors.forEach(vendor => {
+      if (vendor.vendorId) {
+        map[vendor.vendorId] = vendor;
+      }
+    });
+    return map;
+  }, [vendors]);
 
   // 제품 정보 로드 함수
   const loadProductMaterials = useCallback(async () => {
@@ -162,6 +199,33 @@ export const useProductionPlanManagement = (tabId) => {
     }
   }, [executeQuery]);
 
+  // 고객사 정보 로드 함수
+  const loadVendors = useCallback(async () => {
+    try {
+      const response = await executeQuery({
+        query: VENDORS_QUERY,
+        variables: {
+          filter: {
+            vendorId: "",
+            vendorName: "",
+            ceoName: "",
+            businessType: ""
+          }
+        }
+      });
+
+      if (response?.data?.getVendors) {
+        console.log("고객사 정보 로드 성공:", response.data.getVendors.length);
+        setVendors(response.data.getVendors);
+        setIsVendorsLoaded(true);
+      } else {
+        console.error("고객사 정보 로드: 데이터가 없습니다.", response);
+      }
+    } catch (error) {
+      console.error("고객사 정보 로드 오류:", error);
+    }
+  }, [executeQuery]);
+
   // API 통신 시 Date 객체를 문자열로 변환하는 함수
   const formatDateToString = useCallback((dateObj) => {
     if (!dateObj) {
@@ -201,6 +265,7 @@ export const useProductionPlanManagement = (tabId) => {
       id: newId,
       prodPlanId: '자동입력',
       orderId: '',
+      orderDetailId: '',
       productId: '',
       productName: '', // 제품명 필드 추가
       materialCategory: '', // 제품유형 필드 추가
@@ -228,6 +293,7 @@ export const useProductionPlanManagement = (tabId) => {
     createNewRow,
     formatNewRow: (row) => ({
       orderId: row.orderId || '',
+      orderDetailId: row.orderDetailId || '',
       productId: row.productId || '',
       shiftType: row.shiftType || 'DAY',
       planQty: parseFloat(row.planQty) || 0,
@@ -238,6 +304,7 @@ export const useProductionPlanManagement = (tabId) => {
     formatUpdatedRow: (row) => ({
       prodPlanId: row.prodPlanId,
       orderId: row.orderId || '',
+      orderDetailId: row.orderDetailId || '',
       productId: row.productId || '',
       shiftType: row.shiftType || 'DAY',
       planQty: parseFloat(row.planQty) || 0,
@@ -306,6 +373,7 @@ export const useProductionPlanManagement = (tabId) => {
     reset({
       prodPlanId: '',
       orderId: '',
+      orderDetailId: '',
       productId: '',
       productName: '',
       materialCategory: '',
@@ -524,6 +592,7 @@ export const useProductionPlanManagement = (tabId) => {
     // 생성할 행 변환 - GraphQL 스키마에 맞게 필드 조정
     const createdPlanInputs = newRows.map(row => ({
       orderId: row.orderId || '',
+      orderDetailId: row.orderDetailId || '',
       productId: row.productId || '',
       shiftType: row.shiftType || 'DAY',
       planQty: parseFloat(row.planQty) || 0,
@@ -540,6 +609,7 @@ export const useProductionPlanManagement = (tabId) => {
       return {
         prodPlanId: currentRow.prodPlanId,
         orderId: currentRow.orderId || '',
+        orderDetailId: currentRow.orderDetailId || '',
         productId: currentRow.productId || '',
         shiftType: currentRow.shiftType || 'DAY',
         planQty: parseFloat(currentRow.planQty) || 0,
@@ -613,7 +683,7 @@ export const useProductionPlanManagement = (tabId) => {
     });
   }, [selectedPlan, planList, setAddRows, executeMutation]);
 
-  // 컴포넌트 마운트 시 제품 정보 로드
+  // 컴포넌트 마운트 시 제품 정보 및 고객사 정보 로드
   useEffect(() => {
     let isMounted = true;
 
@@ -625,7 +695,11 @@ export const useProductionPlanManagement = (tabId) => {
         await loadProductMaterials();
         console.log("제품 정보 로드 완료, 제품 수:", productMaterials.length);
 
-        // 2. 제품 정보 로드 후 생산계획 목록 조회
+        // 2. 고객사 정보 로드
+        await loadVendors();
+        console.log("고객사 정보 로드 완료, 고객사 수:", vendors.length);
+
+        // 3. 제품 정보 및 고객사 정보 로드 후 생산계획 목록 조회
         if (isMounted) {
           handleSearch({});
         }
@@ -675,6 +749,11 @@ export const useProductionPlanManagement = (tabId) => {
     // 제품 정보 관련 상태
     productMaterials,
     isProductMaterialsLoaded,
+
+    // 고객사 정보 관련 상태 추가
+    vendors,
+    isVendorsLoaded,
+    vendorMap,
 
     // 에디터 컴포넌트
     CustomDateEditor,

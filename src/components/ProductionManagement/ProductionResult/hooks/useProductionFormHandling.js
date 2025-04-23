@@ -1,6 +1,5 @@
 import { useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { format } from 'date-fns';
 
 /**
  * 검색 폼 및 필터 관련 로직을 처리하는 커스텀 훅
@@ -9,13 +8,10 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
   // React Hook Form 설정
   const { control, handleSubmit, reset, setValue } = useForm({
     defaultValues: {
+      prodPlanId: '',
       workOrderId: '',
       productId: '',
-      equipmentId: '',
-      dateRange: {
-        startDate: null,
-        endDate: null
-      }
+      workType: ''
     }
   });
 
@@ -23,21 +19,13 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
   const isSearchingRef = useRef(false);
   const lastSearchParamsRef = useRef(null);
 
-  // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = useCallback((startDate, endDate) => {
-    setValue('dateRange', { startDate, endDate });
-  }, [setValue]);
-
   // 초기화 함수
   const handleReset = useCallback(() => {
     reset({
+      prodPlanId: '',
       workOrderId: '',
       productId: '',
-      equipmentId: '',
-      dateRange: {
-        startDate: null,
-        endDate: null
-      }
+      workType: ''
     });
 
     // 검색 상태 초기화
@@ -69,6 +57,11 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
     // 날짜 형식 변환과 필터 객체 생성
     const filter = {};
 
+    // 생산계획ID가 있으면 추가
+    if (data.prodPlanId) {
+      filter.prodPlanId = data.prodPlanId;
+    }
+
     // workOrderId가 있으면 추가
     if (data.workOrderId) {
       filter.workOrderId = data.workOrderId;
@@ -79,28 +72,9 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
       filter.productId = data.productId;
     }
 
-    // equipmentId가 있으면 추가
-    if (data.equipmentId) {
-      filter.equipmentId = data.equipmentId;
-    }
-
-    // dateRange 객체에서 시작일/종료일을 추출하여 필터 데이터로 변환
-    if (data.dateRange) {
-      if (data.dateRange.startDate) {
-        try {
-          filter.planStartDateFrom = format(data.dateRange.startDate, 'yyyy-MM-dd');
-        } catch (error) {
-          console.error("Invalid startDate:", error);
-        }
-      }
-
-      if (data.dateRange.endDate) {
-        try {
-          filter.planStartDateTo = format(data.dateRange.endDate, 'yyyy-MM-dd');
-        } catch (error) {
-          console.error("Invalid endDate:", error);
-        }
-      }
+    // 근무타입이 있으면 추가
+    if (data.workType) {
+      filter.shiftType = data.workType;
     }
 
     // 상태 필터 - 생산 가능한 상태의 작업지시만 조회 ('IN_PROGRESS'만 허용)
@@ -122,7 +96,6 @@ export const useProductionFormHandling = (loadWorkOrders, setSelectedWorkOrder, 
     handleSubmit,
     reset,
     setValue,
-    handleDateRangeChange,
     handleReset,
     handleSearch
   };

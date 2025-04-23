@@ -85,6 +85,7 @@ const WorkOrderManagement = (props) => {
         <SearchForm
             onSearch={handleSearch}
             onReset={handleReset}
+            productOptions={productMaterials}
         />
 
         {/* 그리드 영역 */}

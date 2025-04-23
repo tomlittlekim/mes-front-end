@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Typography, Tooltip } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
@@ -7,6 +7,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShiftTypeChip from './ShiftTypeChip';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
+import OrderInfoModal from './OrderInfoModal';
 
 /**
  * 생산계획 목록 컴포넌트
@@ -21,6 +22,7 @@ import ProductMaterialSelector from '../editors/ProductMaterialSelector';
  * @param {String} props.tabId - 탭 ID
  * @param {Object} props.gridProps - 그리드 추가 속성
  * @param {Array} props.productMaterials - 제품 정보 목록
+ * @param {Object} props.vendorMap - 고객사ID를 고객사 정보로 매핑하는 객체
  * @returns {JSX.Element}
  */
 const PlanList = ({
@@ -32,8 +34,17 @@ const PlanList = ({
   refreshKey,
   tabId,
   gridProps,
-  productMaterials
+  productMaterials,
+  vendorMap = {}
 }) => {
+  // 주문정보 모달 상태 관리
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [selectedOrderInfo, setSelectedOrderInfo] = useState({
+    orderId: '',
+    orderDetailId: '',
+    rowId: null
+  });
+
   // MaterialType 코드값을 한글 표시값으로 변환하는 맵 정의
   const materialTypeMap = useMemo(() => ({
     'COMPLETE_PRODUCT': '완제품',
@@ -41,6 +52,55 @@ const PlanList = ({
     'RAW_MATERIAL': '원자재',
     'SUB_MATERIAL': '부자재'
   }), []);
+
+  // 주문정보 모달 열기 핸들러
+  const handleOpenOrderModal = (orderId, orderDetailId, rowId) => {
+    setSelectedOrderInfo({
+      orderId: orderId || '',
+      orderDetailId: orderDetailId || '',
+      rowId
+    });
+    setIsOrderModalOpen(true);
+  };
+
+  // 주문정보 모달 닫기 핸들러
+  const handleCloseOrderModal = () => {
+    setIsOrderModalOpen(false);
+  };
+
+  // 주문정보 저장 핸들러
+  const handleConfirmOrderInfo = (orderId, orderDetailId, systemMaterialId, materialName, materialStandard, unit, quantity) => {
+    // processRowUpdate 함수를 활용하여 선택된 행의 주문정보 업데이트
+    if (selectedOrderInfo.rowId !== null && typeof gridProps.processRowUpdate === 'function') {
+      const targetRow = planList.find(row => row.id === selectedOrderInfo.rowId);
+      if (targetRow) {
+        const updatedRow = { 
+          ...targetRow, 
+          orderId: orderId,                // 주문번호
+          orderDetailId: orderDetailId,    // 주문상세ID
+          productId: systemMaterialId,     // 제품ID (systemMaterialId)
+          productName: materialName,       // 제품명
+          // 제품유형은 ProductMaterialSelector가 자동으로 처리하므로 여기서는 설정하지 않음
+          materialUnit: unit,              // 단위
+          planQty: quantity                // 계획수량 = 주문수량
+        };
+        
+        gridProps.processRowUpdate(updatedRow, targetRow);
+      }
+    }
+  };
+
+  // 셀 더블클릭 핸들러
+  const handleCellDoubleClick = (params) => {
+    // 주문번호 또는 주문상세ID 필드만 처리
+    if (params.field === 'orderId' || params.field === 'orderDetailId') {
+      handleOpenOrderModal(
+        params.row.orderId,
+        params.row.orderDetailId,
+        params.row.id
+      );
+    }
+  };
 
   // 생산계획 목록 그리드 컬럼 정의
   const planColumns = useMemo(() => ([
@@ -55,7 +115,15 @@ const PlanList = ({
       field: 'orderId',
       headerName: '주문번호',
       width: 150,
-      editable: true,
+      editable: false, // 직접 수정 불가 (모달을 통해서만 수정)
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: 'orderDetailId',
+      headerName: '주문상세ID',
+      width: 150,
+      editable: false, // 직접 수정 불가 (모달을 통해서만 수정)
       headerAlign: 'center',
       align: 'center'
     },
@@ -190,19 +258,28 @@ const PlanList = ({
       }
     },
     {
-      field: 'shiftType',
-      headerName: '주/야간',
-      width: 120,
-      editable: true,
+      field: 'materialUnit',
+      headerName: '단위',
+      width: 100,
+      editable: false,
       headerAlign: 'center',
       align: 'center',
-      type: 'singleSelect',
-      valueOptions: [
-        { value: 'DAY', label: '주간' },
-        { value: 'NIGHT', label: '야간' },
-      ],
       renderCell: (params) => {
-        return <ShiftTypeChip type={params.value || 'DAY'} />;
+        // 제품 정보에서 단위 가져오기
+        let unitText = '';
+        
+        if (params.row.productId) {
+          const product = productMaterials.find(p => p.systemMaterialId === params.row.productId);
+          if (product) {
+            unitText = product.materialUnit || '';
+          }
+        }
+        
+        return (
+          <Typography variant="body2">
+            {unitText}
+          </Typography>
+        );
       }
     },
     {
@@ -217,6 +294,22 @@ const PlanList = ({
             {params.value ? Number(params.value).toLocaleString() : '0'}
           </Typography>
       )
+    },
+    {
+      field: 'shiftType',
+      headerName: '주/야간',
+      width: 120,
+      editable: true,
+      headerAlign: 'center',
+      align: 'center',
+      type: 'singleSelect',
+      valueOptions: [
+        { value: 'DAY', label: '주간' },
+        { value: 'NIGHT', label: '야간' },
+      ],
+      renderCell: (params) => {
+        return <ShiftTypeChip type={params.value || 'DAY'} />;
+      }
     },
     {
       field: 'planStartDate',
@@ -338,17 +431,32 @@ const PlanList = ({
   ]), [onAdd, onSave, onDelete]);
 
   return (
+    <>
       <EnhancedDataGridWrapper
-          title="생산계획목록"
-          key={refreshKey}
-          rows={planList}
-          columns={planColumns}
-          buttons={planGridButtons}
-          height={450}
-          onRowClick={onRowClick}
-          tabId={tabId + "-production-plans"}
-          gridProps={gridProps}
+        title="생산계획목록"
+        key={refreshKey}
+        rows={planList}
+        columns={planColumns}
+        buttons={planGridButtons}
+        height={450}
+        onRowClick={onRowClick}
+        tabId={tabId + "-production-plans"}
+        gridProps={{
+          ...gridProps,
+          onCellDoubleClick: handleCellDoubleClick
+        }}
       />
+      
+      {/* 주문정보 모달 */}
+      <OrderInfoModal
+        open={isOrderModalOpen}
+        onClose={handleCloseOrderModal}
+        orderId={selectedOrderInfo.orderId}
+        orderDetailId={selectedOrderInfo.orderDetailId}
+        onConfirm={handleConfirmOrderInfo}
+        vendorMap={vendorMap}
+      />
+    </>
   );
 };
 
