@@ -9,7 +9,9 @@ import {
   upsertShipmentDetails,
   softDeleteShipment,
   getVendors,
-  getShipmentStatus
+  getShipmentStatus,
+  getMaterialByOrderNo,
+  getWarehouseByMaterialId
 } from '../../api/shipmentApi';
 import Message from '../../utils/message/Message';
 import { format, parse } from 'date-fns';
@@ -45,6 +47,8 @@ const ShipmentManagement = () => {
   const [isNewDetailRow, setIsNewDetailRow] = useState(false);
   const [preparedDetails, setPreparedDetails] = useState([]);
   const [modifiedRows, setModifiedRows] = useState(new Set());
+  const [warehouses, setWarehouses] = useState([]);
+  const [materials, setMaterials] = useState([]);
 
   // 초기 데이터 로딩
   useEffect(() => {
@@ -236,28 +240,41 @@ const ShipmentManagement = () => {
 
   // 상세 그리드 컬럼 정의
   const detailColumns = [
-    { 
-      field: 'shipmentDate', 
-      headerName: '출하일자(*)', 
-      width: 120,
-      editable: true,
-      required: true,
-      renderCell: (params) => renderRequiredCell(params, 'shipmentDate'),
-      renderEditCell: (params) => <DatePickerCell {...params} />,
-      valueFormatter: (params) => params?.value ? formatDate(params.value) : ''
-    },
-    { 
+    {
       field: 'systemMaterialId', 
       headerName: '품목ID(*)', 
       width: 150,
       editable: true,
       required: true,
       type: 'singleSelect',
-      valueOptions: preparedDetails.map(entry => ({
-        value: entry.systemMaterialId,
-        label: entry.materialName
+      valueOptions: materials.map(material => ({
+        value: material.systemMaterialId,
+        label: material.materialName
       })),
       renderCell: (params) => renderRequiredCell(params, 'systemMaterialId')
+    },
+    {
+      field: 'shipmentWarehouse',
+      headerName: '출하창고(*)',
+      width: 120,
+      editable: true,
+      required: true,
+      type: 'singleSelect',
+      valueOptions: warehouses.map(warehouse => ({
+        value: warehouse.warehouseId,
+        label: warehouse.warehouseName
+      })),
+      renderCell: (params) => renderRequiredCell(params, 'shipmentWarehouse')
+    },
+    {
+      field: 'shipmentDate',
+      headerName: '출하일자(*)',
+      width: 120,
+      editable: true,
+      required: true,
+      renderCell: (params) => renderRequiredCell(params, 'shipmentDate'),
+      renderEditCell: (params) => <DatePickerCell {...params} />,
+      valueFormatter: (params) => params?.value ? formatDate(params.value) : ''
     },
     { 
       field: 'materialName', 
@@ -320,12 +337,6 @@ const ShipmentManagement = () => {
       }
     },
     { 
-      field: 'shipmentWarehouse', 
-      headerName: '출하창고', 
-      width: 120,
-      editable: false
-    },
-    { 
       field: 'shipmentHandler', 
       headerName: '출하처리자(*)', 
       width: 120,
@@ -370,12 +381,18 @@ const ShipmentManagement = () => {
     if (params.row.id) {
       try {
         setLoading(true);
-        const [details, prepared] = await Promise.all([
+        const [details, materialInfo] = await Promise.all([
           getShipmentDetails(params.row.id),
-          prepareShipmentDetailsForEntry(params.row.orderNo)
+          getMaterialByOrderNo(params.row.orderNo)
         ]);
         setDetailRows(details || []);
-        setPreparedDetails(prepared || []);
+        setMaterials(materialInfo || []);
+        
+        // 기존 상세 데이터가 있는 경우 해당 품목의 창고 정보 로드
+        if (details && details.length > 0) {
+          const warehouseInfo = await getWarehouseByMaterialId(details[0].systemMaterialId);
+          setWarehouses(warehouseInfo || []);
+        }
       } catch (error) {
         Message.showError(error);
       } finally {
@@ -383,7 +400,8 @@ const ShipmentManagement = () => {
       }
     } else {
       setDetailRows([]);
-      setPreparedDetails([]);
+      setMaterials([]);
+      setWarehouses([]);
     }
   };
 
@@ -396,16 +414,60 @@ const ShipmentManagement = () => {
   const processDetailRowUpdate = async (newRow, oldRow) => {
     // 품목ID가 변경된 경우
     if (newRow.systemMaterialId !== oldRow.systemMaterialId) {
-      const selectedDetail = preparedDetails.find(d => d.systemMaterialId === newRow.systemMaterialId);
-      if (selectedDetail) {
-        const updatedRow = { 
-          ...newRow,
-          ...selectedDetail,
-          id: newRow.id
-        };
-        // 수정된 row 추적
-        setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-        return updatedRow;
+      try {
+        // 품목 정보 조회
+        const materialInfo = await getMaterialByOrderNo(selectedHeader.orderNo);
+        if (materialInfo) {
+          const selectedMaterial = materialInfo.find(m => m.systemMaterialId === newRow.systemMaterialId);
+          if (selectedMaterial) {
+            // 창고 정보 조회
+            const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
+            setWarehouses(warehouseInfo || []);
+            
+            // prepareShipmentDetailsForEntry 호출
+            const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, warehouseInfo[0]?.warehouseId);
+            if (prepared) {
+              const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
+              if (selectedDetail) {
+                const updatedRow = { 
+                  ...newRow,
+                  ...selectedDetail,
+                  id: newRow.id
+                };
+                // 수정된 row 추적
+                setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+                return updatedRow;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        Message.showError(error);
+        return oldRow;
+      }
+    }
+
+    // 출하창고가 변경된 경우
+    if (newRow.shipmentWarehouse !== oldRow.shipmentWarehouse) {
+      try {
+        // prepareShipmentDetailsForEntry 호출
+        const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, newRow.shipmentWarehouse);
+        if (prepared) {
+          const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
+          if (selectedDetail) {
+            const updatedRow = { 
+              ...newRow,
+              ...selectedDetail,
+              id: newRow.id
+            };
+            // 수정된 row 추적
+            setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+            return updatedRow;
+          }
+        }
+      } catch (error) {
+        Message.showError(error);
+        return oldRow;
       }
     }
 
@@ -754,7 +816,7 @@ const ShipmentManagement = () => {
                 getRowId: (row) => row.id,
                 processRowUpdate: processDetailRowUpdate,
                 isCellEditable: (params) => {
-                  const editableFields = ['shipmentDate', 'systemMaterialId', 'cumulativeShipmentQuantity', 'shipmentHandler', 'remark'];
+                  const editableFields = ['shipmentDate', 'systemMaterialId', 'cumulativeShipmentQuantity', 'shipmentWarehouse', 'shipmentHandler', 'remark'];
                   return editableFields.includes(params.field) && (params.row.id < 0 || !params.row.flagPrint);
                 },
                 disableSelectionOnClick: false,
