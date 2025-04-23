@@ -50,7 +50,6 @@ const DefectInfoModal = ({
   // 상태 관리
   const [defectInfoList, setDefectInfoList] = useState([]);
   const [currentDefect, setCurrentDefect] = useState({
-    defectType: '',
     defectQty: 0,
     defectCause: '',
     resultInfo: ''
@@ -96,7 +95,6 @@ const DefectInfoModal = ({
 
     // 모든 불량정보가 유효한지 확인
     const isAllValid = defectInfoList.every(item =>
-        item.defectType &&
         item.defectQty > 0 &&
         item.defectCause
     );
@@ -107,16 +105,6 @@ const DefectInfoModal = ({
   // 불량정보 추가 버튼 클릭 핸들러
   const handleAddDefect = () => {
     // 유효성 검증
-    if (!currentDefect.defectType) {
-      Swal.fire({
-        title: '입력 오류',
-        text: '불량유형을 선택해주세요.',
-        icon: 'warning',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
     if (!currentDefect.defectQty || currentDefect.defectQty <= 0) {
       Swal.fire({
         title: '입력 오류',
@@ -166,7 +154,6 @@ const DefectInfoModal = ({
 
     // 입력 필드 초기화
     setCurrentDefect({
-      defectType: '',
       defectQty: 0,
       defectCause: '',
       resultInfo: ''
@@ -200,7 +187,6 @@ const DefectInfoModal = ({
           setEditMode(false);
           setEditIndex(-1);
           setCurrentDefect({
-            defectType: '',
             defectQty: 0,
             defectCause: '',
             resultInfo: ''
@@ -216,9 +202,16 @@ const DefectInfoModal = ({
 
     if (name === 'defectQty') {
       // 불량수량은 숫자만 허용하고 음수는 허용하지 않음
-      const numValue = parseFloat(value);
-      if (isNaN(numValue) || numValue < 0) return;
-
+      // 입력값이 빈 문자열이거나 숫자가 아닌 경우 처리
+      if (value === '' || isNaN(value)) {
+        setCurrentDefect({ ...currentDefect, [name]: '' });
+        return;
+      }
+      
+      // 앞에 0이 붙는 것을 방지(예: 011 -> 11)
+      const numValue = parseInt(value, 10);
+      if (numValue < 0) return;
+      
       setCurrentDefect({ ...currentDefect, [name]: numValue });
     } else {
       setCurrentDefect({ ...currentDefect, [name]: value });
@@ -286,9 +279,9 @@ const DefectInfoModal = ({
       prodResultId: productionResult.prodResultId,
       productId: productId,
       defectQty: Number(item.defectQty),
-      defectType: item.defectType,
+      defectType: 'OTHER', // 기본값으로 'OTHER' 설정
       defectCause: item.defectCause,
-      resultInfo: item.resultInfo || item.defectType,
+      resultInfo: item.resultInfo || item.defectCause,
       state: 'NEW',
       flagActive: true
     }));
@@ -297,11 +290,6 @@ const DefectInfoModal = ({
     if (typeof onSave === 'function') {
       onSave(defectInfos);
     }
-  };
-
-  const getDefectTypeName = (code) => {
-    const defectType = defectTypes.find(type => type.value === code);
-    return defectType ? defectType.label : code;
   };
 
   // 작업지시 정보 또는 생산실적 정보 가져오기
@@ -378,25 +366,7 @@ const DefectInfoModal = ({
                   {editMode ? '불량정보 수정' : '불량정보 추가'}
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={3}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel id="defect-type-label">불량유형</InputLabel>
-                      <Select
-                          labelId="defect-type-label"
-                          name="defectType"
-                          value={currentDefect.defectType}
-                          onChange={handleInputChange}
-                          label="불량유형"
-                      >
-                        {defectTypes.map(option => (
-                            <MenuItem key={option.value} value={option.value}>
-                              {option.label}
-                            </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid item xs={12} sm={4}>
                     <TextField
                         name="defectQty"
                         label="불량수량"
@@ -405,10 +375,16 @@ const DefectInfoModal = ({
                         onChange={handleInputChange}
                         fullWidth
                         size="small"
-                        InputProps={{ inputProps: { min: 0 } }}
+                        InputProps={{ 
+                          inputProps: { 
+                            min: 0, 
+                            step: 1,
+                            pattern: '[0-9]*' 
+                          } 
+                        }}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid item xs={12} sm={4}>
                     <TextField
                         name="defectCause"
                         label="불량원인"
@@ -418,7 +394,7 @@ const DefectInfoModal = ({
                         size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} sm={2}>
+                  <Grid item xs={12} sm={3}>
                     <TextField
                         name="resultInfo"
                         label="상세내용(선택)"
@@ -462,18 +438,17 @@ const DefectInfoModal = ({
                       <TableRow sx={{
                         bgcolor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'
                       }}>
-                        <TableCell align="center" width="8%">번호</TableCell>
-                        <TableCell align="center" width="22%">불량유형</TableCell>
-                        <TableCell align="center" width="15%">불량수량</TableCell>
-                        <TableCell align="center" width="22%">불량원인</TableCell>
-                        <TableCell align="center" width="22%">상세내용</TableCell>
-                        <TableCell align="center" width="11%">관리</TableCell>
+                        <TableCell align="center" width="10%">번호</TableCell>
+                        <TableCell align="center" width="20%">불량수량</TableCell>
+                        <TableCell align="center" width="30%">불량원인</TableCell>
+                        <TableCell align="center" width="30%">상세내용</TableCell>
+                        <TableCell align="center" width="10%">관리</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {defectInfoList.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} align="center">
+                            <TableCell colSpan={5} align="center">
                               <Typography variant="body2" sx={{ py: 2, color: 'text.secondary' }}>
                                 등록된 불량정보가 없습니다. 불량정보를 추가해주세요.
                               </Typography>
@@ -487,7 +462,6 @@ const DefectInfoModal = ({
                                 }
                               }}>
                                 <TableCell align="center">{index + 1}</TableCell>
-                                <TableCell>{getDefectTypeName(defect.defectType)}</TableCell>
                                 <TableCell align="center">{defect.defectQty}</TableCell>
                                 <TableCell>{defect.defectCause}</TableCell>
                                 <TableCell>{defect.resultInfo || '-'}</TableCell>
@@ -519,7 +493,7 @@ const DefectInfoModal = ({
                           <TableRow sx={{
                             bgcolor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'
                           }}>
-                            <TableCell colSpan={2} align="right">
+                            <TableCell colSpan={1} align="right">
                               <Typography variant="subtitle2">합계</Typography>
                             </TableCell>
                             <TableCell align="center">
@@ -571,7 +545,7 @@ const DefectInfoModal = ({
                     `불량수량 합계가 ${defectInfoList.reduce((sum, item) => sum + (Number(item.defectQty) || 0), 0)}/${totalDefectQty}입니다.`}
           </Typography>
           <Box>
-            <Button onClick={handleCloseConfirm} sx={{ mr: 1 }}>
+            <Button onClick={onClose} sx={{ mr: 1 }}>
               취소
             </Button>
             <Button

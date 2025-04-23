@@ -1,5 +1,3 @@
-// graphql-queries.js - GraphQL 쿼리/뮤테이션 중앙 관리
-
 import { gql } from '@apollo/client';
 
 // 작업지시 관련 쿼리
@@ -43,30 +41,8 @@ export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
             updateUser
             updateDate
             flagActive
-        }
-    }
-`;
-
-// 제품ID로 생산실적 조회 쿼리 (신규)
-export const PRODUCTION_RESULTS_BY_PRODUCT_QUERY = gql`
-    query getProductionResultsByProductId($productId: String!) {
-        productionResultsByProductId(productId: $productId) {
-            id
-            workOrderId
-            prodResultId
-            productId
-            goodQty
-            defectQty
-            progressRate
-            defectRate
-            equipmentId
-            resultInfo
-            defectCause
-            createUser
-            createDate
-            updateUser
-            updateDate
-            flagActive
+            prodStartTime
+            prodEndTime
         }
     }
 `;
@@ -91,6 +67,8 @@ export const PRODUCTION_RESULTS_QUERY = gql`
             updateUser
             updateDate
             flagActive
+            prodStartTime
+            prodEndTime
         }
     }
 `;

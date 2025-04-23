@@ -67,14 +67,7 @@ const MobileLayout = ({ children }) => {
     }
     // '생산실적' 메뉴 클릭 시
     else if (id === 'production-result') {
-      // 개발 중 알림
-      Swal.fire({
-        title: '알림',
-        text: '개발 중인 메뉴입니다.',
-        icon: 'info',
-        confirmButtonColor: getAccentColor(),
-        confirmButtonText: '확인'
-      });
+      openTab({ id: 'pd-production-result', name: '생산실적등록', group: 'pd' });
     }
 
     setDrawerOpen(false);

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import './ProductionResultInquiry.css';
-import { Box, Typography, IconButton, Stack, Grid, useTheme, alpha } from '@mui/material';
+import { Box, Typography, IconButton, Stack, Grid, useTheme, alpha, Alert, Button, CircularProgress } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useDomain } from '../../../contexts/DomainContext';
 import HelpModal from '../../Common/HelpModal';
 import { SearchCondition } from '../../Common';
-import WorkOrderList from './components/WorkOrderList';
-import ProductionResultList from './components/ProductionResultList';
 import SearchForm from './SearchForm';
+import ProductionResultList from './components/ProductionResultList';
 import { useProductionResultInquiry } from './hooks/useProductionResultInquiry';
+import { useForm } from 'react-hook-form';
 
 /**
  * 생산실적조회 컴포넌트
@@ -21,26 +22,74 @@ const ProductionResultInquiry = (props) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const { domain } = useDomain();
+
+  // react-hook-form 설정
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    getValues,
+  } = useForm({
+    defaultValues: {
+      prodResultId: '',
+      workOrderId: '',
+      productId: '',
+      equipmentId: '',
+      startDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      endDateRange: {
+        startDate: null,
+        endDate: null
+      }
+    }
+  });
+
+  // 날짜 범위 변경 핸들러
+  const handleDateRangeChange = (fieldName, startDate, endDate) => {
+    setValue(fieldName, { startDate, endDate });
+  };
+
+  // 이전 버전과의 호환성을 위한 핸들러
+  const handleStartDateRangeChange = (startDate, endDate) => {
+    handleDateRangeChange('startDateRange', startDate, endDate);
+  };
+
+  const handleEndDateRangeChange = (startDate, endDate) => {
+    handleDateRangeChange('endDateRange', startDate, endDate);
+  };
+
+  // 초기화 핸들러
+  const handleReset = () => {
+    reset({
+      prodResultId: '',
+      workOrderId: '',
+      productId: '',
+      equipmentId: '',
+      startDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      endDateRange: {
+        startDate: null,
+        endDate: null
+      }
+    });
+  };
 
   // 커스텀 훅 사용
   const {
-    // 검색폼 관련
-    control,
-    handleSubmit,
-    handleDateRangeChange,
-    handleReset,
-    handleSearch,
-
-    // 작업지시 관련
-    isLoading,
-    workOrderList,
-    selectedWorkOrder,
-    handleWorkOrderSelect,
-
     // 생산실적 관련
+    isLoading,
     productionResultList,
     handlePrint,
     handleExport,
+    errorMessage,
+    handleSearch,
 
     // 색상 및 테마
     getTextColor,
@@ -49,10 +98,17 @@ const ProductionResultInquiry = (props) => {
 
     // 설비 옵션
     equipmentOptions,
+    productOptions,
 
     // 리프레시 키
     refreshKey
   } = useProductionResultInquiry(props.tabId);
+
+  // 검색 이벤트 핸들러
+  const onSearch = (data) => {
+    // 검색 실행
+    handleSearch(data);
+  };
 
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
@@ -89,40 +145,61 @@ const ProductionResultInquiry = (props) => {
           </IconButton>
         </Box>
 
+        {/* 오류 메시지 표시 */}
+        {errorMessage && (
+            <Alert
+                severity="error"
+                sx={{ mb: 2 }}
+                action={
+                  <Button
+                      color="inherit"
+                      size="small"
+                      startIcon={<RefreshIcon />}
+                      onClick={handleSubmit(onSearch)}
+                  >
+                    다시 시도
+                  </Button>
+                }
+            >
+              {errorMessage}
+            </Alert>
+        )}
+
         {/* 검색 조건 영역 */}
         <SearchCondition
-            onSearch={handleSubmit(handleSearch)}
+            onSearch={handleSubmit(onSearch)}
             onReset={handleReset}
         >
-          <SearchForm
-              control={control}
-              equipmentOptions={equipmentOptions}
-              handleDateRangeChange={handleDateRangeChange}
-          />
+          {SearchForm({
+              control,
+              equipmentOptions,
+              productOptions,
+              handleDateRangeChange,
+              handleStartDateRangeChange,
+              handleEndDateRangeChange,
+              onSearch: handleSubmit(onSearch)
+          })}
         </SearchCondition>
+
+        {/* 로딩 표시 */}
+        {isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+        )}
 
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid container spacing={2}>
-              {/* 작업지시 목록 그리드 */}
-              <Grid item xs={12} md={6}>
-                <WorkOrderList
-                    workOrderList={workOrderList}
-                    onRowClick={handleWorkOrderSelect}
-                    tabId={props.tabId}
-                    height={450}
-                />
-              </Grid>
-
-              {/* 생산실적 목록 그리드 */}
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12}>
                 <ProductionResultList
                     productionResultList={productionResultList}
-                    selectedWorkOrder={selectedWorkOrder}
                     onPrint={handlePrint}
                     onExport={handleExport}
                     tabId={props.tabId}
                     height={450}
+                    productOptions={productOptions}
+                    equipmentOptions={equipmentOptions}
                 />
               </Grid>
             </Grid>
@@ -137,9 +214,6 @@ const ProductionResultInquiry = (props) => {
           <Stack spacing={1}>
             <Typography variant="body2" color={getTextColor()}>
               • 생산실적조회 화면에서는 완료된 작업지시에 대한 생산실적을 조회할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 작업지시목록에서 특정 작업지시를 선택하면 해당 작업지시의 생산실적을 확인할 수 있습니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
               • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 확인하여 생산이력을 분석할 수 있습니다.
@@ -161,9 +235,6 @@ const ProductionResultInquiry = (props) => {
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 상단의 검색조건을 사용하여 특정 기간, 제품, 작업지시 등의 생산실적을 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 왼쪽 작업지시목록에서 작업지시를 선택하면 오른쪽에 해당 작업지시의 생산실적 정보가 표시됩니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 그리드의 컬럼을 클릭하여 정렬하거나, 필터 기능을 사용하여 데이터를 필터링할 수 있습니다.

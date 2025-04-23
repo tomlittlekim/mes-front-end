@@ -12,14 +12,8 @@ import {
     Box,
     Typography,
     useTheme,
-    Stack,
     IconButton,
     alpha,
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -42,9 +36,11 @@ import {useGridDataCall} from '../../utils/grid/useGridDataCall';
 import {useGridRow} from '../../utils/grid/useGridRow';
 import CustomModal from '../Common/CustomModal';
 import Message from "../../utils/message/Message";
-import {format} from "date-fns";
 import CellButton from "../Common/grid-piece/CellButton";
 import {useMaterialData} from '../MaterialManagement/hooks/useMaterialData';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import MaterialSelectModal from './components/materialSelectModal';
+import {useGridApiRef} from "@mui/x-data-grid";
 
 /** GraphQL 쿼리 정의 */
 //BOM 좌측 그리드
@@ -91,61 +87,6 @@ const BOM_COLUMNS = [
     // {field: 'createDate', headerName: '등록일', width: 150},
     // {field: 'updateUser', headerName: '수정자', width: 100},
     // {field: 'updateDate', headerName: '수정일', width: 150}
-];
-
-/** 신규 데이터 추가 시 생성되는 구조 */
-//BOM(팝업)
-const BOM_MODAL_FIELDS = [
-    {
-        id: 'materialType',
-        label: '종류',
-        type: 'select',
-        required: true,
-        lockOnEdit: true,
-        options: [
-            {value: 'COMPLETE_PRODUCT', label: '완제품'},
-            {value: 'HALF_PRODUCT', label: '반제품'}
-        ],
-        relation: {
-            targetField: 'systemMaterialId',
-            query: GET_MATERIALS_BY_TYPE,
-            params: ['materialType'],
-            mapping: {
-                value: 'systemMaterialId',
-                label: 'materialName'
-            }
-        }
-    },
-    {
-        id: 'systemMaterialId',
-        label: '제품 선택',
-        type: 'select',
-        required: true,
-        lockOnEdit: true,
-        options: [],
-        relation: {
-            query: GET_MATERIALS_BY_TYPE,
-            params: ['materialType'],
-            mapping: {
-                value: 'systemMaterialId',
-                label: 'materialName'
-            },
-            onSelect: (selectedValue, allValues) => {
-                const selectedOption = allValues.find(opt => opt.systemMaterialId === selectedValue);
-                return {
-                    userMaterialId: selectedOption?.userMaterialId || '',
-                    materialName: selectedOption?.materialName || '',
-                    materialStandard: selectedOption?.materialStandard || '',
-                    unit: selectedOption?.unit || ''
-                };
-            }
-        }
-    },
-    {id: 'userMaterialId', label: '제품ID', type: 'text', required: true, lock: true},
-    {id: 'materialStandard', label: '규격', type: 'text', lock: true},
-    {id: 'unit', label: '단위', type: 'text', required: true, lock: true},
-    {id: 'bomName', label: 'BOM 명', type: 'text', required: true},
-    {id: 'remark', label: '비고', type: 'textarea', rows: 6}
 ];
 
 //BOM DETAIL(행추가)
@@ -440,27 +381,75 @@ const useMaterialSelect = (setBomDetailList, materialData) => {
 };
 
 const BomManagement = (props) => {
-    // Theme 및 Context 관련
     const theme = useTheme();
     const {domain} = useDomain();
     const isDarkMode = theme.palette.mode === 'dark';
     const {executeQuery, executeMutation} = useGraphQL();
-    const {
-        materials,
-        isLoading: isMaterialLoading,
-        getCategoriesByType,
-        getMaterialsByTypeAndCategory,
-        getMaterialById,
-        refresh: refreshMaterialData
-    } = useMaterialData(executeQuery);
+    const { materials, getMaterialsByType, getMaterialById, loadMaterials } = useMaterialData(executeQuery);
+    /** 이벤트 커스텀 위한 apiRef 추가 */
+    const apiRef = useGridApiRef();
 
     // materialData 객체 생성
     const materialData = {
         materials,
-        getCategoriesByType,
-        getMaterialsByTypeAndCategory,
         getMaterialById
     };
+
+    // 모달 필드의 relation 함수 정의
+    const getMaterialOptions = (materialType) => {
+        const materials = getMaterialsByType(materialType);
+        return materials.map(m => ({
+            value: m.systemMaterialId,
+            label: m.materialName
+        }));
+    };
+
+    const getMaterialDetails = (systemMaterialId) => {
+        const material = getMaterialById(systemMaterialId);
+        return {
+            userMaterialId: material?.userMaterialId || '',
+            materialName: material?.materialName || '',
+            materialStandard: material?.materialStandard || '',
+            unit: material?.unit || ''
+        };
+    };
+
+    // BOM_MODAL_FIELDS 정의
+    const BOM_MODAL_FIELDS = [
+        {
+            id: 'materialType',
+            label: '종류',
+            type: 'select',
+            required: true,
+            lockOnEdit: true,
+            options: [
+                {value: 'COMPLETE_PRODUCT', label: '완제품'},
+                {value: 'HALF_PRODUCT', label: '반제품'}
+            ],
+            relation: {
+                targetField: 'systemMaterialId',
+                getOptions: getMaterialOptions,
+                onSelect: getMaterialDetails
+            }
+        },
+        {
+            id: 'systemMaterialId',
+            label: '제품 선택',
+            type: 'select',
+            required: true,
+            lockOnEdit: true,
+            options: [],
+            relation: {
+                getOptions: getMaterialOptions,
+                onSelect: getMaterialDetails
+            }
+        },
+        {id: 'userMaterialId', label: '제품ID', type: 'text', required: true, lock: true},
+        {id: 'materialStandard', label: '규격', type: 'text', lock: true},
+        {id: 'unit', label: '단위', type: 'text', required: true, lock: true},
+        {id: 'bomName', label: 'BOM 명', type: 'text', required: true},
+        {id: 'remark', label: '비고', type: 'textarea', rows: 6}
+    ];
 
     // 스타일 관련 함수
     const getTextColor = () => domain === DOMAINS.PEMS ?
@@ -492,8 +481,20 @@ const BomManagement = (props) => {
     // Grid 관련 훅
     const {generateId, formatDateToYYYYMMDD, formatGridData} = useGridUtils();
 
+    const [materialSelectModalOpen, setMaterialSelectModalOpen] = useState(false);
+    const [selectedRowData, setSelectedRowData] = useState(null);
 
-// BOM 상세 목록 그리드 컬럼 정의
+    const handleOpenMaterialSelectModal = (params) => {
+        setSelectedRowData(params.row);
+        setMaterialSelectModalOpen(true);
+    };
+
+    const handleCloseMaterialSelectModal = () => {
+        setMaterialSelectModalOpen(false);
+        setSelectedRowData(null);
+    };
+
+    // BOM 상세 목록 그리드 컬럼 정의
     const BOM_DETAIL_COLUMNS = [
         {
             field: 'systemMaterialId',
@@ -502,7 +503,7 @@ const BomManagement = (props) => {
             renderCell: (params) => (
                 <CellButton
                     params={params}
-                    onClick={(params) => handleOpen(params)}
+                    onClick={() => handleOpenMaterialSelectModal(params)}
                     label="설정"
                 />
             )
@@ -645,20 +646,8 @@ const BomManagement = (props) => {
         deleteMutation: BOM_DETAIL_DELETE,
         formatData: formatBomDetailData,
         defaultFilter: {bomId: selectedBom?.bomId || ''},
-        onSuccess: (result) => {
-            const details = result?.data?.getBomDetails || [];
-            const formattedDetails = details
-                .filter(detail => detail !== null)
-                .map(detail => ({
-                    ...detail,
-                    id: detail.bomDetailId,
-                    bomId: selectedBom.bomId,
-                    parentItemCd: selectedBom.systemMaterialId
-                }));
-            setBomDetailList(formattedDetails);
-        },
         clearAddRows: setDetailAddRows,
-        clearUpdatedRows: setDetailUpdatedRows
+        clearUpdatedRows: setDetailUpdatedRows,
     });
 
     // 행 선택 시 이벤트 핸들러 - BOM Detail
@@ -680,7 +669,7 @@ const BomManagement = (props) => {
     /** CRUD 핸들러들 */
     const handleSearch = async (data) => {
         const searchParams = formatBomSearchParams(data);
-        const result = await handleGridSearch(searchParams);
+        const result = await handleGridSearch({ filter: SEARCH_CONDITIONS });
         setBomList(result);
         setBomDetailList([]);
     };
@@ -688,13 +677,28 @@ const BomManagement = (props) => {
     const handleDetailSave = async () => {
         const { createdRows, updatedRows } = formatDetailSaveData(detailAddRows, detailUpdatedRows);
 
-        console.log('생성: ', createdRows, '/업뎃: ',updatedRows)
-
         try {
             await handleDetailGridSave({
                 createdRows,
                 updatedRows
             });
+
+            // 저장 후 상세 정보 다시 로드
+            if (selectedBom.bomId) {
+                const result = await executeQuery(BOM_DETAIL_GET, {bomId: selectedBom.bomId});
+                if (result.data?.getBomDetails) {
+                    const details = result.data.getBomDetails;
+                    const formattedDetails = details
+                        .filter(detail => detail !== null)
+                        .map(detail => ({
+                            ...detail,
+                            id: detail.bomDetailId,
+                            bomId: selectedBom.bomId,
+                        }));
+
+                    setBomDetailList(formattedDetails);
+                }
+            }
 
         } catch (error) {
             console.error('저장 실패:', error);
@@ -739,14 +743,15 @@ const BomManagement = (props) => {
             return;
         }
 
-        await handleDetailGridDelete({
-            mutationData: {
-                bomDetailIds: deleteData.existingRows.map(row => row.bomDetailId)
-            },
-            setDataList: setBomDetailList,
-            newRows: deleteData.newRows,
-            customMessage: {
-                html: `
+        try {
+            await handleDetailGridDelete({
+                mutationData: {
+                    bomDetailIds: deleteData.existingRows.map(row => row.bomDetailId)
+                },
+                setDataList: setBomDetailList,
+                newRows: deleteData.newRows,
+                customMessage: {
+                    html: `
                 <div>
                     <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">BOM 상세 정보를 삭제하시겠습니까?</div>
                     <div style="color: #ff0000; font-size: 0.9em;">
@@ -756,12 +761,13 @@ const BomManagement = (props) => {
                     </div>
                 </div>
             `
-            }
-        });
+                },
+                refreshFilter: { bomId: selectedBom.bomId }
+            });
 
-        // 삭제 후 상태 초기화
-        setDetailAddRows([]);
-        setDetailUpdatedRows([]);
+        } catch (error) {
+            console.error('삭제 후 데이터 갱신 실패:', error);
+        }
     };
 
     /** BOM 모달 관련 */
@@ -775,10 +781,10 @@ const BomManagement = (props) => {
             fields: BOM_MODAL_FIELDS
         });
 
-
     // 모달 필드 변경 핸들러
     const handleModalFieldChange = async (fieldId, value) => {
         const field = BOM_MODAL_FIELDS.find(f => f.id === fieldId);
+        if (!field) return;
 
         // 먼저 값을 설정
         setModalConfig(prev => ({
@@ -791,24 +797,11 @@ const BomManagement = (props) => {
 
         if (field?.relation) {
             try {
-                const {targetField, query, params, mapping, onSelect} = field.relation;
+                const { targetField, getOptions, onSelect } = field.relation;
 
-                if (targetField) {
-                    // materialType 선택 시에만 서버 요청
-                    const queryParams = {};
-                    params.forEach(param => {
-                        queryParams[param] = modalConfig.values[param] || value;
-                    });
-
-                    const result = await executeQuery(query, queryParams);
-
-                    // materialType 선택 시 systemMaterialId 목록 업데이트
-                    const options = result.data.getMaterialsByType.map(item => ({
-                        value: item[mapping.value],
-                        label: item[mapping.label]
-                    }));
-
-                    // systemMaterialId 필드만 업데이트
+                if (targetField && getOptions) {
+                    const options = getOptions(value);
+                    
                     setModalConfig(prev => ({
                         ...prev,
                         fields: prev.fields.map(f => {
@@ -820,17 +813,10 @@ const BomManagement = (props) => {
                                 };
                             }
                             return f;
-                        }),
-                        values: {
-                            ...prev.values,
-                            [`${targetField}_options`]: options,
-                            [`${targetField}_raw_data`]: result.data.getMaterialsByType
-                        }
+                        })
                     }));
                 } else if (onSelect && value) {
-                    // systemMaterialId 선택 시 이미 불러온 원본 데이터에서 찾기
-                    const rawData = modalConfig.values[`${fieldId}_raw_data`] || [];
-                    const additionalValues = onSelect(value, rawData);
+                    const additionalValues = onSelect(value);
                     setModalConfig(prev => ({
                         ...prev,
                         values: {
@@ -939,7 +925,7 @@ const BomManagement = (props) => {
     /** 초기 데이터 로드 */
     useEffect(() => {
         const loadData = async () => {
-            const result = await refresh();
+            const result = await refresh({ filter: SEARCH_CONDITIONS });
             setBomList(result);
             
             // 첫 번째 BOM이 있으면 자동으로 선택
@@ -951,13 +937,13 @@ const BomManagement = (props) => {
                 try {
                     const detailResult = await executeQuery(BOM_DETAIL_GET, {bomId: firstBom.bomId});
                     if (detailResult.data?.getBomDetails) {
-                        const formattedDetails = detailResult.data.getBomDetails
+                        const details = detailResult.data.getBomDetails;
+                        const formattedDetails = details
                             .filter(detail => detail !== null)
                             .map(detail => ({
                                 ...detail,
                                 id: detail.bomDetailId,
                                 bomId: firstBom.bomId,
-                                parentItemCd: firstBom.systemMaterialId
                             }));
                         setBomDetailList(formattedDetails);
                     }
@@ -986,7 +972,6 @@ const BomManagement = (props) => {
                 ...detail,
                 id: detail.bomDetailId,
                 bomId: selectedBomId,
-                parentItemCd: bom.systemMaterialId
             }));
             setBomDetailList(formattedDetails);
         } catch (error) {
@@ -995,7 +980,7 @@ const BomManagement = (props) => {
     };
 
     const refreshAndKeepSelection = async () => {
-        const result = await refresh(); // 좌측 그리드 데이터 새로고침
+        const result = await refresh({ filter: SEARCH_CONDITIONS }); // 좌측 그리드 데이터 새로고침
         setBomList(result);
 
         if (!selectedBom) {
@@ -1010,7 +995,17 @@ const BomManagement = (props) => {
 
             // 우측 그리드 데이터 새로고침
             const detailResult = await executeQuery(BOM_DETAIL_GET, {bomId: preservedBom.bomId});
-            setBomDetailList(detailResult.data?.getBomDetails || []);
+            const formattedDetailData = formatBomDetailData(detailResult);
+            
+            if (formattedDetailData && formattedDetailData.length > 0) {
+                const details = formattedDetailData.map(detail => ({
+                    ...detail,
+                    bomId: preservedBom.bomId
+                }));
+                setBomDetailList(details);
+            } else {
+                setBomDetailList([]);
+            }
         } else {
             setSelectedBom(null);
             setBomDetailList([]);
@@ -1043,6 +1038,11 @@ const BomManagement = (props) => {
         handleParentSelect,
         handleComplete
     } = useMaterialSelect(setBomDetailList, materialData);
+
+    // 리프레시 버튼 추가
+    const handleRefresh = async () => {
+        await loadMaterials();
+    };
 
     return (
         <Box sx={{p: 0, minHeight: '100vh'}}>
@@ -1205,6 +1205,7 @@ const BomManagement = (props) => {
                                     userParentItemCd: false,
                                     parentMaterialType: false
                                 },
+                                apiRef: apiRef,
                             }}
                         />
                     </Grid>
@@ -1242,201 +1243,15 @@ const BomManagement = (props) => {
             />
 
             {/* 제품 선택 모달 */}
-            <Dialog
-                open={materialSelectModal.open}
-                onClose={handleClose}
-                maxWidth="md"
-                fullWidth
-                sx={{
-                    '& .MuiDialog-paper': {
-                        zIndex: 1000
-                    }
-                }}
-            >
-                <DialogTitle>
-                    {materialSelectModal.isNewRow ? '제품 등록' : '제품 수정'}
-                </DialogTitle>
-                <DialogContent>
-                    <Box sx={{display: 'flex', gap: 4, mt: 2}}>
-                        {/* 부모 제품 선택 영역 */}
-                        <Box sx={{flex: 1}}>
-                            <Typography variant="subtitle1" sx={{mb: 2}}>부모 제품</Typography>
-                            <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                                <FormControl fullWidth>
-                                    <InputLabel>종류</InputLabel>
-                                    <Select
-                                        value={materialSelectModal.parentMaterialType}
-                                        onChange={handleParentTypeChange}
-                                        label="종류"
-                                    >
-                                        <MenuItem value="COMPLETE_PRODUCT">완제품</MenuItem>
-                                        <MenuItem value="HALF_PRODUCT">반제품</MenuItem>
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl fullWidth>
-                                    <InputLabel>제품 유형</InputLabel>
-                                    <Select
-                                        value={materialSelectModal.parentMaterialCategory}
-                                        onChange={handleParentCategoryChange}
-                                        label="제품 유형"
-                                        disabled={!materialSelectModal.parentMaterialType}
-                                    >
-                                        <MenuItem value="">전체</MenuItem>
-                                        {[...new Set(materialSelectModal.parentMaterials.map(m => m.materialCategory))]
-                                            .map(category => (
-                                                <MenuItem key={category} value={category}>
-                                                    {category}
-                                                </MenuItem>
-                                            ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl fullWidth>
-                                    <InputLabel>부모 제품 선택</InputLabel>
-                                    <Select
-                                        value={materialSelectModal.selectedParentMaterial?.systemMaterialId || ''}
-                                        onChange={handleParentSelect}
-                                        label="부모 제품 선택"
-                                        disabled={!materialSelectModal.parentMaterialCategory}
-                                    >
-                                        {materialSelectModal.parentFilteredMaterials.map(material => (
-                                            <MenuItem key={material.systemMaterialId} value={material.systemMaterialId}>
-                                                {material.materialName} ({material.userMaterialId})
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                {materialSelectModal.selectedParentMaterial && (
-                                    <Box sx={{
-                                        mt: 2,
-                                        p: 2,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1
-                                    }}>
-                                        <Typography variant="subtitle2" sx={{mb: 1}}>선택된 부모 제품 정보</Typography>
-                                        <Grid container spacing={1}>
-                                            <Grid item xs={12}>
-                                                <Typography variant="body2" color="text.secondary">제품명</Typography>
-                                                <Typography>{materialSelectModal.selectedParentMaterial.materialName}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">제품ID</Typography>
-                                                <Typography>{materialSelectModal.selectedParentMaterial.userMaterialId}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">자재유형</Typography>
-                                                <Typography>{materialSelectModal.selectedParentMaterial.materialCategory}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">규격</Typography>
-                                                <Typography>{materialSelectModal.selectedParentMaterial.materialStandard}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">단위</Typography>
-                                                <Typography>{materialSelectModal.selectedParentMaterial.unit}</Typography>
-                                            </Grid>
-                                        </Grid>
-                                    </Box>
-                                )}
-                            </Box>
-                        </Box>
-
-                        {/* 자식 제품 선택 영역 */}
-                        <Box sx={{flex: 1}}>
-                            <Typography variant="subtitle1" sx={{mb: 2}}>자식 제품</Typography>
-                            <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                                <FormControl fullWidth>
-                                    <InputLabel>종류</InputLabel>
-                                    <Select
-                                        value={materialSelectModal.materialType}
-                                        onChange={handleTypeChange}
-                                        label="종류"
-                                    >
-                                        <MenuItem value="RAW_MATERIAL">원자재</MenuItem>
-                                        <MenuItem value="SUB_MATERIAL">부자재</MenuItem>
-                                        <MenuItem value="HALF_PRODUCT">반제품</MenuItem>
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl fullWidth>
-                                    <InputLabel>제품 유형</InputLabel>
-                                    <Select
-                                        value={materialSelectModal.materialCategory}
-                                        onChange={handleCategoryChange}
-                                        label="제품 유형"
-                                        disabled={!materialSelectModal.materialType}
-                                    >
-                                        <MenuItem value="">전체</MenuItem>
-                                        {[...new Set(materialSelectModal.materials.map(m => m.materialCategory))]
-                                            .map(category => (
-                                                <MenuItem key={category} value={category}>
-                                                    {category}
-                                                </MenuItem>
-                                            ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl fullWidth>
-                                    <InputLabel>제품 선택</InputLabel>
-                                    <Select
-                                        value={materialSelectModal.selectedMaterial?.systemMaterialId || ''}
-                                        onChange={handleSelect}
-                                        label="제품 선택"
-                                        disabled={!materialSelectModal.materialCategory}
-                                    >
-                                        {materialSelectModal.filteredMaterials.map(material => (
-                                            <MenuItem key={material.systemMaterialId} value={material.systemMaterialId}>
-                                                {material.materialName} ({material.userMaterialId})
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                {materialSelectModal.selectedMaterial && (
-                                    <Box sx={{
-                                        mt: 2,
-                                        p: 2,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1
-                                    }}>
-                                        <Typography variant="subtitle2" sx={{mb: 1}}>선택된 제품 정보</Typography>
-                                        <Grid container spacing={1}>
-                                            <Grid item xs={12}>
-                                                <Typography variant="body2" color="text.secondary">제품명</Typography>
-                                                <Typography>{materialSelectModal.selectedMaterial.materialName}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">제품ID</Typography>
-                                                <Typography>{materialSelectModal.selectedMaterial.userMaterialId}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">자재유형</Typography>
-                                                <Typography>{materialSelectModal.selectedMaterial.materialCategory}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">규격</Typography>
-                                                <Typography>{materialSelectModal.selectedMaterial.materialStandard}</Typography>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Typography variant="body2" color="text.secondary">단위</Typography>
-                                                <Typography>{materialSelectModal.selectedMaterial.unit}</Typography>
-                                            </Grid>
-                                        </Grid>
-                                    </Box>
-                                )}
-                            </Box>
-                        </Box>
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>취소</Button>
-                    <Button onClick={handleComplete} variant="contained">확인</Button>
-                </DialogActions>
-            </Dialog>
+            <MaterialSelectModal
+                open={materialSelectModalOpen}
+                onClose={handleCloseMaterialSelectModal}
+                rowData={selectedRowData}
+                setBomDetailList={setBomDetailList}
+                executeQuery={executeQuery}
+                generateId={generateId}
+                apiRef={apiRef}
+            />
         </Box>
     );
 };

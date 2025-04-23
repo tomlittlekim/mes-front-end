@@ -20,11 +20,11 @@ const ProductionResultList = ({
   selectedWorkOrder,
   onRowClick,
   onCreateResult,
-  onCreateIndependentResult, // 작업지시 없는 생산실적 생성 함수 추가
+  onCreateIndependentResult, // 이제 이 함수는 모달을 여는 역할
   onSave,
   onDelete,
   equipmentOptions,
-  productOptions, // 제품 옵션 목록 추가
+  productOptions,
   setProductionResultList,
   setProductionResult,
   productionResult,
@@ -141,6 +141,92 @@ const ProductionResultList = ({
         );
       }
     },
+    // 생산시작일시 필드 수정
+    {
+      field: 'prodStartTime',
+      headerName: '생산시작일시',
+      width: 180,
+      headerAlign: 'center',
+      align: 'center',
+      editable: true,
+      type: 'dateTime',
+      valueGetter: (params) => {
+        // params가 null이거나 undefined인 경우 체크
+        if (!params || params.value === undefined || params.value === null) return null;
+        try {
+          const date = new Date(params.value);
+          return isNaN(date.getTime()) ? null : date;
+        } catch (e) {
+          return null;
+        }
+      },
+      renderCell: (params) => {
+        // params가 null이거나 undefined인 경우 체크
+        if (!params) return <Typography variant="body2">-</Typography>;
+
+        // params.row의 원본 데이터에서 직접 값을 가져옴
+        const dateValue = params.row.prodStartTime;
+
+        if (!dateValue) {
+          return <Typography variant="body2">-</Typography>;
+        }
+
+        try {
+          const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+          return (
+              <Typography variant="body2">
+                {!isNaN(date.getTime()) ? format(date, 'yyyy-MM-dd HH:mm') : '-'}
+              </Typography>
+          );
+        } catch (e) {
+          console.error("Date formatting error:", e);
+          return <Typography variant="body2">-</Typography>;
+        }
+      }
+    },
+    // 생산종료일시 필드 수정
+    {
+      field: 'prodEndTime',
+      headerName: '생산종료일시',
+      width: 180,
+      headerAlign: 'center',
+      align: 'center',
+      editable: true,
+      type: 'dateTime',
+      valueGetter: (params) => {
+        // params가 null이거나 undefined인 경우 체크
+        if (!params || params.value === undefined || params.value === null) return null;
+        try {
+          const date = new Date(params.value);
+          return isNaN(date.getTime()) ? null : date;
+        } catch (e) {
+          return null;
+        }
+      },
+      renderCell: (params) => {
+        // params가 null이거나 undefined인 경우 체크
+        if (!params) return <Typography variant="body2">-</Typography>;
+
+        // params.row의 원본 데이터에서 직접 값을 가져옴
+        const dateValue = params.row.prodEndTime;
+
+        if (!dateValue) {
+          return <Typography variant="body2">-</Typography>;
+        }
+
+        try {
+          const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+          return (
+              <Typography variant="body2">
+                {!isNaN(date.getTime()) ? format(date, 'yyyy-MM-dd HH:mm') : '-'}
+              </Typography>
+          );
+        } catch (e) {
+          console.error("Date formatting error:", e);
+          return <Typography variant="body2">-</Typography>;
+        }
+      }
+    },
     {
       field: 'progressRate',
       headerName: '진척률',
@@ -186,13 +272,13 @@ const ProductionResultList = ({
             <Typography variant="body2">
               {equipment ? (
                   <span>
-            {equipment.label}
+                    {equipment.label}
                     {equipment.factoryName && equipment.lineName ? (
                         <span style={{ fontSize: '0.85em', color: 'gray', display: 'block' }}>
-                {equipment.factoryName} &gt; {equipment.lineName}
-              </span>
+                          {equipment.factoryName} &gt; {equipment.lineName}
+                        </span>
                     ) : null}
-          </span>
+                  </span>
               ) : params.value || ''}
             </Typography>
         );
@@ -230,7 +316,7 @@ const ProductionResultList = ({
     // "독립 생산실적" 버튼 (작업지시 없이 생성)
     buttons.push({
       label: '독립 생산실적',
-      onClick: onCreateIndependentResult,
+      onClick: onCreateIndependentResult, // 이제 이 함수는 모달을 여는 역할
       icon: <NoteAddIcon/>,
       tooltip: '작업지시 없이 생산실적을 등록합니다',
       color: 'secondary'
@@ -319,7 +405,16 @@ const ProductionResultList = ({
   const gridProps = {
     editMode: "cell",
     onCellEditCommit: handleCellEditCommit,
-    // 셀 편집 완료 후 처리를 위한 processRowUpdate 추가
+    // 내장 날짜 시간 편집기 설정
+    localeText: {
+      // 한국어 날짜 형식 설정
+      dateTimePickerToolbarTitle: '날짜 및 시간 선택',
+      datePickerToolbarTitle: '날짜 선택',
+      timePickerToolbarTitle: '시간 선택',
+      datePickerDefaultToolbarTitle: '날짜 선택',
+      timePickerDefaultToolbarTitle: '시간 선택',
+    },
+    // 셀 편집 완료 후 처리를 위한 processRowUpdate 수정
     processRowUpdate: (newRow, oldRow) => {
       // 음수 값 방지
       if (newRow.goodQty < 0) {
@@ -330,26 +425,67 @@ const ProductionResultList = ({
         newRow.defectQty = 0;
       }
 
-      // 수정된 행 정보로 productionResultList 업데이트
-      const updatedList = productionResultList.map(row =>
-          row.id === newRow.id ? newRow : row
-      );
-      setProductionResultList(updatedList);
+      // 날짜 필드가 Date 객체인 경우 적절하게 처리
+      let processedRow = { ...newRow };
 
-      // 현재 수정한 행이 선택된 행이라면 productionResult도 업데이트
-      if (productionResult && productionResult.id === newRow.id) {
-        setProductionResult(newRow);
-
-        // onRowEdit 핸들러가 제공된 경우 호출
-        if (onRowEdit) {
-          onRowEdit(newRow);
+      // 생산시작일시 처리
+      if (processedRow.prodStartTime instanceof Date) {
+        console.log('Processing prodStartTime:', processedRow.prodStartTime);
+        processedRow.prodStartTime = processedRow.prodStartTime.toISOString();
+      } else if (processedRow.prodStartTime) {
+        try {
+          const date = new Date(processedRow.prodStartTime);
+          if (!isNaN(date.getTime())) {
+            console.log('Converting prodStartTime string to Date:', date);
+            processedRow.prodStartTime = date.toISOString();
+          }
+        } catch (e) {
+          console.error('Error processing prodStartTime:', e);
         }
       }
 
-      return newRow;
+      // 생산종료일시 처리
+      if (processedRow.prodEndTime instanceof Date) {
+        console.log('Processing prodEndTime:', processedRow.prodEndTime);
+        processedRow.prodEndTime = processedRow.prodEndTime.toISOString();
+      } else if (processedRow.prodEndTime) {
+        try {
+          const date = new Date(processedRow.prodEndTime);
+          if (!isNaN(date.getTime())) {
+            console.log('Converting prodEndTime string to Date:', date);
+            processedRow.prodEndTime = date.toISOString();
+          }
+        } catch (e) {
+          console.error('Error processing prodEndTime:', e);
+        }
+      }
+
+      // 처리된 행 출력 (디버깅용)
+      console.log('Processed row:', processedRow);
+
+      // 수정된 행 정보로 productionResultList 업데이트
+      const updatedList = productionResultList.map(row =>
+          row.id === processedRow.id ? processedRow : row
+      );
+
+      // 상태 업데이트
+      setProductionResultList(updatedList);
+
+      // 현재 수정한 행이 선택된 행이라면 productionResult도 업데이트
+      if (productionResult && productionResult.id === processedRow.id) {
+        setProductionResult(processedRow);
+
+        // onRowEdit 핸들러가 제공된 경우 호출
+        if (onRowEdit) {
+          onRowEdit(processedRow);
+        }
+      }
+
+      return processedRow;
     },
     // 에러 처리
     onProcessRowUpdateError: (error) => {
+      console.error('데이터 업데이트 오류:', error);
       Swal.fire({
         title: '오류',
         text: '데이터 업데이트 중 오류가 발생했습니다.',

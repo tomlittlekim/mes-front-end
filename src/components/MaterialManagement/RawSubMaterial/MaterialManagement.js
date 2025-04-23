@@ -213,7 +213,7 @@ const MaterialManagement = ({tabId}) => {
         formatData: formatMaterialData,     // 데이터 포맷팅 함수
         defaultFilter: SEARCH_CONDITIONS,   // 기본 검색 조건
         onSuccess: async () => { // 성공 콜백
-            const result = await refresh();
+            const result = await refresh({ filter: SEARCH_CONDITIONS });
             setMaterialList(result);
         },
         clearAddRows: () => setAddRows([]),         // 신규 행 초기화
@@ -277,7 +277,7 @@ const MaterialManagement = ({tabId}) => {
     /** CRUD 핸들러들 */
     const handleSearch = async (data) => {
         const searchParams = formatMaterialSearchParams(data);
-        const result = await handleGridSearch(searchParams);
+        const result = await handleGridSearch({ filter: searchParams });
         setMaterialList(result);
     };
 
@@ -306,7 +306,7 @@ const MaterialManagement = ({tabId}) => {
     /** 초기 데이터 로드 */
     useEffect(() => {
         const loadData = async () => {
-            const result = await refresh();
+            const result = await refresh({ filter: SEARCH_CONDITIONS });
             setMaterialList(result);
         };
         loadData();

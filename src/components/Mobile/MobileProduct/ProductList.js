@@ -100,7 +100,14 @@ const ProductList = ({ materialList, loading, onEdit, onDelete, onAddNew, getAcc
                 <Divider />
                 <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1 }}>
                   <Typography variant="body2" color="text.secondary" fontSize="0.9rem">
-                    {material.updateDate ? `최종 수정: ${material.updateDate}` : `등록: ${material.createDate}`}
+                    {material.updateDate ? 
+                      <>
+                        최종 수정:<br/>{material.updateDate}
+                      </> : 
+                      <>
+                        등록:<br/>{material.createDate}
+                      </>
+                    }
                   </Typography>
                   <Box>
                     <IconButton

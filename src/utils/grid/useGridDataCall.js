@@ -24,14 +24,8 @@ export const useGridDataCall = ({
         async (customFilter = {}) => {
             try {
                 setLoading(true);
-                const filter = { ...defaultFilter, ...customFilter }; // Merge defaultFilter with customFilter
-                
-                // 필터가 비어있는 경우 기본값으로 설정
-                if (Object.keys(filter).length === 0) {
-                    return [];
-                }
 
-                const result = await executeQuery(query, { filter });
+                const result = await executeQuery(query, customFilter);
                 return result.data ? formatData(result.data) : [];
             } catch (error) {
                 Message.showError(Message.SERVER_ERROR);
@@ -40,7 +34,7 @@ export const useGridDataCall = ({
                 setLoading(false);
             }
         },
-        [executeQuery, query, defaultFilter, formatData]
+        [executeQuery, query, formatData]
     );
 
     /**
@@ -49,7 +43,7 @@ export const useGridDataCall = ({
     const handleGridSearch = useCallback(async (searchParams) => {
         try {
             setLoading(true);
-            const result = await executeQuery(query, { filter: searchParams });
+            const result = await executeQuery(query, searchParams);
             return result.data ? formatData(result.data) : [];
         } catch (error) {
             Message.showError(Message.SERVER_ERROR);

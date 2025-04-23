@@ -41,7 +41,7 @@ const createFetch = (withAuth = true) => {
         if (!response.ok) {
             const isUnAuthorized = (response?.status === 401)
             if (isUnAuthorized) handleTokenExpiration();
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error(`HTTP error! status: ${response.status}`);
         }
 
         return response;
@@ -82,13 +82,13 @@ export const graphFetch = async <T>(
     if (!response.ok) {
         const isUnAuthorized = (response?.status === 401)
         if (isUnAuthorized) handleTokenExpiration();
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.error(`HTTP error! status: ${response.status}`);
     }
 
     const json = await response.json();
 
     if (json.errors) {
-        throw new Error(json.errors[0]?.message || "GraphQL Error");
+        console.error(json.errors[0]?.message || "GraphQL Error");
     }
 
     return json.data;

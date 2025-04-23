@@ -10,6 +10,7 @@ import WorkOrderList from './components/WorkOrderList';
 import ProductionResultList from './components/ProductionResultList';
 import SearchForm from './SearchForm';
 import DefectInfoModal from './components/DefectInfoModal';
+import IndependentProductionModal from './components/IndependentProductionModal'; // 새로운 모달 컴포넌트 import
 import { useProductionResultManagement } from './hooks/useProductionResultManagement';
 
 /**
@@ -48,6 +49,7 @@ const ProductionResultManagement = (props) => {
     handleDateRangeChange,
     handleReset,
     handleSearch,
+    handleSearchSubmit,
 
     // 작업지시 관련
     isLoading,
@@ -61,7 +63,7 @@ const ProductionResultManagement = (props) => {
     productionResult,
     setProductionResult,
     handleCreateResult,
-    handleCreateIndependentResult, // 독립형 생산실적 생성 함수
+    handleCreateIndependentResult, // 독립형 생산실적 생성 함수 (모달 열기)
     handleSave,
     handleDelete,
     handleProductionResultSelect,
@@ -74,6 +76,11 @@ const ProductionResultManagement = (props) => {
     currentProductionResult,
     defectInfos,
     handleProductionResultEdit,
+
+    // 독립 생산실적 모달 관련 - 새로 추가
+    isIndependentModalOpen,
+    closeIndependentModal,
+    handleSaveIndependentResult,
 
     // 옵션 데이터
     equipmentOptions,
@@ -143,7 +150,7 @@ const ProductionResultManagement = (props) => {
 
         {/* 검색 조건 영역 */}
         <SearchCondition
-            onSearch={handleSubmit(handleSearch)}
+            onSearch={handleSubmit(handleSearchSubmit)}
             onReset={handleReset}
         >
           <SearchForm
@@ -167,7 +174,7 @@ const ProductionResultManagement = (props) => {
             }}
         >
           <Typography variant="body2" align="center">
-            작업지시 없이도 생산실적을 등록할 수 있습니다.
+            "독립 생산실적" 버튼을 클릭하여 작업지시 없이도 생산실적을 등록할 수 있습니다.
             제품ID는 필수 입력 항목입니다.
           </Typography>
         </Alert>
@@ -193,7 +200,7 @@ const ProductionResultManagement = (props) => {
                     selectedWorkOrder={selectedWorkOrder}
                     onRowClick={handleProductionResultSelect}
                     onCreateResult={handleCreateResult}
-                    onCreateIndependentResult={handleCreateIndependentResult}
+                    onCreateIndependentResult={handleCreateIndependentResult} // 독립 생산실적 모달 열기 함수
                     onSave={handleSave}
                     onDelete={handleDelete}
                     equipmentOptions={equipmentOptions}
@@ -274,6 +281,15 @@ const ProductionResultManagement = (props) => {
                 defectTypes={defectTypes}
             />
         )}
+
+        {/* 독립 생산실적 모달 - 새로 추가 */}
+        <IndependentProductionModal
+            open={isIndependentModalOpen}
+            onClose={closeIndependentModal}
+            onSave={handleSaveIndependentResult}
+            equipmentOptions={equipmentOptions}
+            productOptions={productOptions}
+        />
       </Box>
   );
 };

@@ -1,37 +1,15 @@
 import { gql } from '@apollo/client';
 
 /**
- * 작업지시 목록 조회 쿼리
+ * 생산실적 목록 조회 쿼리
  */
-export const WORK_ORDERS_QUERY = gql`
-    query getWorkOrders($filter: WorkOrderFilter) {
-        workOrders(filter: $filter) {
-            site
-            compCd
-            workOrderId
-            prodPlanId
-            productId
-            orderQty
-            shiftType
-            state
-            flagActive
-            createUser
-            createDate
-            updateUser
-            updateDate
-        }
-    }
-`;
-
-/**
- * 작업지시별 생산실적 조회 쿼리
- */
-export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
-    query getProductionResultsByWorkOrderId($workOrderId: String!) {
-        productionResultsByWorkOrderId(workOrderId: $workOrderId) {
+export const PRODUCTION_RESULTS_QUERY = gql`
+    query getProductionResults($filter: ProductionResultFilter) {
+        productionResults(filter: $filter) {
             id
             workOrderId
             prodResultId
+            productId
             goodQty
             defectQty
             progressRate
@@ -39,6 +17,8 @@ export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
             equipmentId
             resultInfo
             defectCause
+            prodStartTime
+            prodEndTime
             createUser
             createDate
             updateUser

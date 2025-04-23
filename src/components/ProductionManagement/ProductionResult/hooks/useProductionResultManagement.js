@@ -6,6 +6,7 @@ import { useGraphQL } from '../../../../apollo/useGraphQL';
 import { PRODUCTS_QUERY, EQUIPMENTS_QUERY } from './graphql-queries';
 import { enrichProductWithDisplayValues } from '../utils/materialTypeUtils';
 import Message from '../../../../utils/message/Message'
+import Swal from 'sweetalert2'
 
 /**
  * 생산실적관리 컴포넌트의 로직을 처리하는 커스텀 훅
@@ -135,7 +136,6 @@ export const useProductionResultManagement = (tabId) => {
     saveResult,
     deleteResult,
     createResult,
-    createIndependentResult,
     // 불량정보 모달 관련 상태 및 핸들러
     isDefectInfoModalOpen,
     openDefectInfoModal,
@@ -143,12 +143,19 @@ export const useProductionResultManagement = (tabId) => {
     handleSaveDefectInfos,
     currentProductionResult,
     defectInfos,
-    handleProductionResultEdit
+    handleProductionResultEdit,
+    // 독립 생산실적 관련 핸들러 추가
+    createIndependentResult,
+    isIndependentModalOpen,
+    closeIndependentModal,
+    handleSaveIndependentResult
   } = useProductionResultOperations(
       selectedWorkOrder,
       setSelectedWorkOrder,
       workOrderList,
-      refreshWorkOrderList
+      refreshWorkOrderList,
+      setProductionResultList,
+      setProductionResult
   );
 
   // 폼 핸들링 훅
@@ -183,20 +190,29 @@ export const useProductionResultManagement = (tabId) => {
     }
   }, [workOrderList, loadProductionResults, selectedWorkOrder]);
 
+  // 조회버튼 연결 핸들러 - 직접 refreshWorkOrderList 사용
+  const handleSearchSubmit = useCallback((data) => {
+    // 먼저 기존 handleSearch 함수 호출
+    handleSearch(data);
+    
+    // 추가로 작업지시 목록 명시적 갱신
+    refreshWorkOrderList();
+  }, [handleSearch, refreshWorkOrderList]);
+
   // 생산실적 생성 핸들러 (작업지시 기반)
   const handleCreateResult = useCallback(() => {
     if (!selectedWorkOrder) {
-      // 작업지시가 선택되지 않았을 때 안내 메시지
-      alert('작업지시를 선택한 후 등록해주세요.');
+      // 작업지시가 선택되지 않았을 때 SweetAlert2로 안내 메시지 표시
+      Swal.fire({
+        title: '알림',
+        text: '작업지시를 선택한 후 등록해주세요.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
       return;
     }
     createResult(setProductionResultList, setProductionResult, productionResultList);
   }, [createResult, productionResultList, selectedWorkOrder]);
-
-  // 생산실적 생성 핸들러 (독립형, 작업지시 없이) - 신규
-  const handleCreateIndependentResult = useCallback(() => {
-    createIndependentResult(setProductionResultList, setProductionResult);
-  }, [createIndependentResult]);
 
   // 저장 핸들러
   const handleSave = useCallback(() => {
@@ -264,28 +280,7 @@ export const useProductionResultManagement = (tabId) => {
 
     // 초기 데이터 로드
     loadInitialData();
-  }, [loadProductMaterials, loadEquipments, loadWorkOrders, setIsLoading, productOptions]);;
-
-  // 작업지시 목록 자동 갱신을 위한 useEffect - 별도로 분리하여 중복 호출 방지
-  useEffect(() => {
-    let intervalId = null;
-
-    // 초기 데이터가 로드되었고 로딩 중이 아닐 때만 인터벌 시작
-    if (isInitialDataLoaded.current && !isLoading && !isLoadingRef.current) {
-      intervalId = setInterval(() => {
-        // 로딩 중이 아닐 때만 갱신
-        if (!isLoadingRef.current) {
-          refreshWorkOrderList();
-        }
-      }, 60000); // 1분마다 갱신
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [isLoading, refreshWorkOrderList]);
+  }, [loadProductMaterials, loadEquipments, loadWorkOrders, setIsLoading, productOptions]);
 
   return {
     // 검색폼 관련
@@ -296,6 +291,7 @@ export const useProductionResultManagement = (tabId) => {
     handleDateRangeChange,
     handleReset,
     handleSearch,
+    handleSearchSubmit,
 
     // 작업지시 관련
     isLoading,
@@ -309,7 +305,7 @@ export const useProductionResultManagement = (tabId) => {
     productionResult,
     setProductionResult,
     handleCreateResult,
-    handleCreateIndependentResult, // 새로 추가된 독립형 생산실적 생성 함수
+    handleCreateIndependentResult: createIndependentResult,
     handleSave,
     handleDelete,
     handleProductionResultSelect,
@@ -323,9 +319,14 @@ export const useProductionResultManagement = (tabId) => {
     defectInfos,
     handleProductionResultEdit,
 
+    // 독립 생산실적 모달 관련 - 새로 추가
+    isIndependentModalOpen,
+    closeIndependentModal,
+    handleSaveIndependentResult,
+
     // 옵션 데이터
     equipmentOptions,
-    productOptions, // 제품 옵션 목록
+    productOptions,
 
     // 리프레시 키
     refreshKey
