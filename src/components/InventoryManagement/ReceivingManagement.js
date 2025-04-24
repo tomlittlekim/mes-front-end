@@ -351,7 +351,7 @@ const ReceivingManagement = (props) => {
           materialName: item.materialName,
           materialCategory: item.materialCategory,
           materialStandard: item.materialStandard,
-          qty: item.qty,
+          qty: parseFloat(item.qty) || 0,
           unitPrice: item.unitPrice,
           unitVat: item.unitVat,
           totalPrice: item.totalPrice,
@@ -687,7 +687,7 @@ const ReceivingManagement = (props) => {
       materialName: row.materialName || '',
       materialCategory: row.materialCategory || '',
       materialStandard: row.materialStandard || '',
-      qty: String(row.qty || 0),
+      qty: String(parseFloat(row.qty) || 0),
       unitPrice: String(row.unitPrice || 0),
       unitVat: String(row.unitVat || 0),
       totalPrice: String(row.totalPrice || 0),
@@ -706,7 +706,7 @@ const ReceivingManagement = (props) => {
       materialName: row.materialName || '',
       materialCategory: row.materialCategory || '',
       materialStandard: row.materialStandard || '',
-      qty: String(row.qty || 0),
+      qty: String(parseFloat(row.qty) || 0),
       unitPrice: String(row.unitPrice || 0),
       unitVat: String(row.unitVat || 0),
       totalPrice: String(row.totalPrice || 0),
@@ -779,7 +779,7 @@ const ReceivingManagement = (props) => {
                 materialName: item.materialName,
                 materialCategory: item.materialCategory,
                 materialStandard: item.materialStandard,
-                qty: item.qty,
+                qty: parseFloat(item.qty) || 0,
                 unitPrice: item.unitPrice,
                 unitVat: item.unitVat,
                 totalPrice: item.totalPrice,
@@ -1375,10 +1375,30 @@ const ReceivingManagement = (props) => {
       editable: false },
     { field: 'qty', 
       headerName: '수량', 
-      width: 30, 
+      width: 100, 
       headerAlign: 'center',
       align: 'center',
-      type: 'number', editable: true },
+      type: 'number',
+      editable: true,
+      renderCell: (params) => {
+        const value = params.value;
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              width: '100%',
+            }}
+          >
+            <Typography>
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
+            </Typography>
+          </Box>
+        );
+      }
+    },
     { field: 'unitPrice', 
       headerName: '단위 금액', 
       width: 70, 
