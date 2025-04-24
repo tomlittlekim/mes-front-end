@@ -19,7 +19,7 @@ import Message from "../../utils/message/Message";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
 import {deleteWarehouse, getWarehouse, saveWarehouse} from "../../api/standardInfo/wareHouseApi";
-import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
+import {fetchDefaultCodesByCodeClassId, fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
 import {getGridFactory} from "../../api/standardInfo/factoryApi";
 
 const WarehouseManagement = (props) => {
@@ -79,7 +79,7 @@ const WarehouseManagement = (props) => {
   }, []);
 
   useEffect(() => {
-    fetchGridCodesByCodeClassId("CD20250401114109083",setWarehouseTypeOptions)
+    fetchDefaultCodesByCodeClassId("WAREHOUSE",setWarehouseTypeOptions)
   }, []);
 
   useEffect(() => {
@@ -556,7 +556,13 @@ const WarehouseManagement = (props) => {
               onRowClick={handleWarehouseSelect}
               gridProps={{
                 editMode: 'cell',
-                onProcessUpdate: handleProcessRowUpdate
+                onProcessUpdate: handleProcessRowUpdate,
+                isCellEditable: (params) => {
+                  if (params.field === 'warehouseType') {
+                    return params.row.id?.toString().startsWith('NEW_');
+                  }
+                  return true;
+                },
               }}
               tabId={props.tabId + "-warehouse"}
             />
