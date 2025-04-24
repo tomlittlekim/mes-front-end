@@ -575,7 +575,7 @@ const OutboundManagement = (props) => {
     const createdInventoryInputs = newRows.map(row => ({
       outManagementId: row.outManagementId,
       systemMaterialId: row.systemMaterialId,
-      qty: String(row.qty || 0),
+      qty: String(parseFloat(row.qty) || 0),
       unitPrice: String(row.unitPrice || 0),
       unitVat: String(row.unitVat || 0),
     }));
@@ -584,7 +584,7 @@ const OutboundManagement = (props) => {
       outInventoryId: row.outInventoryId,
       outManagementId: row.outManagementId,
       systemMaterialId: row.systemMaterialId,
-      qty: String(row.qty || 0),
+      qty: String(parseFloat(row.qty) || 0),
       unitPrice: String(row.unitPrice || 0),
       unitVat: String(row.unitVat || 0),
     }));
@@ -875,7 +875,26 @@ const OutboundManagement = (props) => {
     },
     { field: 'materialCategory', headerName: '자재유형', width: 70, headerAlign: 'center', align: 'center', editable: false },
     { field: 'materialStandard', headerName: '규격', width: 70, headerAlign: 'center', align: 'center', editable: false },
-    { field: 'qty', headerName: '수량', width: 30, headerAlign: 'center', align: 'center', type: 'number', editable: true },
+    { field: 'qty', headerName: '수량', width: 30, headerAlign: 'center', align: 'center', type: 'number', editable: true,
+      renderCell: (params) => {
+        const value = params.value;
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              width: '100%',
+            }}
+          >
+            <Typography>
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
+            </Typography>
+          </Box>
+        );
+      },
+    },
     { field: 'unitPrice', headerName: '단위 금액', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true },
     { field: 'unitVat', headerName: '부가세', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true },
     { field: 'totalPrice', headerName: '총금액', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true }, // 클라이언트 계산 시 editable: true

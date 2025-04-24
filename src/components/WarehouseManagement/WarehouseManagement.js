@@ -329,7 +329,7 @@ const WarehouseManagement = (props) => {
 
     Swal.fire({
       title: '삭제 확인',
-      text: '정말 삭제하시겠습니까?',
+      html: '정말 삭제하시겠습니까?<br> 연관된 정보가 모두 사라질 수 있습니다.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',

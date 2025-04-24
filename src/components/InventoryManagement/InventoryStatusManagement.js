@@ -200,7 +200,7 @@ const InventoryStatusManagement = (props) => {
             systemMaterialId: item.systemMaterialId,
             materialName: item.materialName,
             unit: item.unit,
-            qty: item.qty
+            qty: parseFloat(item.qty) || 0
           })));
           
           // 선택 상태 초기화
@@ -308,6 +308,25 @@ const InventoryStatusManagement = (props) => {
       headerAlign: 'center',
       align: 'center',
       editable: false,
+      renderCell: (params) => {
+        const value = params.value;
+        
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              width: '100%',
+            }}
+          >
+            <Typography>
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
+            </Typography>
+          </Box>
+        );
+      },
      },
   ];
 

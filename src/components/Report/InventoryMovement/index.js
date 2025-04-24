@@ -1,9 +1,6 @@
-// 메인 컴포넌트
-export { default as InventoryMovement } from './InventoryMovement';
+// 통합된 컴포넌트
+export { default } from './InventoryMovementCombined';
+export { useInventoryMovement } from './InventoryMovementCombined';
 
-// UI 컴포넌트
-export { default as SearchForm } from './SearchForm';
-export { default as InventoryMovementChart } from './InventoryMovementChart';
-
-// 커스텀 훅
-export { default as useInventoryMovement } from './hooks/useInventoryMovement'; 
+// 기존 코드와의 호환성을 위해 named export도 제공
+export { default as InventoryMovement } from './InventoryMovementCombined'; 
