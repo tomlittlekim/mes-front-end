@@ -556,7 +556,13 @@ const WarehouseManagement = (props) => {
               onRowClick={handleWarehouseSelect}
               gridProps={{
                 editMode: 'cell',
-                onProcessUpdate: handleProcessRowUpdate
+                onProcessUpdate: handleProcessRowUpdate,
+                isCellEditable: (params) => {
+                  if (params.field === 'warehouseType') {
+                    return params.row.id?.toString().startsWith('NEW_');
+                  }
+                  return true;
+                },
               }}
               tabId={props.tabId + "-warehouse"}
             />
