@@ -43,7 +43,6 @@ export const useProductionResult = () => {
 
         // 변수 준비
         let createdRows = null;
-        let updatedRows = null;
         let defectInfoInputs = null;
 
         // 제품ID 필수 확인
@@ -81,6 +80,7 @@ export const useProductionResult = () => {
           goodQty: productionResult.goodQty || 0,
           defectQty: productionResult.defectQty || 0,
           equipmentId: productionResult.equipmentId || "",
+          warehouseId: productionResult.warehouseId || "",
           resultInfo: productionResult.resultInfo || "",
           defectCause: productionResult.defectCause || "",
           // 날짜 필드 처리 - 서버가 기대하는 형식으로 변환
@@ -93,11 +93,11 @@ export const useProductionResult = () => {
           // 신규 생산실적 생성
           createdRows = [baseData];
         } else {
-          // 기존 생산실적 수정
-          updatedRows = [{
-            prodResultId: productionResult.prodResultId,
-            ...baseData
-          }];
+          // 기존 생산실적이지만 수정 불가이므로 에러 메시지 표시
+          const error = new Error('등록된 생산실적은 수정할 수 없습니다. 삭제 후 재등록해주세요.');
+          Message.showError({message: error.message});
+          isSavingRef.current = false;
+          return Promise.reject(error);
         }
 
         // 불량정보가 있는 경우 데이터 구조 최적화
@@ -127,7 +127,6 @@ export const useProductionResult = () => {
           mutation: SAVE_PRODUCTION_RESULT_MUTATION,
           variables: {
             createdRows: createdRows,
-            updatedRows: updatedRows,
             defectInfos: defectInfoInputs
           }
         })

@@ -12,6 +12,7 @@ import SearchForm from './SearchForm';
 import DefectInfoModal from './components/DefectInfoModal';
 import IndependentProductionModal from './components/IndependentProductionModal'; // 새로운 모달 컴포넌트 import
 import { useProductionResultManagement } from './hooks/useProductionResultManagement';
+import { getWarehouseByType } from '../../../api/standardInfo/wareHouseApi';
 
 /**
  * 생산실적등록 컴포넌트
@@ -45,6 +46,21 @@ const ProductionResultManagement = (props) => {
     { value: 'DAY', label: '주간' },
     { value: 'NIGHT', label: '야간' },
   ]);
+
+  // 창고 목록 추가
+  const [warehouseOptions, setWarehouseOptions] = useState([]);
+
+  // 창고 옵션 가져오기
+  useEffect(() => {
+    // 제품 창고 타입("PRODUCT_WAREHOUSE")으로 창고 정보 가져오기
+    getWarehouseByType("PRODUCT_WAREHOUSE")
+      .then(options => {
+        setWarehouseOptions(options);
+      })
+      .catch(err => {
+        console.error("창고 정보 로드 중 오류:", err);
+      });
+  }, []);
 
   const {
     // 검색폼 관련
@@ -183,6 +199,23 @@ const ProductionResultManagement = (props) => {
           </Typography>
         </Alert>
 
+        {/* 수정 제한 안내 메시지 추가 */}
+        <Alert
+            severity="warning"
+            sx={{
+              mb: 2,
+              '& .MuiAlert-message': {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }
+            }}
+        >
+          <Typography variant="body2" align="center" fontWeight="500">
+            등록된 생산실적은 수정할 수 없으며, 삭제 후 재등록해야 합니다.
+          </Typography>
+        </Alert>
+
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid container spacing={2}>
@@ -209,10 +242,10 @@ const ProductionResultManagement = (props) => {
                     onDelete={handleDelete}
                     equipmentOptions={equipmentOptions}
                     productOptions={productOptions} // 제품 옵션 목록 확인
+                    warehouseOptions={warehouseOptions} // 창고 옵션 목록 추가
                     setProductionResultList={setProductionResultList}
                     setProductionResult={setProductionResult}
                     productionResult={productionResult}
-                    onRowEdit={handleProductionResultEdit}
                     tabId={props.tabId}
                     height={450}  // 높이 일치
                 />
@@ -275,24 +308,23 @@ const ProductionResultManagement = (props) => {
         </HelpModal>
 
         {/* 불량정보 모달 */}
-        {isDefectInfoModalOpen && (
-            <DefectInfoModal
-                open={isDefectInfoModalOpen}
-                onClose={closeDefectInfoModal}
-                onSave={handleSaveDefectInfos}
-                productionResult={currentProductionResult}
-                selectedWorkOrder={selectedWorkOrder}
-                defectTypes={defectTypes}
-            />
-        )}
+        <DefectInfoModal
+            open={isDefectInfoModalOpen}
+            onClose={closeDefectInfoModal}
+            onSave={handleSaveDefectInfos}
+            productionResult={currentProductionResult}
+            defectInfos={defectInfos}
+            defectTypes={defectTypes}
+        />
 
-        {/* 독립 생산실적 모달 - 새로 추가 */}
+        {/* 독립 생산실적 모달 */}
         <IndependentProductionModal
             open={isIndependentModalOpen}
             onClose={closeIndependentModal}
             onSave={handleSaveIndependentResult}
             equipmentOptions={equipmentOptions}
             productOptions={productOptions}
+            warehouseOptions={warehouseOptions} // 창고 옵션 목록 추가
         />
       </Box>
   );

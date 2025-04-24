@@ -268,104 +268,74 @@ export const useProductionResultOperations = (
   }, [modalResolveReject]);
 
   /**
-   * 불량정보 저장 처리
+   * 불량정보 저장 핸들러
    *
-   * @param {Array} defectInfoList - 불량정보 목록
+   * @param {Array} updatedDefectInfos - 업데이트된 불량정보 배열
    */
-  const handleSaveDefectInfos = useCallback(
-      (defectInfoList) => {
-        // DefectInfoInput에 맞게 데이터 구조 변환
-        const formattedDefectInfos = defectInfoList.map(item => ({
-          workOrderId: item.workOrderId,
-          prodResultId: item.prodResultId,
-          productId: item.productId,
-          defectQty: Number(item.defectQty),
-          defectType: item.defectType || 'OTHER', // 불량유형이 없는 경우 'OTHER'로 기본값 설정
-          defectCause: item.defectCause,
-          resultInfo: item.resultInfo || item.defectCause, // 불량유형 대신 불량원인으로 기본값 설정
-          state: item.state || "NEW",
-          flagActive: true
-        }));
+  const handleSaveDefectInfos = useCallback(updatedDefectInfos => {
+    if (currentProductionResult && updatedDefectInfos) {
+      setDefectInfos(updatedDefectInfos);
 
-        // 불량정보 상태 업데이트
-        setDefectInfosForSave(formattedDefectInfos);
+      // 새로운 불량정보 배열로 업데이트
+      const defectsForSave = updatedDefectInfos.map(info => ({
+        prodResultId: currentProductionResult.prodResultId || '',
+        defectCode: info.defectCode || '',
+        defectName: info.defectName || '',
+        defectType: info.defectType || '',
+        defectQty: Number(info.defectQty) || 0,
+        defectInfo: info.defectInfo || '',
+        flagActive: true
+      }));
 
-        // 모달 닫기
-        setIsDefectInfoModalOpen(false);
+      setDefectInfosForSave(defectsForSave);
 
-        // 불량정보 저장 후 생산실적 저장 액션 실행
-        if (modalResolveReject.saveAction) {
-          // 불량정보가 저장되었으므로 생산실적 저장 액션 실행
-          modalResolveReject.saveAction(formattedDefectInfos);
-
-          // 상태 초기화
-          setModalResolveReject(
-              {resolve: null, reject: null, saveAction: null});
-        }
-      },
-      [modalResolveReject]
-  );
-
-  /**
-   * 생산실적 셀 값 변경 감지 핸들러
-   *
-   * @param {Object} updatedRow - 업데이트된 행 데이터
-   */
-  const handleProductionResultEdit = useCallback((updatedRow) => {
-    // 불량수량이 변경되었고 0으로 설정된 경우 불량정보 초기화
-    if (updatedRow.defectQty === 0) {
-      setDefectInfosForSave([]);
+      // 현재 모달리졸브 액션 확인
+      if (modalResolveReject.saveAction) {
+        const defectsPromise = Promise.resolve(defectsForSave);
+        modalResolveReject.saveAction(defectsPromise);
+      }
     }
-  }, []);
+
+    setIsDefectInfoModalOpen(false);
+  }, [currentProductionResult, modalResolveReject]);
 
   /**
    * 생산실적 저장 함수
    *
-   * @param {Object} productionResult - 저장할 생산실적 데이터
-   * @param {Array} productionResultList - 생산실적 목록
+   * @param {Object} currentRow - 현재 선택된 생산실적
    * @param {Function} setProductionResult - 생산실적 상태 변경 함수
    * @param {Function} setProductionResultList - 생산실적 목록 상태 변경 함수
-   * @returns {Promise} 저장 결과 Promise
+   * @returns {Promise} - 저장 작업 Promise
    */
   const saveResult = useCallback(
-      (productionResult, productionResultList, setProductionResult,
-          setProductionResultList) => {
+      async (currentRow, setProductionResult, setProductionResultList) => {
+        // 로딩 중인 경우 중복 호출 방지
+        if (isLoadingRef.current) {
+          Message.showWarning('처리 중입니다. 잠시만 기다려주세요.');
+          return Promise.resolve();
+        }
+
         try {
-          if (!productionResult) {
-            Message.showWarning('저장할 생산실적이 없습니다.');
-            return Promise.resolve();
-          }
-
-          // 로딩 중인 경우 중복 호출 방지
-          if (isLoadingRef.current) {
-            Message.showWarning('처리 중입니다. 잠시만 기다려주세요.');
-            return Promise.resolve();
-          }
-
-          isLoadingRef.current = true;
-
-          // productionResultList에서 현재 선택된 행 다시 가져오기
-          const currentRow = productionResultList.find(
-              row => row.id === productionResult.id);
-
           if (!currentRow) {
-            Message.showWarning('저장할 생산실적이 없습니다.');
-            isLoadingRef.current = false;
+            Message.showWarning('저장할 생산실적을 선택해주세요.');
             return Promise.resolve();
           }
 
-          // 제품ID 필수 체크 - 작업지시가 없는 경우
-          if (!currentRow.productId && (!selectedWorkOrder
-              || !selectedWorkOrder.productId)) {
+          // 필수 필드 검사
+          if (!currentRow.productId) {
             Message.showWarning('제품ID는 필수 입력 항목입니다.');
-            isLoadingRef.current = false;
+            return Promise.resolve();
+          }
+          
+          // 창고 필수 입력 검사 추가
+          if (!currentRow.warehouseId) {
+            Message.showWarning('창고는 필수 입력 항목입니다.');
             return Promise.resolve();
           }
 
-          // 양품수량과 불량수량이 음수인지 검사
+          // 음수 검사
           if (currentRow.goodQty < 0 || currentRow.defectQty < 0) {
             Message.showWarning('양품수량과 불량수량은 0 이상이어야 합니다.');
-            isLoadingRef.current = false;
             return Promise.resolve();
           }
 
@@ -538,45 +508,45 @@ export const useProductionResultOperations = (
   );
 
   /**
-   * 새 생산실적 생성 함수 (작업지시 기반)
+   * 새 생산실적 생성
    *
    * @param {Function} setProductionResultList - 생산실적 목록 상태 변경 함수
-   * @param {Function} setProductionResult - 생산실적 상태 변경 함수
-   * @param {Array} productResultListData - 현재 생산실적 목록
+   * @param {Function} setProductionResult - 선택된 생산실적 상태 변경 함수
+   * @param {Array} productionResultList - 현재 생산실적 목록
    */
   const createResult = useCallback(
-      (setProductionResultList, setProductionResult, productResultListData) => {
-        // 현재 날짜 및 시간 가져오기
-        const now = new Date();
+    (setProductionResultList, setProductionResult, productionResultList) => {
+      // 작업지시가 선택되지 않았을 경우
+      if (!selectedWorkOrder) {
+        Message.error('작업지시를 선택해주세요.');
+        return;
+      }
 
-        // 새 생산실적 객체 생성
-        const newResult = {
-          id: `temp_${Date.now()}`, // 임시 ID (클라이언트용)
-          workOrderId: selectedWorkOrder ? selectedWorkOrder.workOrderId : null,
-          prodResultId: null, // 서버에서 생성될 ID
-          productId: selectedWorkOrder ? selectedWorkOrder.productId : "",
-          goodQty: 0,
-          defectQty: 0,
-          equipmentId: "",
-          resultInfo: "",
-          defectCause: "",
-          progressRate: null, // 백엔드에서 자동 계산될 값
-          defectRate: null, // 백엔드에서 자동 계산될 값
-          createDate: null, // 백엔드에서 자동 설정될 값
-          // 생산시작일시와 생산종료일시를 Date 객체로 초기화 (null)
-          prodStartTime: null, // 생산시작일시
-          prodEndTime: null, // 생산종료일시
-          flagActive: true
-        };
+      // 새로운 생산실적 기본값
+      const newResult = {
+        id: `temp_${Date.now()}`,  // 임시 ID (저장 시 실제 ID로 대체)
+        workOrderId: selectedWorkOrder.workOrderId,
+        prodResultId: null,  // 서버에서 생성
+        productId: selectedWorkOrder.productId,  // 작업지시의 제품ID
+        goodQty: 0,
+        defectQty: 0,
+        equipmentId: selectedWorkOrder.equipmentId || '',
+        warehouseId: '',  // 필수 입력값으로 변경
+        prodStartTime: new Date().toISOString(),  // 현재 시간 기본값
+        prodEndTime: new Date().toISOString(),
+        createDate: null,
+        flagActive: true,
+        createUser: '',
+        isNew: true  // 신규 플래그
+      };
 
-        // 새 행을 목록에 추가하고 선택
-        setProductionResultList(prev => [newResult, ...prev]);
-        setProductionResult(newResult);
+      // 생산실적 목록 업데이트
+      setProductionResultList([newResult, ...productionResultList]);
 
-        // 불량정보 상태 초기화
-        setDefectInfosForSave([]);
-      },
-      [selectedWorkOrder]
+      // 선택 상태 업데이트
+      setProductionResult(newResult);
+    },
+    [selectedWorkOrder]
   );
 
   /**
@@ -598,6 +568,12 @@ export const useProductionResultOperations = (
     // 제품ID 필수 체크
     if (!newIndependentResult.productId) {
       Message.showWarning('제품ID는 필수 입력 항목입니다.');
+      return;
+    }
+    
+    // 창고 필수 체크 추가
+    if (!newIndependentResult.warehouseId) {
+      Message.showWarning('창고는 필수 입력 항목입니다.');
       return;
     }
     
@@ -682,8 +658,14 @@ export const useProductionResultOperations = (
 
   // 모달 닫기 함수
   const closeIndependentModal = useCallback(() => {
+    console.log('closeIndependentModal 함수 호출됨 - 모달 닫기');
     setIsIndependentModalOpen(false);
-  }, []);
+    
+    // 디버깅용 상태 확인
+    setTimeout(() => {
+      console.log('모달 상태 확인:', { isOpen: isIndependentModalOpen });
+    }, 100);
+  }, [isIndependentModalOpen]);
 
   return {
     loadProductionResults,
@@ -698,7 +680,6 @@ export const useProductionResultOperations = (
     handleSaveDefectInfos,
     currentProductionResult,
     defectInfos,
-    handleProductionResultEdit,
     isIndependentModalOpen,
     closeIndependentModal,
     handleSaveIndependentResult

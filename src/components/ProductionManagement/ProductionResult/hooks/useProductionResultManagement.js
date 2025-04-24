@@ -143,7 +143,7 @@ export const useProductionResultManagement = (tabId) => {
     handleSaveDefectInfos,
     currentProductionResult,
     defectInfos,
-    handleProductionResultEdit,
+    // handleProductionResultEdit, // 수정 기능 제거
     // 독립 생산실적 관련 핸들러 추가
     createIndependentResult,
     isIndependentModalOpen,
@@ -213,6 +213,11 @@ export const useProductionResultManagement = (tabId) => {
     }
     createResult(setProductionResultList, setProductionResult, productionResultList);
   }, [createResult, productionResultList, selectedWorkOrder]);
+
+  // 독립 생산실적 생성 핸들러
+  const handleCreateIndependentResult = useCallback(() => {
+    createIndependentResult();
+  }, [createIndependentResult]);
 
   // 저장 핸들러
   const handleSave = useCallback(() => {
@@ -305,7 +310,7 @@ export const useProductionResultManagement = (tabId) => {
     productionResult,
     setProductionResult,
     handleCreateResult,
-    handleCreateIndependentResult: createIndependentResult,
+    handleCreateIndependentResult,
     handleSave,
     handleDelete,
     handleProductionResultSelect,
@@ -317,16 +322,15 @@ export const useProductionResultManagement = (tabId) => {
     handleSaveDefectInfos,
     currentProductionResult,
     defectInfos,
-    handleProductionResultEdit,
 
-    // 독립 생산실적 모달 관련 - 새로 추가
+    // 독립 생산실적 모달 관련
     isIndependentModalOpen,
     closeIndependentModal,
     handleSaveIndependentResult,
 
     // 옵션 데이터
     equipmentOptions,
-    productOptions,
+    productOptions, // 제품 옵션 목록
 
     // 리프레시 키
     refreshKey

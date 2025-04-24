@@ -75,8 +75,8 @@ export const PRODUCTION_RESULTS_QUERY = gql`
 
 // 생산실적 저장 뮤테이션
 export const SAVE_PRODUCTION_RESULT_MUTATION = gql`
-    mutation SaveProductionResult($createdRows: [ProductionResultInput], $updatedRows: [ProductionResultUpdate], $defectInfos: [DefectInfoInput]) {
-        saveProductionResult(createdRows: $createdRows, updatedRows: $updatedRows, defectInfos: $defectInfos)
+    mutation SaveProductionResult($createdRows: [ProductionResultInput], $defectInfos: [DefectInfoInput]) {
+        saveProductionResult(createdRows: $createdRows, defectInfos: $defectInfos)
     }
 `;
 
@@ -140,4 +140,16 @@ export const EQUIPMENTS_QUERY = gql`
             equipmentStatus
         }
     }
+`;
+
+export const WAREHOUSE_QUERY = `
+  query getWarehouse($filter: WarehouseFilter) {
+    getWarehouse(filter: $filter) {
+      warehouseId
+      warehouseName
+      factoryId
+      factoryName
+      warehouseType
+    }
+  }
 `;
