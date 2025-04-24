@@ -340,6 +340,7 @@ const MuiDataGridWrapper = ({
               columnGrouping: true
             }}
             processRowUpdate={gridProps.onProcessUpdate}
+            isCellEditable={gridProps?.isCellEditable}
             onProcessRowUpdateError={(error) => {
               console.error('Error updating row:', error);
               // 필요 시 사용자에게 알림을 표시하거나, 원래 값으로 되돌리는 로직을 추가합니다.
