@@ -29,9 +29,6 @@ const deleteWarehouseMutation = `
       }
 `;
 
-/**
- * 창고 리스트를 불러오는 메소드
- * */
 export const getWarehouse = async (filter = {}) => {
     const response = await graphFetch(warehouseInfoQuery, {filter});
     return response.getWarehouse

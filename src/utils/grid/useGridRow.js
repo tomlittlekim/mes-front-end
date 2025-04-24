@@ -95,9 +95,7 @@ export const useGridRow = ({
     };
 };
 
-/**
- * 공통코드를 불러오는 메소드
- * */
+
 export function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
     getGridCodes(codeClassId)
         .then((options) => {
