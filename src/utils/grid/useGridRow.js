@@ -77,8 +77,8 @@ export const useGridRow = ({
     const formatDeleteData = useCallback((selectedRows) => ({
         newRows: selectedRows.filter(row => row.id.startsWith('NEW_')),
         existingRows: selectedRows
-            .filter(row => !row.id.startsWith('NEW_'))
-            .map(row => formatExistingRow(row))
+        .filter(row => !row.id.startsWith('NEW_'))
+        .map(row => formatExistingRow(row))
     }), [formatExistingRow]);
 
     return {
@@ -95,29 +95,31 @@ export const useGridRow = ({
     };
 };
 
-
+/**
+ * 공통코드를 불러오는 메소드
+ * */
 export function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
     getGridCodes(codeClassId)
-        .then((options) => {
-            if (options.errors) {
-                console.error(options.errors);
-            } else {
-                setOptions(options);
-            }
-        })
-        .catch((err) => console.error(err));
+    .then((options) => {
+        if (options.errors) {
+            console.error(options.errors);
+        } else {
+            setOptions(options);
+        }
+    })
+    .catch((err) => console.error(err));
 }
 
 export function fetchDefaultCodesByCodeClassId(codeClassId, setOptions) {
     getInitialCodes(codeClassId)
-        .then((options) => {
-            if (options.errors) {
-                console.error(options.errors);
-            } else {
-                setOptions(options);
-            }
-        })
-        .catch((err) => console.error(err));
+    .then((options) => {
+        if (options.errors) {
+            console.error(options.errors);
+        } else {
+            setOptions(options);
+        }
+    })
+    .catch((err) => console.error(err));
 }
 
 
