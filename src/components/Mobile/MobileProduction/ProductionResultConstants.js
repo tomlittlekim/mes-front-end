@@ -10,6 +10,7 @@ export const NEW_PRODUCTION_RESULT = {
     goodQty: 0,
     defectQty: 0,
     equipmentId: "",
+    warehouseId: "",
     resultInfo: "",
     defectCause: "",
     prodStartTime: null,
@@ -19,7 +20,7 @@ export const NEW_PRODUCTION_RESULT = {
 
 // 신규 불량정보 기본값
 export const NEW_DEFECT_INFO = {
-    defectType: "불량정보등록",
     defectQty: 0,
-    defectReason: ""
+    defectReason: "",
+    resultInfo: ""
 }; 

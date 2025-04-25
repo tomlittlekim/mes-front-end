@@ -16,7 +16,8 @@ import {
   Box,
   useTheme,
   Autocomplete,
-  Paper
+  Paper,
+  FormHelperText
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -37,7 +38,8 @@ const IndependentProductionModal = ({
   onClose,
   onSave,
   equipmentOptions = [],
-  productOptions = []
+  productOptions = [],
+  warehouseOptions = []
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -51,8 +53,7 @@ const IndependentProductionModal = ({
     goodQty: 0, // 양품수량
     defectQty: 0, // 불량수량
     equipmentId: "", // 설비ID
-    resultInfo: "", // 비고
-    defectCause: "", // 불량원인
+    warehouseId: "", // 창고 추가
     prodStartTime: null, // 생산시작일시
     prodEndTime: null, // 생산종료일시
     flagActive: true
@@ -64,13 +65,17 @@ const IndependentProductionModal = ({
   // 유효성 검증 상태
   const [isValid, setIsValid] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
-    productId: false
+    productId: false,
+    warehouseId: false,
+    quantity: false,
+    date: false
   });
 
   // 데이터 변경 시 유효성 검증
   useEffect(() => {
     // 필수 입력 항목 검증
     const productIdValid = !!productionData.productId;
+    const warehouseIdValid = !!productionData.warehouseId;
 
     // 수량이 음수가 아닌지 검증
     const quantityValid =
@@ -84,19 +89,22 @@ const IndependentProductionModal = ({
     }
 
     // 전체 유효성 상태 업데이트
-    setIsValid(productIdValid && quantityValid && dateValid);
+    setIsValid(productIdValid && quantityValid && dateValid && warehouseIdValid);
 
     // 유효성 오류 메시지 상태 업데이트
     setValidationErrors({
       productId: !productIdValid,
       quantity: !quantityValid,
-      date: !dateValid
+      date: !dateValid,
+      warehouseId: !warehouseIdValid
     });
   }, [productionData]);
 
   // 모달 열릴 때 데이터 초기화
   useEffect(() => {
     if (open) {
+      console.log("창고 옵션 목록:", warehouseOptions);
+      
       // 현재 시간으로 ID 갱신
       setProductionData({
         id: `temp_${Date.now()}`,
@@ -106,15 +114,21 @@ const IndependentProductionModal = ({
         goodQty: 0,
         defectQty: 0,
         equipmentId: "",
-        resultInfo: "",
-        defectCause: "",
+        warehouseId: "",
         prodStartTime: null,
         prodEndTime: null,
         flagActive: true
       });
       setSelectedProduct(null);
+      // 유효성 오류 초기화
+      setValidationErrors({
+        productId: false,
+        warehouseId: false,
+        quantity: false,
+        date: false
+      });
     }
-  }, [open]);
+  }, [open, warehouseOptions]);
 
   // 입력 필드 변경 핸들러
   const handleInputChange = (e) => {
@@ -169,11 +183,16 @@ const IndependentProductionModal = ({
       let errorMessage = '';
 
       if (validationErrors.productId) {
-        errorMessage = '제품ID는 필수 입력 항목입니다.';
-      } else if (validationErrors.quantity) {
-        errorMessage = '양품수량과 불량수량은 0 이상이어야 합니다.';
-      } else if (validationErrors.date) {
-        errorMessage = '생산종료일시는 생산시작일시 이후여야 합니다.';
+        errorMessage = '제품ID는 필수 입력 항목입니다.\n';
+      }
+      if (validationErrors.warehouseId) {
+        errorMessage += '창고는 필수 입력 항목입니다.\n';
+      }
+      if (validationErrors.quantity) {
+        errorMessage += '양품수량과 불량수량은 0 이상이어야 합니다.\n';
+      }
+      if (validationErrors.date) {
+        errorMessage += '생산종료일시는 생산시작일시 이후여야 합니다.\n';
       }
 
       Swal.fire({
@@ -186,7 +205,7 @@ const IndependentProductionModal = ({
       return;
     }
 
-    // 저장할 데이터 준비
+    // 저장할 데이터 준비 (불량원인과 비고 필드 제거)
     const dataToSave = {
       ...productionData,
       // 날짜 데이터 정리
@@ -204,14 +223,15 @@ const IndependentProductionModal = ({
   };
 
   // 닫기 핸들러 (변경 사항 있을 경우 확인)
-  const handleClose = () => {
+  const handleClose = (event, reason) => {
+    console.log('handleClose 함수 호출됨', { event, reason });
+    
     // 데이터가 기본값과 다르면 확인 대화상자 표시
     const hasChanges = productionData.productId !== "" ||
         productionData.goodQty !== 0 ||
         productionData.defectQty !== 0 ||
         productionData.equipmentId !== "" ||
-        productionData.resultInfo !== "" ||
-        productionData.defectCause !== "" ||
+        productionData.warehouseId !== "" ||
         productionData.prodStartTime !== null ||
         productionData.prodEndTime !== null;
 
@@ -225,11 +245,15 @@ const IndependentProductionModal = ({
         cancelButtonText: '취소'
       }).then((result) => {
         if (result.isConfirmed) {
-          onClose();
+          if (onClose) {
+            onClose();
+          }
         }
       });
     } else {
-      onClose();
+      if (onClose) {
+        onClose();
+      }
     }
   };
 
@@ -278,8 +302,8 @@ const IndependentProductionModal = ({
               </Paper>
             </Grid>
 
-            {/* 제품 정보 (필수) */}
-            <Grid item xs={12} sm={6}>
+            {/* 첫 번째 줄: 제품ID만 표시 (전체 너비 사용) */}
+            <Grid item xs={12}>
               <Autocomplete
                   value={selectedProduct}
                   onChange={handleProductSelect}
@@ -314,7 +338,7 @@ const IndependentProductionModal = ({
               />
             </Grid>
 
-            {/* 설비ID */}
+            {/* 두 번째 줄: 설비ID와 창고 */}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel id="equipment-label">설비ID</InputLabel>
@@ -340,34 +364,30 @@ const IndependentProductionModal = ({
               </FormControl>
             </Grid>
 
-            {/* 양품수량 */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                  name="goodQty"
-                  label="양품수량"
-                  type="number"
-                  value={productionData.goodQty}
-                  onChange={handleInputChange}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 0 } }}
-              />
+              <FormControl fullWidth required error={validationErrors.warehouseId}>
+                <InputLabel id="warehouse-label">창고 (필수)</InputLabel>
+                <Select
+                    labelId="warehouse-label"
+                    name="warehouseId"
+                    value={productionData.warehouseId}
+                    onChange={handleInputChange}
+                    label="창고 (필수)"
+                >
+                  <MenuItem value="">선택하세요</MenuItem>
+                  {warehouseOptions.map(option => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                  ))}
+                </Select>
+                {validationErrors.warehouseId && (
+                  <FormHelperText>창고는 필수 입력 항목입니다</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
 
-            {/* 불량수량 */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                  name="defectQty"
-                  label="불량수량"
-                  type="number"
-                  value={productionData.defectQty}
-                  onChange={handleInputChange}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 0 } }}
-                  helperText="불량수량이 1 이상인 경우 저장 시 불량정보를 추가로 입력해야 합니다"
-              />
-            </Grid>
-
-            {/* 생산시작일시 */}
+            {/* 세 번째 줄: 생산시작일시, 생산종료일시 */}
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                 <DateTimePicker
@@ -385,7 +405,6 @@ const IndependentProductionModal = ({
               </LocalizationProvider>
             </Grid>
 
-            {/* 생산종료일시 */}
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                 <DateTimePicker
@@ -405,25 +424,29 @@ const IndependentProductionModal = ({
               </LocalizationProvider>
             </Grid>
 
-            {/* 불량원인 */}
+            {/* 네 번째 줄: 양품수량, 불량수량 */}
             <Grid item xs={12} sm={6}>
               <TextField
-                  name="defectCause"
-                  label="불량원인"
-                  value={productionData.defectCause}
+                  name="goodQty"
+                  label="양품수량"
+                  type="number"
+                  value={productionData.goodQty}
                   onChange={handleInputChange}
                   fullWidth
+                  InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
 
-            {/* 비고 */}
             <Grid item xs={12} sm={6}>
               <TextField
-                  name="resultInfo"
-                  label="비고"
-                  value={productionData.resultInfo}
+                  name="defectQty"
+                  label="불량수량"
+                  type="number"
+                  value={productionData.defectQty}
                   onChange={handleInputChange}
                   fullWidth
+                  InputProps={{ inputProps: { min: 0 } }}
+                  helperText="불량수량이 1 이상인 경우 저장 시 불량정보를 추가로 입력해야 합니다"
               />
             </Grid>
 
@@ -466,12 +489,16 @@ const IndependentProductionModal = ({
                 '✓ 저장할 준비가 완료되었습니다.' :
                 validationErrors.productId ?
                     '제품ID는 필수 입력 항목입니다.' :
-                    validationErrors.date ?
-                        '종료일시는 시작일시 이후여야 합니다.' :
-                        '입력 정보를 확인해주세요.'}
+                    validationErrors.warehouseId ?
+                        '창고는 필수 입력 항목입니다.' :
+                        validationErrors.date ?
+                            '종료일시는 시작일시 이후여야 합니다.' :
+                            '입력 정보를 확인해주세요.'}
           </Typography>
           <Box>
-            <Button onClick={handleClose} sx={{ mr: 1 }}>
+            <Button 
+              onClick={handleClose}
+              sx={{ mr: 1 }}>
               취소
             </Button>
             <Button

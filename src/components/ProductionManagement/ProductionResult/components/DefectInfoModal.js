@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -58,6 +58,8 @@ const DefectInfoModal = ({
   const [editIndex, setEditIndex] = useState(-1);
   const [totalDefectQty, setTotalDefectQty] = useState(0);
   const [isValid, setIsValid] = useState(false);
+  const [defectCause, setDefectCause] = useState('');
+  const [detailInfo, setDetailInfo] = useState('');
 
   // 생산실적 변경 시 초기화
   useEffect(() => {
@@ -276,19 +278,37 @@ const DefectInfoModal = ({
     // 불량정보 리스트 서버 형식으로 변환
     const defectInfos = defectInfoList.map(item => ({
       workOrderId: workOrderId,
-      prodResultId: productionResult.prodResultId,
+      prodResultId: productionResult?.prodResultId || null,
       productId: productId,
       defectQty: Number(item.defectQty),
-      defectType: 'OTHER', // 기본값으로 'OTHER' 설정
+      defectType: null,
       defectCause: item.defectCause,
-      resultInfo: item.resultInfo || item.defectCause,
+      resultInfo: item.resultInfo,
       state: 'NEW',
       flagActive: true
     }));
+    
+    if (defectInfos.length === 0 && productionResult?.defectQty > 0) {
+      Swal.fire({
+        title: '입력 오류',
+        text: '불량수량이 입력되었으나 불량정보가 없습니다. 불량정보를 입력해주세요.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
 
     // 부모 컴포넌트의 저장 함수 호출
     if (typeof onSave === 'function') {
       onSave(defectInfos);
+    } else {
+      console.error('onSave 함수가 전달되지 않았습니다.');
+      Swal.fire({
+        title: '저장 실패',
+        text: '저장 기능이 정의되지 않았습니다. 관리자에게 문의하세요.',
+        icon: 'error',
+        confirmButtonText: '확인'
+      });
     }
   };
 
@@ -296,6 +316,22 @@ const DefectInfoModal = ({
   const productInfo = {
     workOrderId: selectedWorkOrder?.workOrderId || productionResult?.workOrderId || null,
     productId: productionResult?.productId || selectedWorkOrder?.productId || null
+  };
+
+  // 입력 필드 초기화 함수 수정
+  const resetInputs = useCallback(() => {
+    setDefectCause('');
+    setDetailInfo('');
+  }, []);
+
+  // 불량원인 입력 핸들러
+  const handleDefectCauseChange = e => {
+    setDefectCause(e.target.value);
+  };
+
+  // 상세내용 입력 핸들러
+  const handleDetailInfoChange = e => {
+    setDetailInfo(e.target.value);
   };
 
   return (

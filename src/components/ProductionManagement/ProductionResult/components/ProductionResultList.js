@@ -20,15 +20,15 @@ const ProductionResultList = ({
   selectedWorkOrder,
   onRowClick,
   onCreateResult,
-  onCreateIndependentResult, // 이제 이 함수는 모달을 여는 역할
+  onCreateIndependentResult,
   onSave,
   onDelete,
   equipmentOptions,
   productOptions,
+  warehouseOptions = [],
   setProductionResultList,
   setProductionResult,
   productionResult,
-  onRowEdit,
   tabId,
   height = 350
 }) => {
@@ -46,17 +46,14 @@ const ProductionResultList = ({
           </Typography>
       )
     },
-    // 제품ID 필드 추가 (필수 입력 필드, ProductMaterialSelector 사용)
+    // 제품ID 필드 (수정 불가)
     {
       field: 'productId',
-      headerName: '제품ID',
+      headerName: '제품ID (수정불가)',
       width: 180,
       headerAlign: 'center',
       align: 'center',
-      editable: true,
-      renderEditCell: (params) => (
-          <ProductMaterialSelector {...params} productMaterials={productOptions} />
-      ),
+      editable: false, // 무조건 수정 불가
       renderCell: (params) => {
         // systemMaterialId(실제 값)를 이용해 제품 찾기
         const product = productOptions?.find(p => p.systemMaterialId === params.value);
@@ -74,7 +71,7 @@ const ProductionResultList = ({
             </Typography>
         );
       },
-      description: '필수 입력 항목'
+      description: '작업지시 기반으로 자동 설정되어 수정 불가'
     },
     {
       field: 'workOrderId',
@@ -95,7 +92,7 @@ const ProductionResultList = ({
       headerAlign: 'center',
       align: 'center',
       type: 'number',
-      editable: true,
+      editable: (params) => params.row.isNew === true,
       renderCell: (params) => (
           <Typography variant="body2">
             {params.value !== null && params.value !== undefined
@@ -111,7 +108,7 @@ const ProductionResultList = ({
       headerAlign: 'center',
       align: 'center',
       type: 'number',
-      editable: true,
+      editable: (params) => params.row.isNew === true,
       renderCell: (params) => (
           <Typography variant="body2" className={params.value > 0 ? "defect-highlight" : ""}>
             {params.value !== null && params.value !== undefined
@@ -141,22 +138,25 @@ const ProductionResultList = ({
         );
       }
     },
-    // 생산시작일시 필드 수정
+    // 생산시작일시 필드 (신규 등록시 수정 가능)
     {
       field: 'prodStartTime',
       headerName: '생산시작일시',
       width: 180,
       headerAlign: 'center',
       align: 'center',
-      editable: true,
+      editable: (params) => params.row.isNew === true,
       type: 'dateTime',
       valueGetter: (params) => {
         // params가 null이거나 undefined인 경우 체크
-        if (!params || params.value === undefined || params.value === null) return null;
+        if (!params) return null;
+        
+        // 문자열이나 다른 형식을 Date 객체로 변환
+        if (!params.value) return null;
         try {
-          const date = new Date(params.value);
-          return isNaN(date.getTime()) ? null : date;
+          return new Date(params.value);
         } catch (e) {
+          console.error("Date conversion error:", e);
           return null;
         }
       },
@@ -184,22 +184,25 @@ const ProductionResultList = ({
         }
       }
     },
-    // 생산종료일시 필드 수정
+    // 생산종료일시 필드 (신규 등록시 수정 가능)
     {
       field: 'prodEndTime',
       headerName: '생산종료일시',
       width: 180,
       headerAlign: 'center',
       align: 'center',
-      editable: true,
+      editable: (params) => params.row.isNew === true,
       type: 'dateTime',
       valueGetter: (params) => {
         // params가 null이거나 undefined인 경우 체크
-        if (!params || params.value === undefined || params.value === null) return null;
+        if (!params) return null;
+        
+        // 문자열이나 다른 형식을 Date 객체로 변환
+        if (!params.value) return null;
         try {
-          const date = new Date(params.value);
-          return isNaN(date.getTime()) ? null : date;
+          return new Date(params.value);
         } catch (e) {
+          console.error("Date conversion error:", e);
           return null;
         }
       },
@@ -260,12 +263,10 @@ const ProductionResultList = ({
     {
       field: 'equipmentId',
       headerName: '설비ID',
-      width: 180,  // 너비 증가
+      width: 180,
       headerAlign: 'center',
       align: 'center',
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: equipmentOptions.map(option => option.value),
+      editable: (params) => params.row.isNew === true,
       renderCell: (params) => {
         const equipment = equipmentOptions.find(e => e.value === params.value);
         return (
@@ -280,6 +281,28 @@ const ProductionResultList = ({
                     ) : null}
                   </span>
               ) : params.value || ''}
+            </Typography>
+        );
+      }
+    },
+    // 창고 필드 (신규 등록시 수정 가능)
+    {
+      field: 'warehouseId',
+      headerName: '창고',
+      width: 150,
+      headerAlign: 'center',
+      align: 'center',
+      editable: (params) => params.row.isNew === true,
+      type: 'singleSelect',
+      valueOptions: warehouseOptions.map(option => ({
+        value: option.value,
+        label: option.label
+      })),
+      renderCell: (params) => {
+        const warehouse = warehouseOptions.find(w => w.value === params.value);
+        return (
+            <Typography variant="body2">
+              {warehouse ? warehouse.label : (params.value || '-')}
             </Typography>
         );
       }
@@ -307,7 +330,7 @@ const ProductionResultList = ({
         }
       }
     }
-  ]), [equipmentOptions, productOptions]);
+  ]), [equipmentOptions, productOptions, warehouseOptions]);
 
   // 생산실적 목록 그리드 버튼: 독립형 생산실적 버튼 추가
   const productionResultButtons = useMemo(() => {
@@ -316,7 +339,7 @@ const ProductionResultList = ({
     // "독립 생산실적" 버튼 (작업지시 없이 생성)
     buttons.push({
       label: '독립 생산실적',
-      onClick: onCreateIndependentResult, // 이제 이 함수는 모달을 여는 역할
+      onClick: onCreateIndependentResult,
       icon: <NoteAddIcon/>,
       tooltip: '작업지시 없이 생산실적을 등록합니다',
       color: 'secondary'
@@ -341,71 +364,9 @@ const ProductionResultList = ({
       </Stack>
   );
 
-  // 셀 값 변경 핸들러
-  const handleCellEditCommit = (params) => {
-    const { id, field, value } = params;
-
-    // 변경된 행 찾기
-    const rowToUpdate = productionResultList.find(row => row.id === id);
-
-    if (!rowToUpdate) return;
-
-    let updatedValue = value;
-
-    // 숫자 필드는 Number 타입으로 변환
-    if (field === 'goodQty' || field === 'defectQty') {
-      updatedValue = Number(value);
-
-      // 음수 값 방지
-      if (updatedValue < 0) {
-        Swal.fire({
-          title: '입력 오류',
-          text: '수량은 0 이상이어야 합니다.',
-          icon: 'warning',
-          confirmButtonText: '확인'
-        });
-        updatedValue = 0;
-      }
-    }
-
-    // 제품ID 변경 시 필수 입력 확인
-    if (field === 'productId' && !value) {
-      Swal.fire({
-        title: '입력 오류',
-        text: '제품ID는 필수 입력 항목입니다.',
-        icon: 'warning',
-        confirmButtonText: '확인'
-      });
-      return;
-    }
-
-    // 행 업데이트
-    const updatedRow = { ...rowToUpdate, [field]: updatedValue };
-
-    // 리스트 업데이트
-    const updatedList = productionResultList.map(row =>
-        row.id === id ? updatedRow : row
-    );
-
-    // 상태 업데이트
-    setProductionResultList(updatedList);
-
-    // 현재 수정한 행이 선택된 행이라면 productionResult도 업데이트
-    if (productionResult && productionResult.id === id) {
-      setProductionResult(updatedRow);
-    }
-
-    // onRowEdit 핸들러가 제공된 경우 호출
-    if (onRowEdit) {
-      onRowEdit(updatedRow);
-    }
-  };
-
   // EnhancedDataGridWrapper에 전달할 추가 속성
   const gridProps = {
-    editMode: "cell",
-    onCellEditCommit: handleCellEditCommit,
-    // 내장 날짜 시간 편집기 설정
+    editMode: "row", // 편집 모드를 row로 변경
     localeText: {
       // 한국어 날짜 형식 설정
       dateTimePickerToolbarTitle: '날짜 및 시간 선택',
@@ -414,84 +375,46 @@ const ProductionResultList = ({
       datePickerDefaultToolbarTitle: '날짜 선택',
       timePickerDefaultToolbarTitle: '시간 선택',
     },
-    // 셀 편집 완료 후 처리를 위한 processRowUpdate 수정
-    processRowUpdate: (newRow, oldRow) => {
-      // 음수 값 방지
-      if (newRow.goodQty < 0) {
-        newRow.goodQty = 0;
+    // 셀 편집 가능 여부 판단 함수 추가
+    isCellEditable: (params) => {
+      // 이미 등록된 행(prodResultId가 있는 행)은 편집 불가
+      if (params.row.prodResultId) {
+        return false;
       }
-
-      if (newRow.defectQty < 0) {
-        newRow.defectQty = 0;
-      }
-
-      // 날짜 필드가 Date 객체인 경우 적절하게 처리
-      let processedRow = { ...newRow };
-
-      // 생산시작일시 처리
-      if (processedRow.prodStartTime instanceof Date) {
-        console.log('Processing prodStartTime:', processedRow.prodStartTime);
-        processedRow.prodStartTime = processedRow.prodStartTime.toISOString();
-      } else if (processedRow.prodStartTime) {
-        try {
-          const date = new Date(processedRow.prodStartTime);
-          if (!isNaN(date.getTime())) {
-            console.log('Converting prodStartTime string to Date:', date);
-            processedRow.prodStartTime = date.toISOString();
-          }
-        } catch (e) {
-          console.error('Error processing prodStartTime:', e);
-        }
-      }
-
-      // 생산종료일시 처리
-      if (processedRow.prodEndTime instanceof Date) {
-        console.log('Processing prodEndTime:', processedRow.prodEndTime);
-        processedRow.prodEndTime = processedRow.prodEndTime.toISOString();
-      } else if (processedRow.prodEndTime) {
-        try {
-          const date = new Date(processedRow.prodEndTime);
-          if (!isNaN(date.getTime())) {
-            console.log('Converting prodEndTime string to Date:', date);
-            processedRow.prodEndTime = date.toISOString();
-          }
-        } catch (e) {
-          console.error('Error processing prodEndTime:', e);
-        }
-      }
-
-      // 처리된 행 출력 (디버깅용)
-      console.log('Processed row:', processedRow);
-
-      // 수정된 행 정보로 productionResultList 업데이트
-      const updatedList = productionResultList.map(row =>
-          row.id === processedRow.id ? processedRow : row
-      );
-
-      // 상태 업데이트
-      setProductionResultList(updatedList);
-
-      // 현재 수정한 행이 선택된 행이라면 productionResult도 업데이트
-      if (productionResult && productionResult.id === processedRow.id) {
-        setProductionResult(processedRow);
-
-        // onRowEdit 핸들러가 제공된 경우 호출
-        if (onRowEdit) {
-          onRowEdit(processedRow);
-        }
-      }
-
-      return processedRow;
+      // 신규 등록 행(isNew가 true)은 편집 가능
+      return params.row.isNew === true;
     },
-    // 에러 처리
-    onProcessRowUpdateError: (error) => {
-      console.error('데이터 업데이트 오류:', error);
-      Swal.fire({
-        title: '오류',
-        text: '데이터 업데이트 중 오류가 발생했습니다.',
-        icon: 'error',
-        confirmButtonText: '확인'
-      });
+    // 행 업데이트 처리
+    processRowUpdate: (newRow, oldRow) => {
+      try {
+        // 날짜 필드가 Date 객체인 경우 ISO 문자열로 변환
+        const updatedRow = {
+          ...newRow,
+          // Date 객체를 ISO 문자열로 변환 (백엔드 저장을 위해)
+          prodStartTime: newRow.prodStartTime instanceof Date ? 
+                        newRow.prodStartTime.toISOString() : 
+                        newRow.prodStartTime,
+          prodEndTime: newRow.prodEndTime instanceof Date ? 
+                      newRow.prodEndTime.toISOString() : 
+                      newRow.prodEndTime
+        };
+        
+        // 변경된 생산실적 데이터 업데이트
+        const updatedList = productionResultList.map(row => 
+          row.id === updatedRow.id ? updatedRow : row
+        );
+        setProductionResultList(updatedList);
+        
+        // 선택된 생산실적도 업데이트
+        if (productionResult && productionResult.id === updatedRow.id) {
+          setProductionResult(updatedRow);
+        }
+        
+        return updatedRow;
+      } catch (error) {
+        console.error('행 업데이트 중 오류 발생:', error);
+        return oldRow; // 오류 발생 시 원래 행 반환
+      }
     }
   };
 

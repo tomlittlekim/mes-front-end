@@ -31,9 +31,6 @@ const deleteVendorMutation = `
       }
     `;
 
-/**
- * 거래처 리스트 불러오는 메소드
- */
 export const getVendors = async (filter = {}) => {
     const response = await graphFetch(getVendorQuery, {filter});
     return response.getVendors
