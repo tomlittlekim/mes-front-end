@@ -655,17 +655,13 @@ const InventoryMovement = (props) => {
 
   // 이 부분이 변경되었습니다 - 4개 컬럼만 표시
   const receivingColumns = [
-    { field: 'createDate', 
-      headerName: '변동일자', 
-      width: 160, 
-      headerAlign: 'center', 
-      align: 'center', 
-      editable: false, 
-      renderCell: (params) => {
-        const raw = params.row?.createDate;
-        if (!raw) return '';
-        return raw.replace('T', ' ');
-      },
+    { field: 'materialName', 
+      headerName: '자재명', 
+      width: 100,
+      headerAlign: 'center',
+      align: 'left',
+      editable: false,
+      flex: 1,
     },
     { field: 'inOutType', 
       headerName: '입출고유형', 
@@ -703,14 +699,6 @@ const InventoryMovement = (props) => {
         );
       },
     },
-    { field: 'materialName', 
-      headerName: '자재명', 
-      width: 100,
-      headerAlign: 'center',
-      align: 'left',
-      editable: false,
-      flex: 1,
-    },
     { field: 'changeQty', 
       headerName: '변동수량',
       width: 70,
@@ -738,6 +726,18 @@ const InventoryMovement = (props) => {
             </Typography>
           </Box>
         );
+      },
+    },
+    { field: 'createDate', 
+      headerName: '변동일자', 
+      width: 160, 
+      headerAlign: 'center', 
+      align: 'center', 
+      editable: false, 
+      renderCell: (params) => {
+        const raw = params.row?.createDate;
+        if (!raw) return '';
+        return raw.replace('T', ' ');
       },
     },
   ];
@@ -819,7 +819,7 @@ const InventoryMovement = (props) => {
             height={500}
             tabId={props.tabId + "-grid"}
             gridProps={{
-              autoHeight: true,
+              autoHeight: false,
               sx: {
                 '& .MuiDataGrid-cell': {
                   overflow: 'hidden',

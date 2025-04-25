@@ -95,9 +95,8 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
       subItems: [
         { id: 'rp-mpv', name: '계획대비실적조회' },
         { id: 'rp-ppr', name: '기간별생산실적' },
-        { id: 'rp-dpr', name: '일일생산수율' },
-        { id: 'rp-imr', name: '입출고현황' },
-        { id: 'rp-dr', name: '생산일보' }
+        { id: 'rp-dpr', name: '불량율 현황' },
+        { id: 'rp-imr', name: '입출고현황' }
       ]
     },
     {

@@ -1,5 +1,5 @@
 // 메인 컴포넌트
-export { default as PeriodicProduction } from './PeriodicProduction';
+export { default as PeriodicProduction } from './PeriodicProductionCombined';
 
 // UI 컴포넌트
 export { default as SearchForm } from './SearchForm';
