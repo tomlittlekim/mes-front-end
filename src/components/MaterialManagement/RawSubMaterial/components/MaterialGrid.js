@@ -17,18 +17,18 @@ export const COLUMNS = [
     renderCell: materialTypeRenderCell
   },
   {
-    field: 'materialCategory', headerName: '자재유형', width: 80, type: 'singleSelect',
+    field: 'materialCategory', headerName: '자재유형', width: 100, type: 'singleSelect',
     valueOptions: [
       {value: '잉크', label: '잉크'},
       {value: '포장재', label: '포장재'}
     ], editable: true
   },
   {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
-  {field: 'userMaterialId', headerName: '사용자자재ID', width: 130, editable: true},
-  {field: 'materialName', headerName: '자재명', width: 120, editable: true},
-  {field: 'materialStandard', headerName: '규격', width: 100, editable: true},
+  {field: 'userMaterialId', headerName: '사용자자재ID', width: 120, editable: true},
+  {field: 'materialName', headerName: '자재명', width: 180, flex: 1, editable: true},
+  {field: 'materialStandard', headerName: '규격', width: 120, editable: true},
   {
-    field: 'unit', headerName: '단위', width: 60, type: 'singleSelect',
+    field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
     valueOptions: [
       {value: 'EA', label: '개'},
       {value: 'roll', label: '롤'},
@@ -38,9 +38,9 @@ export const COLUMNS = [
   },
   {field: 'minQuantity', headerName: '최소수량', width: 80, type: 'number', editable: true},
   {field: 'maxQuantity', headerName: '최대수량', width: 80, type: 'number', editable: true},
-  {field: 'manufacturerName', headerName: '제조사명', width: 100, editable: true},
+  {field: 'manufacturerName', headerName: '제조사명', width: 120, editable: true},
   {
-    field: 'supplierId', headerName: '공급업체명', width: 100, type: 'singleSelect',
+    field: 'supplierId', headerName: '공급업체명', width: 120, type: 'singleSelect',
     valueOptions: [
       {value: 'SUP010', label: '광학용품마트'},
       {value: 'SUP018', label: '도서용품샵'},
@@ -48,10 +48,10 @@ export const COLUMNS = [
       {value: 'SUP016', label: '제본용품샵'}
     ], editable: true
   },
-  { field: 'createUser', headerName: '작성자', width: 70},
-  { field: 'createDate', headerName: '작성일', width: 100},
-  { field: 'updateUser', headerName: '수정자', width: 70},
-  { field: 'updateDate', headerName: '수정일', width: 100},
+  { field: 'createUser', headerName: '작성자', width: 100},
+  { field: 'createDate', headerName: '작성일', width: 200},
+  { field: 'updateUser', headerName: '수정자', width: 100},
+  { field: 'updateDate', headerName: '수정일', width: 200},
 ];
 
 const MaterialGrid = ({

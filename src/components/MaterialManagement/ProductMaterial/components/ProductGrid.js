@@ -13,9 +13,9 @@ export const COLUMNS = [
       { value: '잉크', label: '잉크' },
       { value: '포장재', label: '포장재' },
     ], editable: true},
-  {field: 'userMaterialId', headerName: '제품ID', width: 200, flex:1, editable: true },
-  {field: 'materialName', headerName: '자재명', width: 200, flex: 1, editable: true },
-  {field: 'materialStandard', headerName: '규격', width: 130, flex:1, editable: true },
+  {field: 'userMaterialId', headerName: '제품ID', width: 120, editable: true },
+  {field: 'materialName', headerName: '자재명', width: 180, flex: 1, editable: true },
+  {field: 'materialStandard', headerName: '규격', width: 120, editable: true },
   {field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
     valueOptions: [
       { value: 'EA', label: '개' },
@@ -28,11 +28,11 @@ export const COLUMNS = [
       { value: 'ream', label: '연' },
       { value: 'pair', label: '쌍' },
     ], editable: true },
-  {field: 'baseQuantity', headerName: '기본수량', width: 100, type: 'number', editable: true },
+  {field: 'baseQuantity', headerName: '기본수량', width: 80, type: 'number', editable: true },
   { field: 'createUser', headerName: '작성자', width: 100},
-  { field: 'createDate', headerName: '작성일', width: 120},
+  { field: 'createDate', headerName: '작성일', width: 200},
   { field: 'updateUser', headerName: '수정자', width: 100},
-  { field: 'updateDate', headerName: '수정일', width: 120},
+  { field: 'updateDate', headerName: '수정일', width: 200},
 ];
 
 const ProductGrid = ({
