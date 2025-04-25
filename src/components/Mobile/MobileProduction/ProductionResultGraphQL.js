@@ -12,6 +12,7 @@ export const PRODUCTION_RESULTS_MOBILE = gql`
             progressRate
             defectRate
             equipmentId
+            warehouseId
             resultInfo
             defectCause
             prodStartTime
@@ -28,9 +29,9 @@ export const PRODUCTION_RESULTS_MOBILE = gql`
             defectInfos {
                 defectId
                 prodResultId
-                defectType
                 defectQty
-                defectReason
+                defectCause
+                resultInfo
             }
         }
     }
@@ -67,16 +68,35 @@ export const EQUIPMENT_OPTIONS = gql`
     }
 `;
 
-// 생산실적 저장 뮤테이션
-export const SAVE_PRODUCTION_RESULT = gql`
-    mutation SaveProductionResult(
-        $createdRows: [ProductionResultInput], 
-        $updatedRows: [ProductionResultUpdate],
+// 창고 목록 조회 쿼리
+export const WAREHOUSE_OPTIONS = gql`
+    query getWarehouse($filter: WarehouseFilter) {
+        getWarehouse(filter: $filter) {
+            warehouseId
+            warehouseName
+            warehouseType
+            factoryId
+        }
+    }
+`;
+
+// 생산 시작 모바일 전용 뮤테이션
+export const START_PRODUCTION_MOBILE = gql`
+    mutation StartProductionAtMobile($input: ProductionResultInput!) {
+        startProductionAtMobile(input: $input)
+    }
+`;
+
+// 생산실적 업데이트 모바일 전용 뮤테이션
+export const UPDATE_PRODUCTION_RESULT_MOBILE = gql`
+    mutation UpdateProductionResultAtMobile(
+        $prodResultId: String!,
+        $input: ProductionResultInput!,
         $defectInfos: [DefectInfoInput]
     ) {
-        saveProductionResult(
-            createdRows: $createdRows, 
-            updatedRows: $updatedRows,
+        updateProductionResultAtMobile(
+            prodResultId: $prodResultId,
+            input: $input,
             defectInfos: $defectInfos
         )
     }

@@ -54,6 +54,12 @@ export const useProductionResult = () => {
           return Promise.reject(error);
         }
 
+        // 불량수량 검사 추가 - 불량수량이 있는데 불량정보가 없는 경우
+        if (productionResult.defectQty > 0 && (!defectInfos || defectInfos.length === 0)) {
+          console.warn('경고: 불량수량이 있지만 불량정보가 없습니다.', productionResult.defectQty);
+          // 여기서는 경고만 로그로 남기고 계속 진행
+        }
+
         // 날짜 형식 변환 함수 (LocalDateTime 형식으로 변환)
         const formatDateForServer = (dateValue) => {
           if (!dateValue) return null;
@@ -102,6 +108,7 @@ export const useProductionResult = () => {
 
         // 불량정보가 있는 경우 데이터 구조 최적화
         if (defectInfos && defectInfos.length > 0) {
+          console.log('전달된 불량정보:', defectInfos);
           defectInfoInputs = defectInfos.map(defect => {
             // 불량정보 객체 최적화
             const optimizedDefect = {
@@ -120,7 +127,20 @@ export const useProductionResult = () => {
 
             return optimizedDefect;
           });
+          console.log('변환된 불량정보:', defectInfoInputs);
+        } else if (productionResult.defectQty > 0) {
+          // 불량수량이 있는데 불량정보가 없는 경우 빈 배열로 초기화
+          console.warn('불량수량이 있지만 불량정보가 제공되지 않았습니다. 빈 배열로 초기화합니다.');
+          defectInfoInputs = [];
+        } else {
+          // 불량수량이 없는 경우 빈 배열로 초기화
+          defectInfoInputs = [];
         }
+
+        console.log('생산실적 저장 요청 데이터:', {
+          createdRows: createdRows,
+          defectInfos: defectInfoInputs
+        });
 
         // GraphQL 뮤테이션 실행
         return executeMutation({

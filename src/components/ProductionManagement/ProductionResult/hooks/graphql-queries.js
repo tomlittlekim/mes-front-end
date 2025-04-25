@@ -34,6 +34,7 @@ export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
             progressRate
             defectRate
             equipmentId
+            warehouseId
             resultInfo
             defectCause
             createUser
@@ -60,6 +61,7 @@ export const PRODUCTION_RESULTS_QUERY = gql`
             progressRate
             defectRate
             equipmentId
+            warehouseId
             resultInfo
             defectCause
             createUser
@@ -142,7 +144,7 @@ export const EQUIPMENTS_QUERY = gql`
     }
 `;
 
-export const WAREHOUSE_QUERY = `
+export const WAREHOUSE_QUERY = gql`
   query getWarehouse($filter: WarehouseFilter) {
     getWarehouse(filter: $filter) {
       warehouseId

@@ -12,7 +12,6 @@ import SearchForm from './SearchForm';
 import DefectInfoModal from './components/DefectInfoModal';
 import IndependentProductionModal from './components/IndependentProductionModal'; // 새로운 모달 컴포넌트 import
 import { useProductionResultManagement } from './hooks/useProductionResultManagement';
-import { getWarehouseByType } from '../../../api/standardInfo/wareHouseApi';
 
 /**
  * 생산실적등록 컴포넌트
@@ -46,21 +45,6 @@ const ProductionResultManagement = (props) => {
     { value: 'DAY', label: '주간' },
     { value: 'NIGHT', label: '야간' },
   ]);
-
-  // 창고 목록 추가
-  const [warehouseOptions, setWarehouseOptions] = useState([]);
-
-  // 창고 옵션 가져오기
-  useEffect(() => {
-    // 제품 창고 타입("PRODUCT_WAREHOUSE")으로 창고 정보 가져오기
-    getWarehouseByType("PRODUCT_WAREHOUSE")
-      .then(options => {
-        setWarehouseOptions(options);
-      })
-      .catch(err => {
-        console.error("창고 정보 로드 중 오류:", err);
-      });
-  }, []);
 
   const {
     // 검색폼 관련
@@ -106,6 +90,7 @@ const ProductionResultManagement = (props) => {
     // 옵션 데이터
     equipmentOptions,
     productOptions, // 제품 옵션 목록
+    warehouseOptions, // 창고 옵션 목록
 
     // 리프레시 키
     refreshKey
