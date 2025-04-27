@@ -3,7 +3,7 @@ import { useProductionWorkOrder } from './useProductionWorkOrder';
 import { useProductionResultOperations } from './useProductionResultOperations';
 import { useProductionFormHandling } from './useProductionFormHandling';
 import { useGraphQL } from '../../../../apollo/useGraphQL';
-import { PRODUCTS_QUERY, EQUIPMENTS_QUERY } from './graphql-queries';
+import { PRODUCTS_QUERY, EQUIPMENTS_QUERY, WAREHOUSE_QUERY } from './graphql-queries';
 import { enrichProductWithDisplayValues } from '../utils/materialTypeUtils';
 import Message from '../../../../utils/message/Message'
 import Swal from 'sweetalert2'
@@ -21,6 +21,7 @@ export const useProductionResultManagement = (tabId) => {
   const [productionResult, setProductionResult] = useState(null);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
+  const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [isProductMaterialsLoaded, setIsProductMaterialsLoaded] = useState(false);
   const { executeQuery } = useGraphQL();
 
@@ -128,6 +129,59 @@ export const useProductionResultManagement = (tabId) => {
       isLoadingRef.current = false;
     }
   }, [executeQuery, equipmentOptions, setIsLoading]);
+
+  // 창고 정보 로드 함수
+  const loadWarehouses = useCallback(async (forceLoad = false) => {
+    // 이미 창고 정보가 있고 강제 로드가 아닌 경우 캐시된 데이터 반환
+    if (warehouseOptions.length > 0 && !forceLoad) {
+      return warehouseOptions;
+    }
+
+    // 이미 로딩 중인 경우 중복 호출 방지
+    if (isLoadingRef.current) {
+      return warehouseOptions;
+    }
+
+    isLoadingRef.current = true;
+
+    try {
+      setIsLoading(true);
+      const response = await executeQuery({
+        query: WAREHOUSE_QUERY,
+        variables: {
+          filter: {
+            factoryId: "",
+            factoryName: "",
+            warehouseId: "",
+            warehouseName: "",
+            warehouseType: "PRODUCT_WAREHOUSE"
+          }
+        }
+      });
+
+      if (response?.data?.getWarehouse) {
+        // 창고 정보를 드롭박스 옵션 형식으로 변환
+        const formattedWarehouses = response.data.getWarehouse.map(warehouse => ({
+          value: warehouse.warehouseId,
+          label: warehouse.warehouseName || warehouse.warehouseId,
+          factoryName: warehouse.factoryName,
+          warehouseType: warehouse.warehouseType
+        }));
+
+        console.log('창고 정보 로드 완료:', formattedWarehouses);
+        setWarehouseOptions(formattedWarehouses);
+        return formattedWarehouses;
+      }
+      console.log('창고 정보 없음');
+      return [];
+    } catch (error) {
+      console.error("창고 정보 로드 오류:", error);
+      return [];
+    } finally {
+      setIsLoading(false);
+      isLoadingRef.current = false;
+    }
+  }, [executeQuery, setIsLoading]);
 
   // 생산실적 관련 훅
   const {
@@ -247,6 +301,11 @@ export const useProductionResultManagement = (tabId) => {
         if (productOptions.length === 0) {
           await loadProductMaterials(true);
         }
+        
+        // 창고 정보가 없는 경우 다시 로드 시도
+        if (warehouseOptions.length === 0) {
+          await loadWarehouses(true);
+        }
 
         return;
       }
@@ -266,6 +325,9 @@ export const useProductionResultManagement = (tabId) => {
 
         // 설비 목록 로드
         await loadEquipments();
+        
+        // 창고 목록 로드 (forceLoad = true로 항상 로드)
+        await loadWarehouses(true);
 
         // 제품 및 설비 로드 완료 후에 작업지시 목록 로드
         await loadWorkOrders({
@@ -285,7 +347,7 @@ export const useProductionResultManagement = (tabId) => {
 
     // 초기 데이터 로드
     loadInitialData();
-  }, [loadProductMaterials, loadEquipments, loadWorkOrders, setIsLoading, productOptions]);
+  }, [loadProductMaterials, loadEquipments, loadWarehouses, loadWorkOrders, setIsLoading, productOptions, warehouseOptions]);
 
   return {
     // 검색폼 관련
@@ -331,6 +393,7 @@ export const useProductionResultManagement = (tabId) => {
     // 옵션 데이터
     equipmentOptions,
     productOptions, // 제품 옵션 목록
+    warehouseOptions, // 창고 옵션 목록
 
     // 리프레시 키
     refreshKey

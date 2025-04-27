@@ -103,6 +103,8 @@ const IndependentProductionModal = ({
   // 모달 열릴 때 데이터 초기화
   useEffect(() => {
     if (open) {
+      console.log("창고 옵션 목록:", warehouseOptions);
+      
       // 현재 시간으로 ID 갱신
       setProductionData({
         id: `temp_${Date.now()}`,
@@ -126,7 +128,7 @@ const IndependentProductionModal = ({
         date: false
       });
     }
-  }, [open]);
+  }, [open, warehouseOptions]);
 
   // 입력 필드 변경 핸들러
   const handleInputChange = (e) => {
@@ -224,11 +226,6 @@ const IndependentProductionModal = ({
   const handleClose = (event, reason) => {
     console.log('handleClose 함수 호출됨', { event, reason });
     
-    // reason이 'backdropClick' 또는 'escapeKeyDown'인 경우 처리
-    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
-      console.log('백드롭 클릭 또는 ESC 키 감지');
-    }
-    
     // 데이터가 기본값과 다르면 확인 대화상자 표시
     const hasChanges = productionData.productId !== "" ||
         productionData.goodQty !== 0 ||
@@ -248,22 +245,14 @@ const IndependentProductionModal = ({
         cancelButtonText: '취소'
       }).then((result) => {
         if (result.isConfirmed) {
-          console.log('Swal 확인 클릭 - onClose 함수 호출');
-          // 명시적으로 모달 상태를 false로 변경 (디버깅용)
-          if (typeof onClose === 'function') {
+          if (onClose) {
             onClose();
-          } else {
-            console.error('onClose is not a function', onClose);
           }
         }
       });
     } else {
-      console.log('변경사항 없음 - onClose 함수 바로 호출');
-      // 명시적으로 모달 상태를 false로 변경 (디버깅용)
-      if (typeof onClose === 'function') {
+      if (onClose) {
         onClose();
-      } else {
-        console.error('onClose is not a function', onClose);
       }
     }
   };
@@ -274,9 +263,6 @@ const IndependentProductionModal = ({
           onClose={handleClose}
           fullWidth
           maxWidth="md"
-          disableEscapeKeyDown={false}
-          keepMounted={false}
-          hideBackdrop={false}
           PaperProps={{
             sx: {
               minHeight: '60vh'
@@ -295,10 +281,7 @@ const IndependentProductionModal = ({
             독립 생산실적 등록
           </Typography>
           <IconButton
-              onClick={() => {
-                console.log('X 버튼 클릭');
-                handleClose();
-              }}
+              onClick={handleClose}
               aria-label="close"
           >
             <CloseIcon />
@@ -513,10 +496,8 @@ const IndependentProductionModal = ({
                             '입력 정보를 확인해주세요.'}
           </Typography>
           <Box>
-            <Button onClick={() => {
-                console.log('취소 버튼 클릭 - handleClose 함수 호출');
-                handleClose();
-              }} 
+            <Button 
+              onClick={handleClose}
               sx={{ mr: 1 }}>
               취소
             </Button>

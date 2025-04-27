@@ -6,7 +6,7 @@ import { SearchCondition, EnhancedDataGridWrapper } from '../../Common';
 import { useGraphQL } from '../../../apollo/useGraphQL';
 import Message from "../../../utils/message/Message";
 import { useForm, Controller } from 'react-hook-form';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, Cell, ComposedChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, Cell } from 'recharts';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import ko from "date-fns/locale/ko"; 
@@ -16,16 +16,13 @@ import { GRAPHQL_URL } from '../../../config';
 // =====================================================================
 // GraphQL 쿼리 정의
 // =====================================================================
-const PLAN_VS_ACTUAL_QUERY = `
-  query planVsActual($filter: PlanVsActualFilter) {
-    planVsActual(filter: $filter) {
-      prodPlanId
-      planQty
-      totalOrderQty
-      completedOrderQty
-      achievementRate
+const PERIODIC_PRODUCTION_QUERY = `
+  query periodicProduction($filter: PlanVsActualFilter) {
+    periodicProduction(filter: $filter) {
       materialName
-      systemMaterialId
+      totalGoodQty
+      totalDefectQty
+      totalDefectRate
     }
   }
 `;
@@ -40,9 +37,9 @@ const GET_MATERIALS_QUERY = `
 `;
 
 // =====================================================================
-// 커스텀 훅: usePlanVsActual
+// 커스텀 훅: usePeriodicProduction
 // =====================================================================
-export const usePlanVsActual = (tabId) => {
+export const usePeriodicProduction = (tabId) => {
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -106,7 +103,7 @@ export const usePlanVsActual = (tabId) => {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: PLAN_VS_ACTUAL_QUERY,
+          query: PERIODIC_PRODUCTION_QUERY,
           variables: { filter }
         })
       });
@@ -122,53 +119,34 @@ export const usePlanVsActual = (tabId) => {
         throw new Error(result.errors[0].message || 'GraphQL 데이터 조회 실패');
       }
 
-      const planVsActualData = result.data?.planVsActual;
-      if (!planVsActualData || planVsActualData.length === 0) {
-        console.warn('No plan vs actual data found.');
+      const periodicProductionData = result.data?.periodicProduction;
+      if (!periodicProductionData || periodicProductionData.length === 0) {
+        console.warn('No periodic production data found.');
         setReportData([]);
         setChartData([]);
         setIsLoading(false);
         return;
       }
       
-      console.log('Fetched Plan vs Actual Data:', planVsActualData);
+      console.log('Fetched Periodic Production Data:', periodicProductionData);
 
       // --- 데이터 가공 로직 ---
-      // 1. 차트 데이터 생성 - 품목별 계획수량, 지시수량, 완료수량 계산
-      const summaryMap = new Map();
-      
-      planVsActualData.forEach(item => {
-        const key = item.materialName;
-        if (!summaryMap.has(key)) {
-          summaryMap.set(key, { 
-            name: key, 
-            '계획수량': 0, 
-            '지시수량': 0,
-            '완료수량': 0
-          });
-        }
-        
-        const summary = summaryMap.get(key);
-        summary['계획수량'] += parseFloat(item.planQty) || 0;
-        summary['지시수량'] += parseFloat(item.totalOrderQty) || 0;
-        summary['완료수량'] += parseFloat(item.completedOrderQty) || 0;
-      });
-      
-      // 차트 데이터 형식으로 변환
-      const processedChartData = Array.from(summaryMap.values())
-        .sort((a, b) => b['계획수량'] - a['계획수량']); // 계획수량 기준 내림차순 정렬
+      // 1. 차트 데이터 생성
+      const processedChartData = periodicProductionData.map((item) => ({
+        name: item.materialName,
+        '양품수량': item.totalGoodQty,
+        '불량수량': item.totalDefectQty,
+        '불량률': item.totalDefectRate
+      })).sort((a, b) => b['양품수량'] - a['양품수량']); // 양품수량 기준 내림차순 정렬
 
       // 2. 그리드 데이터 생성
-      const processedGridData = planVsActualData.map((item, index) => ({
-        id: `${item.prodPlanId}-${index}`,
-        prodPlanId: item.prodPlanId,
+      const processedGridData = periodicProductionData.map((item, index) => ({
+        id: `${item.materialName}-${index}`, // materialName과 인덱스 조합으로 고유 ID 생성
         materialName: item.materialName,
-        systemMaterialId: item.systemMaterialId,
-        planQty: parseFloat(item.planQty) || 0,
-        orderQty: parseFloat(item.totalOrderQty) || 0,
-        completedQty: parseFloat(item.completedOrderQty) || 0,
-        remainingQty: (parseFloat(item.planQty) || 0) - (parseFloat(item.completedOrderQty) || 0),
-        achievementRate: parseFloat(item.achievementRate) || 0
+        totalGoodQty: item.totalGoodQty,
+        totalDefectQty: item.totalDefectQty,
+        totalDefectRate: item.totalDefectRate,
+        totalQty: item.totalGoodQty + item.totalDefectQty
       }));
 
       console.log('Processed Grid Data:', processedGridData);
@@ -228,7 +206,7 @@ export const usePlanVsActual = (tabId) => {
 };
 
 // =====================================================================
-// 계획대비 실적 검색 폼 컴포넌트
+// 주기별 생산 검색 폼 컴포넌트
 // =====================================================================
 const SearchForm = ({ control, handleDateRangeChange }) => {
   return (
@@ -264,16 +242,13 @@ const SearchForm = ({ control, handleDateRangeChange }) => {
 };
 
 // =====================================================================
-// 계획대비 실적 차트 컴포넌트
+// 주기별 생산 차트 컴포넌트
 // =====================================================================
-const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMouseOut }) => {
+const PeriodicProductionChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMouseOut }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
 
-  const planColor = theme.palette.primary.main;
-  const orderColor = theme.palette.warning.main;
-  const completedColor = theme.palette.success.main;
-  const achievementColor = '#4ade80'; // 밝은 녹색으로 달성률 색상 변경
+  const goodQtyColor = '#4ade80'; // 밝은 녹색
   const axisColor = isDarkMode ? theme.palette.grey[400] : theme.palette.text.secondary;
 
   // 데이터가 없는 경우 체크
@@ -292,15 +267,15 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
   }
 
   // 바 렌더링 커스터마이징 - 하이라이트 적용
-  const getBarProps = (entry, dataKey) => {
+  const getBarProps = (entry) => {
     if (highlightedMaterial && entry.name === highlightedMaterial) {
       return {
-        fill: dataKey === '계획수량' ? planColor : dataKey === '지시수량' ? orderColor : dataKey === '완료수량' ? completedColor : achievementColor,
+        fill: goodQtyColor,
         fillOpacity: 1
       };
     }
     return {
-      fill: dataKey === '계획수량' ? planColor : dataKey === '지시수량' ? orderColor : dataKey === '완료수량' ? completedColor : achievementColor,
+      fill: goodQtyColor,
       fillOpacity: highlightedMaterial ? 0.4 : 1
     };
   };
@@ -333,18 +308,22 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
           }}>{label}</p>
           {payload.map((entry, index) => (
             <p key={`tooltip-${index}`} style={{ 
-              color: entry.dataKey === '계획수량' ? planColor 
-                : entry.dataKey === '지시수량' ? orderColor 
-                : entry.dataKey === '완료수량' ? completedColor 
-                : achievementColor, 
+              color: goodQtyColor, 
               margin: '3px 0',
               fontWeight: 'bold'
             }}>
-              {entry.name}: {entry.dataKey === '달성률' 
-                ? `${entry.value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}%` 
-                : entry.value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
+              {entry.name}: {entry.value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
             </p>
           ))}
+          {payload[0] && payload[0].payload['불량률'] !== undefined && (
+            <p style={{ 
+              color: theme.palette.error.main, 
+              margin: '3px 0',
+              fontWeight: 'bold'
+            }}>
+              불량률: {payload[0].payload['불량률'].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}%
+            </p>
+          )}
         </div>
       );
     }
@@ -359,7 +338,7 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart
+      <BarChart
         data={data}
         margin={{ top: 10, right: 30, left: 20, bottom: 30 }}
         barGap={0}
@@ -375,10 +354,9 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
           tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
         />
         <YAxis 
-          yAxisId="left"
           tick={{ fill: axisColor, fontSize: 11 }} 
           tickLine={{ stroke: axisColor }}
-          tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
+          tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
           width={50}
         >
           <Label 
@@ -388,24 +366,6 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
             fill={axisColor} 
             fontSize={12} 
             dx={-10}
-          />
-        </YAxis>
-        <YAxis 
-          yAxisId="right"
-          orientation="right"
-          domain={[0, 100]}
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          tickFormatter={(value) => `${value}%`}
-          width={50}
-        >
-          <Label 
-            value="달성률(%)" 
-            angle={90} 
-            position="insideRight" 
-            fill={axisColor} 
-            fontSize={12} 
-            dx={10}
           />
         </YAxis>
         <Tooltip content={<CustomTooltip />} />
@@ -418,82 +378,30 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
           iconType="square"
         />
         <Bar 
-          yAxisId="left"
-          dataKey="계획수량" 
-          name="계획수량" 
+          dataKey="양품수량" 
+          name="양품수량" 
           barSize={20}
-          fill={planColor}
+          fill={goodQtyColor}
           isAnimationActive={false}
         >
           {data.map((entry, index) => (
             <Cell 
-              key={`cell-plan-${index}`} 
-              {...getBarProps(entry, '계획수량')}
+              key={`cell-good-${index}`} 
+              {...getBarProps(entry)}
               onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
               onMouseOut={() => onBarMouseOut && onBarMouseOut()}
             />
           ))}
         </Bar>
-        <Bar 
-          yAxisId="left"
-          dataKey="지시수량" 
-          name="지시수량" 
-          barSize={20}
-          fill={orderColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-order-${index}`} 
-              {...getBarProps(entry, '지시수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-        <Bar 
-          yAxisId="left"
-          dataKey="완료수량" 
-          name="완료수량" 
-          barSize={20}
-          fill={completedColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-completed-${index}`} 
-              {...getBarProps(entry, '완료수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-        <Bar 
-          yAxisId="right"
-          dataKey="달성률" 
-          name="달성률(%)" 
-          barSize={20}
-          fill={achievementColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-achievement-${index}`} 
-              {...getBarProps(entry, '달성률')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-      </ComposedChart>
+      </BarChart>
     </ResponsiveContainer>
   );
 };
 
 // =====================================================================
-// 메인 컴포넌트: 계획대비 실적조회
+// 메인 컴포넌트: 주기별 생산 현황
 // =====================================================================
-const PlanVsActualCombined = (props) => {
+const PeriodicProductionCombined = (props) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -523,7 +431,7 @@ const PlanVsActualCombined = (props) => {
     chartData,
     refreshKey,
     materialList
-  } = usePlanVsActual(props.tabId);
+  } = usePeriodicProduction(props.tabId);
 
   const getTextColor = useCallback(() => isDarkMode ? '#fff' : 'rgba(0, 0, 0, 0.87)', [isDarkMode]);
   const getBgColor = useCallback(() => isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5', [isDarkMode]);
@@ -624,7 +532,7 @@ const PlanVsActualCombined = (props) => {
   const searchFormItems = SearchForm({ control, handleDateRangeChange });
 
   // 그리드 컬럼 정의
-  const planVsActualColumns = [
+  const periodicProductionColumns = [
     { 
       field: 'materialName', 
       headerName: '제품명', 
@@ -635,17 +543,64 @@ const PlanVsActualCombined = (props) => {
       flex: 1,
     },
     { 
-      field: 'prodPlanId', 
-      headerName: '계획ID', 
+      field: 'totalGoodQty', 
+      headerName: '양품수량', 
       width: 120, 
       headerAlign: 'center', 
-      align: 'center', 
+      align: 'right', 
       editable: false,
+      renderCell: (params) => {
+        const value = params.value;
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              height: '100%',
+              width: '100%',
+              pr: 1
+            }}
+          >
+            <Typography>
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+            </Typography>
+          </Box>
+        );
+      },
     },
     { 
-      field: 'planQty', 
-      headerName: '계획수량', 
-      width: 90, 
+      field: 'totalDefectQty', 
+      headerName: '불량수량', 
+      width: 120, 
+      headerAlign: 'center', 
+      align: 'right', 
+      editable: false,
+      renderCell: (params) => {
+        const value = params.value;
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              height: '100%',
+              width: '100%',
+              pr: 1,
+              color: theme.palette.error.main
+            }}
+          >
+            <Typography>
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+            </Typography>
+          </Box>
+        );
+      },
+    },
+    { 
+      field: 'totalQty', 
+      headerName: '총 생산수량', 
+      width: 120, 
       headerAlign: 'center', 
       align: 'right', 
       editable: false,
@@ -663,96 +618,15 @@ const PlanVsActualCombined = (props) => {
             }}
           >
             <Typography>
-              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
             </Typography>
           </Box>
         );
       },
     },
     { 
-      field: 'orderQty', 
-      headerName: '지시수량', 
-      width: 90, 
-      headerAlign: 'center', 
-      align: 'right', 
-      editable: false,
-      renderCell: (params) => {
-        const value = params.value;
-        return (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              height: '100%',
-              width: '100%',
-              pr: 1
-            }}
-          >
-            <Typography>
-              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
-            </Typography>
-          </Box>
-        );
-      },
-    },
-    { 
-      field: 'completedQty', 
-      headerName: '완료수량', 
-      width: 90, 
-      headerAlign: 'center', 
-      align: 'right', 
-      editable: false,
-      renderCell: (params) => {
-        const value = params.value;
-        return (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              height: '100%',
-              width: '100%',
-              pr: 1
-            }}
-          >
-            <Typography>
-              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
-            </Typography>
-          </Box>
-        );
-      },
-    },
-    { 
-      field: 'remainingQty', 
-      headerName: '잔여수량', 
-      width: 90, 
-      headerAlign: 'center', 
-      align: 'right', 
-      editable: false,
-      renderCell: (params) => {
-        const value = params.value;
-        return (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              height: '100%',
-              width: '100%',
-              pr: 1
-            }}
-          >
-            <Typography>
-              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
-            </Typography>
-          </Box>
-        );
-      },
-    },
-    { 
-      field: 'achievementRate', 
-      headerName: '달성률(%)', 
+      field: 'totalDefectRate', 
+      headerName: '불량률(%)', 
       width: 100, 
       headerAlign: 'center', 
       align: 'right', 
@@ -761,11 +635,11 @@ const PlanVsActualCombined = (props) => {
         const value = parseFloat(params.value);
         let color = theme.palette.text.primary;
         
-        if (value >= 100) {
+        if (value < 1) {
           color = theme.palette.success.main;
-        } else if (value < 80) {
+        } else if (value >= 5) {
           color = theme.palette.error.main;
-        } else if (value < 100) {
+        } else if (value >= 1) {
           color = theme.palette.warning.main;
         }
         
@@ -793,7 +667,7 @@ const PlanVsActualCombined = (props) => {
     <Box sx={{ p: 2, minHeight: 'calc(100vh - 64px)' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, borderBottom: `1px solid ${getBorderColor()}`, pb: 1 }}>
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: getTextColor() }}>
-          레포트 - 계획대비 실적조회
+          레포트 - 기간별 생산실적
         </Typography>
         <IconButton onClick={() => setIsHelpModalOpen(true)} sx={{ ml: 1, color: theme.palette.primary.main }}>
           <HelpOutlineIcon />
@@ -838,9 +712,9 @@ const PlanVsActualCombined = (props) => {
       <Grid container spacing={2} mt={0}>
         <Grid item xs={12} md={12}>
           <Box sx={{ height: 300, bgcolor: getBgColor(), borderRadius: 1, p: 2, border: `1px solid ${getBorderColor()}` }}>
-            <Typography variant="h6" sx={{ mb: 2, color: getTextColor() }}>제품별 계획/지시/완료 수량</Typography>
+            <Typography variant="h6" sx={{ mb: 2, color: getTextColor() }}>제품별 양품 생산량</Typography>
             {!isLoading && chartData && chartData.length > 0 ? (
-              <PlanVsActualChart 
+              <PeriodicProductionChart 
                 data={chartData} 
                 highlightedMaterial={highlightedMaterial}
                 onBarMouseOver={(materialName) => setHighlightedMaterial(materialName)}
@@ -856,16 +730,17 @@ const PlanVsActualCombined = (props) => {
 
         <Grid item xs={12} md={12} mt={3}>
           <EnhancedDataGridWrapper
-            title="계획대비 실적 현황"
+            title="주기별 생산 현황"
             key={refreshKey}
             rows={reportData}
-            columns={planVsActualColumns}
+            columns={periodicProductionColumns}
             loading={isLoading}
             buttons={[]}
             height={500}
             tabId={props.tabId + "-grid"}
             gridProps={{
               autoHeight: false,
+              getRowId: (row) => row.id,
               sx: {
                 '& .MuiDataGrid-cell': {
                   overflow: 'hidden',
@@ -885,7 +760,7 @@ const PlanVsActualCombined = (props) => {
               pageSizeOptions: [5, 10, 20, 50],
               initialState: {
                 sorting: {
-                  sortModel: [{ field: 'prodPlanId', sort: 'desc' }],
+                  sortModel: [{ field: 'totalGoodQty', sort: 'desc' }],
                 },
                 pagination: {
                   paginationModel: { pageSize: 10, page: 0 },
@@ -918,9 +793,12 @@ const PlanVsActualCombined = (props) => {
         </Grid>
       </Grid>
 
-      <HelpModal open={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} title="계획대비 실적조회 도움말">
+      <HelpModal open={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} title="주기별 생산 현황 도움말">
         <Typography component="div" color={getTextColor()} paragraph>
-          • 설정된 기간 동안의 제품별 생산계획 대비 실적을 조회합니다.
+          • 설정된 기간 동안의 제품별 생산 수량과 불량률을 조회합니다.
+        </Typography>
+        <Typography component="div" color={getTextColor()} paragraph>
+          • 차트에는 양품 수량만 표시되며, 상세 정보는 그리드에서 확인할 수 있습니다.
         </Typography>
       </HelpModal>
 
@@ -992,4 +870,4 @@ const PlanVsActualCombined = (props) => {
   );
 };
 
-export default PlanVsActualCombined; 
+export default PeriodicProductionCombined; 

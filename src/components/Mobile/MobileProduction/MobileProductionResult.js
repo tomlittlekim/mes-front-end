@@ -31,7 +31,9 @@ import {
   PRODUCTION_RESULTS_MOBILE,
   PRODUCT_OPTIONS,
   EQUIPMENT_OPTIONS,
-  SAVE_PRODUCTION_RESULT,
+  WAREHOUSE_OPTIONS,
+  START_PRODUCTION_MOBILE,
+  UPDATE_PRODUCTION_RESULT_MOBILE,
   DELETE_PRODUCTION_RESULT
 } from './ProductionResultGraphQL';
 import { SEARCH_CONDITIONS } from './ProductionResultConstants';
@@ -39,6 +41,31 @@ import ProductionResultList from './components/ProductionResultList';
 import ProductionResultFilterDialog from './components/ProductionResultFilterDialog';
 import ProductionResultEditDialog from './components/ProductionResultEditDialog';
 import DefectInfoDialog from './components/DefectInfoDialog';
+
+// 날짜 형식 변환 유틸리티 함수
+// 백엔드에서 요구하는 형식으로 변환 (밀리초와 시간대 표시 제거)
+// 한국 시간(KST, UTC+9)으로 변환
+const formatDateForServer = (dateObj) => {
+  if (!dateObj) return null;
+  
+  try {
+    if (!(dateObj instanceof Date)) return null;
+    
+    // 한국 시간(KST)으로 변환
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const hours = String(dateObj.getHours()).padStart(2, '0');
+    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+    const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+    
+    // ISO 형식의 날짜 문자열 생성 (T는 날짜와 시간 구분자)
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  } catch (e) {
+    console.error("날짜 형식 변환 실패:", e);
+    return null;
+  }
+};
 
 const MobileProductionResult = () => {
   // Theme 및 Context 관련
@@ -64,6 +91,7 @@ const MobileProductionResult = () => {
   const [productionResults, setProductionResults] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
+  const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [searchParams, setSearchParams] = useState(SEARCH_CONDITIONS);
   const [loading, setLoading] = useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
@@ -87,10 +115,11 @@ const MobileProductionResult = () => {
     try {
       setLoading(true);
       
-      // 기본 데이터(제품, 설비) 먼저 로드
+      // 기본 데이터(제품, 설비, 창고) 먼저 로드
       await Promise.all([
         fetchProductOptions(),
-        fetchEquipmentOptions()
+        fetchEquipmentOptions(),
+        fetchWarehouseOptions()
       ]);
       
       // 생산실적 데이터 로드
@@ -183,6 +212,44 @@ const MobileProductionResult = () => {
     }
   };
 
+  // 창고 목록 조회
+  const fetchWarehouseOptions = async () => {
+    try {
+      const { data } = await executeQuery({
+        query: WAREHOUSE_OPTIONS,
+        variables: {
+          filter: {
+            factoryId: '',
+            factoryName: '',
+            warehouseId: '',
+            warehouseName: '',
+            warehouseType: 'PRODUCT_WAREHOUSE'
+          }
+        }
+      });
+
+      if (data && data.getWarehouse) {
+        const formattedOptions = data.getWarehouse.map(warehouse => ({
+          value: warehouse.warehouseId,
+          label: `${warehouse.warehouseName || ''} (${warehouse.warehouseId})`,
+          warehouseType: warehouse.warehouseType,
+          factoryId: warehouse.factoryId
+        }));
+        console.log('창고 목록 로드 완료:', formattedOptions.length, '개 항목');
+        setWarehouseOptions(formattedOptions);
+      } else {
+        console.warn('창고 목록 데이터가 없습니다:', data);
+      }
+    } catch (error) {
+      console.error('창고 목록 조회 중 오류 발생:', error);
+      setSnackbar({
+        open: true,
+        message: '창고 목록을 불러오는 중 오류가 발생했습니다.',
+        severity: 'error'
+      });
+    }
+  };
+
   // 생산실적 목록 조회
   const handleSearch = async (params = searchParams) => {
     try {
@@ -260,6 +327,7 @@ const MobileProductionResult = () => {
         goodQty: 0,
         defectQty: 0,
         equipmentId: "",
+        warehouseId: "",
         resultInfo: "",
         defectCause: "",
         prodStartTime: null,
@@ -321,26 +389,31 @@ const MobileProductionResult = () => {
       setSaving(true);
       console.log('생산 시작 데이터:', productionData);
       
-      // 생산시작 데이터를 저장
+      // 생산시작 뮤테이션 실행
       const { data } = await executeMutation({
-        mutation: SAVE_PRODUCTION_RESULT,
+        mutation: START_PRODUCTION_MOBILE,
         variables: {
-          createdRows: [{
-            workOrderId: productionData.workOrderId || null,
+          input: {
+            workOrderId: null, // workOrderId는 항상 null
             productId: productionData.productId,
             goodQty: 0,
             defectQty: 0,
             equipmentId: productionData.equipmentId || null,
+            warehouseId: productionData.warehouseId || null,
             resultInfo: null,
             defectCause: null,
-            prodStartTime: productionData.prodStartTime,
+            prodStartTime: formatDateForServer(productionData.prodStartTime),
             prodEndTime: null,
             flagActive: true
-          }],
-          updatedRows: [],
-          defectInfos: []
+          }
         }
       });
+      
+      if (!data || !data.startProductionAtMobile) {
+        throw new Error('생산실적 ID를 받아오지 못했습니다.');
+      }
+      
+      const prodResultId = data.startProductionAtMobile;
       
       // 저장 성공 시 알림
       setSnackbar({
@@ -352,7 +425,9 @@ const MobileProductionResult = () => {
       // 생산 목록 갱신
       handleSearch();
       
-      return data.saveProductionResult;
+      // prodResultId를 반환
+      console.log('생산실적 ID 생성됨:', prodResultId);
+      return prodResultId;
     } catch (error) {
       console.error('생산 시작 중 오류 발생:', error);
       setSnackbar({
@@ -378,53 +453,49 @@ const MobileProductionResult = () => {
     try {
       setSaving(true);
       
-      // 신규 모드인지 수정 모드인지 확인
-      const isNewRecord = formData.id && formData.id.startsWith('NEW');
+      // prodResultId가 있는지 확인 (이미 시작된 생산인지)
+      if (!formData.prodResultId) {
+        setSnackbar({
+          open: true,
+          message: '생산 실적 ID가 없습니다. 먼저 생산을 시작해주세요.',
+          severity: 'error'
+        });
+        return;
+      }
       
-      const mutation = {
-        mutation: SAVE_PRODUCTION_RESULT,
+      console.log('저장할 생산실적 데이터:', {
+        ...formData,
+        prodStartTime: formatDateForServer(formData.prodStartTime),
+        prodEndTime: formatDateForServer(formData.prodEndTime)
+      });
+      
+      // 뮤테이션 실행
+      const { data } = await executeMutation({
+        mutation: UPDATE_PRODUCTION_RESULT_MOBILE,
         variables: {
-          createdRows: isNewRecord ? [{
-            // 신규 생성 시에는 prodResultId 필드를 보내지 않음 (백엔드에서 생성)
-            workOrderId: formData.workOrderId || null,
+          prodResultId: formData.prodResultId,
+          input: {
+            workOrderId: null, // workOrderId는 항상 null
             productId: formData.productId,
             goodQty: parseFloat(formData.goodQty) || 0,
             defectQty: parseFloat(formData.defectQty) || 0,
             equipmentId: formData.equipmentId || null,
+            warehouseId: formData.warehouseId || null,
             resultInfo: formData.resultInfo || null,
             defectCause: formData.defectCause || null,
-            prodStartTime: formData.prodStartTime,
-            prodEndTime: formData.prodEndTime,
+            prodStartTime: formatDateForServer(formData.prodStartTime),
+            prodEndTime: formatDateForServer(formData.prodEndTime),
             flagActive: true
-          }] : [],
-          updatedRows: isNewRecord ? [] : [{
-            // 수정 시에는 prodResultId 필드가 필요함
-            prodResultId: formData.prodResultId,
-            workOrderId: formData.workOrderId || null,
-            productId: formData.productId,
-            goodQty: parseFloat(formData.goodQty) || 0,
-            defectQty: parseFloat(formData.defectQty) || 0,
-            equipmentId: formData.equipmentId || null,
-            resultInfo: formData.resultInfo || null,
-            defectCause: formData.defectCause || null,
-            prodStartTime: formData.prodStartTime,
-            prodEndTime: formData.prodEndTime,
-            flagActive: true
-          }],
+          },
           defectInfos: defectInfos.map(info => ({
-            prodResultId: isNewRecord ? null : formData.prodResultId, // 신규 생성 시 null로 설정
-            productId: formData.productId, // 제품 ID 추가
             defectQty: parseFloat(info.defectQty) || 0,
-            defectCause: info.defectCause || null,
-            resultInfo: info.resultInfo || null,
-            state: "NEW" // 상태 기본값 추가
+            defectReason: info.defectReason || null,
+            resultInfo: info.resultInfo || null
           }))
         }
-      };
+      });
       
-      const { data } = await executeMutation(mutation);
-      
-      if (data.saveProductionResult) {
+      if (data.updateProductionResultAtMobile) {
         setSnackbar({
           open: true,
           message: '생산실적이 저장되었습니다.',
@@ -595,6 +666,7 @@ const MobileProductionResult = () => {
         editMode={editMode}
         productOptions={productOptions}
         equipmentOptions={equipmentOptions}
+        warehouseOptions={warehouseOptions}
         onOpenDefectInfo={handleOpenDefectInfoDialog}
         defectInfos={defectInfos}
         getAccentColor={getAccentColor}

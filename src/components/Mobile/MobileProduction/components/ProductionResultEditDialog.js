@@ -39,6 +39,7 @@ const ProductionResultEditDialog = ({
   editMode,
   productOptions,
   equipmentOptions,
+  warehouseOptions,
   onOpenDefectInfo,
   defectInfos,
   getAccentColor,
@@ -56,6 +57,7 @@ const ProductionResultEditDialog = ({
       // 데이터 로깅
       console.log('제품 목록 데이터:', productOptions?.length || 0, '개 항목');
       console.log('설비 목록 데이터:', equipmentOptions?.length || 0, '개 항목');
+      console.log('창고 목록 데이터:', warehouseOptions?.length || 0, '개 항목');
       
       // 날짜 문자열을 Date 객체로 변환
       const result = {
@@ -76,7 +78,7 @@ const ProductionResultEditDialog = ({
         setProductionState('IDLE');
       }
     }
-  }, [open, productionResult, productOptions, equipmentOptions]);
+  }, [open, productionResult, productOptions, equipmentOptions, warehouseOptions]);
 
   // Snackbar 닫기 핸들러
   const handleCloseSnackbar = () => {
@@ -117,6 +119,14 @@ const ProductionResultEditDialog = ({
       return;
     }
 
+    if (!localResult.warehouseId) {
+      setErrors({
+        ...errors,
+        warehouseId: '창고를 선택해주세요.'
+      });
+      return;
+    }
+
     const now = new Date();
     setLocalResult(prev => ({
       ...prev,
@@ -128,11 +138,20 @@ const ProductionResultEditDialog = ({
     // 생산시작 기록을 서버에 저장
     if (onStartProduction) {
       try {
-        await onStartProduction({
+        const prodResultId = await onStartProduction({
           ...localResult,
-          prodStartTime: format(now, 'yyyy-MM-dd\'T\'HH:mm:ss'),
+          prodStartTime: now,
           prodEndTime: null
         });
+        
+        // 백엔드에서 반환된 생산실적 ID를 설정
+        if (prodResultId) {
+          console.log('생산실적 ID 할당:', prodResultId);
+          setLocalResult(prev => ({
+            ...prev,
+            prodResultId: prodResultId
+          }));
+        }
       } catch (error) {
         console.error('생산 시작 기록 저장 실패:', error);
       }
@@ -142,6 +161,8 @@ const ProductionResultEditDialog = ({
   // 생산 종료 버튼 핸들러
   const handleEndProduction = () => {
     const now = new Date();
+    console.log('생산 종료 시간 설정:', now);
+    
     setLocalResult(prev => ({
       ...prev,
       prodEndTime: now
@@ -175,6 +196,10 @@ const ProductionResultEditDialog = ({
     
     if (!localResult.productId) {
       newErrors.productId = '제품을 선택해주세요.';
+    }
+    
+    if (!localResult.warehouseId) {
+      newErrors.warehouseId = '창고를 선택해주세요.';
     }
     
     if (productionState !== 'ENDED') {
@@ -247,7 +272,14 @@ const ProductionResultEditDialog = ({
   const formatDateTime = (dateObj) => {
     if (!dateObj) return '-';
     try {
-      return format(dateObj, 'yyyy-MM-dd HH:mm');
+      // 한국 시간 형식으로 표시
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
     } catch (e) {
       return '-';
     }
@@ -318,6 +350,35 @@ const ProductionResultEditDialog = ({
           </Grid>
 
           <Grid item xs={12}>
+            <FormControl fullWidth required variant="outlined" size="medium" error={!!errors.warehouseId}>
+              <InputLabel id="warehouse-select-label" sx={{ fontSize: '1.2rem' }}>창고</InputLabel>
+              <Select
+                labelId="warehouse-select-label"
+                name="warehouseId"
+                value={localResult.warehouseId || ""}
+                onChange={handleChange}
+                label="창고"
+                disabled={editMode && localResult.prodStartTime}
+                sx={{ fontSize: '1.2rem', py: 0.5 }}
+              >
+                <MenuItem value="" sx={{ fontSize: '1.2rem' }}>
+                  <em>선택하세요</em>
+                </MenuItem>
+                {warehouseOptions && warehouseOptions.map((warehouse) => (
+                  <MenuItem key={warehouse.value} value={warehouse.value} sx={{ fontSize: '1.2rem' }}>
+                    {warehouse.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.warehouseId && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                  {errors.warehouseId}
+                </Typography>
+              )}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12}>
             <FormControl fullWidth variant="outlined" size="medium" error={!!errors.equipmentId}>
               <InputLabel id="equipment-select-label" sx={{ fontSize: '1.2rem' }}>설비</InputLabel>
               <Select
@@ -378,7 +439,7 @@ const ProductionResultEditDialog = ({
                     height: '60px',
                     fontSize: '1.3rem'
                   }}
-                  disabled={!localResult.productId}
+                  disabled={!localResult.productId || !localResult.warehouseId}
                   fullWidth
                 >
                   생산 시작

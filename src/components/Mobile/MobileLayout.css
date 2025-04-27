@@ -42,46 +42,46 @@
 }
 
 /* 스크롤 스타일 설정 */
-body.pems .mobile-layout Container {
+body.pems .mobile-layout .MuiContainer-root {
   scrollbar-color: rgba(252, 235, 212, 0.6) transparent;
 }
 
-body.pems .mobile-layout Container::-webkit-scrollbar {
+body.pems .mobile-layout .MuiContainer-root::-webkit-scrollbar {
   width: 6px;
 }
 
-body.pems .mobile-layout Container::-webkit-scrollbar-track {
+body.pems .mobile-layout .MuiContainer-root::-webkit-scrollbar-track {
   background: transparent;
 }
 
-body.pems .mobile-layout Container::-webkit-scrollbar-thumb {
+body.pems .mobile-layout .MuiContainer-root::-webkit-scrollbar-thumb {
   background-color: rgba(252, 235, 212, 0.6);
   border-radius: 3px;
 }
 
-body.pems .mobile-layout Container::-webkit-scrollbar-thumb:hover {
+body.pems .mobile-layout .MuiContainer-root::-webkit-scrollbar-thumb:hover {
   background-color: rgba(252, 235, 212, 0.8);
 }
 
 /* IMOS 도메인 스크롤바 스타일 */
-body.imos .mobile-layout Container {
+body.imos .mobile-layout .MuiContainer-root {
   scrollbar-color: rgba(232, 240, 253, 0.6) transparent;
 }
 
-body.imos .mobile-layout Container::-webkit-scrollbar {
+body.imos .mobile-layout .MuiContainer-root::-webkit-scrollbar {
   width: 6px;
 }
 
-body.imos .mobile-layout Container::-webkit-scrollbar-track {
+body.imos .mobile-layout .MuiContainer-root::-webkit-scrollbar-track {
   background: transparent;
 }
 
-body.imos .mobile-layout Container::-webkit-scrollbar-thumb {
+body.imos .mobile-layout .MuiContainer-root::-webkit-scrollbar-thumb {
   background-color: rgba(232, 240, 253, 0.6);
   border-radius: 3px;
 }
 
-body.imos .mobile-layout Container::-webkit-scrollbar-thumb:hover {
+body.imos .mobile-layout .MuiContainer-root::-webkit-scrollbar-thumb:hover {
   background-color: rgba(232, 240, 253, 0.8);
 }
 
