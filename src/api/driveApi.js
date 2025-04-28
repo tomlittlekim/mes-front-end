@@ -78,7 +78,7 @@ export const updateFiles = async (files) => {
 
 // 파일 다운로드
 export const downloadFile = async (id) => {
-  const response = await apiFetch.get(`/api/file/download/${id}`, {
+  const response = await fetch(`/api/file/download/${id}`, {
     responseType: 'blob'
   });
   return response;

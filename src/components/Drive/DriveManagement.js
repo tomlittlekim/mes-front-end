@@ -165,6 +165,28 @@ const DriveManagement = () => {
     return `${bytes} KB`;  // 백엔드에서 이미 KB 단위로 변환하여 전달
   };
 
+  const processRowUpdate = (newRow, oldRow) => {
+    if (JSON.stringify(newRow) === JSON.stringify(oldRow)) {
+      return oldRow;
+    }
+
+    const updatedRow = { ...newRow };
+    setModifiedRows(prev => ({
+      ...prev,
+      [newRow.id]: {
+        id: newRow.id,
+        name: newRow.name !== oldRow.name ? newRow.name : undefined,
+        menuId: newRow.menuId !== oldRow.menuId ? newRow.menuId : undefined
+      }
+    }));
+
+    return updatedRow;
+  };
+
+  const handleProcessRowUpdateError = (error) => {
+    Message.showError(error.message);
+  };
+
   const handleSaveChanges = async () => {
     if (Object.keys(modifiedRows).length === 0) {
       Message.showInfo('변경된 내용이 없습니다.');
@@ -173,7 +195,15 @@ const DriveManagement = () => {
 
     try {
       setLoading(true);
-      const modifiedFiles = Object.values(modifiedRows);
+      const modifiedFiles = Object.values(modifiedRows).filter(row => 
+        row.name !== undefined || row.menuId !== undefined
+      );
+      
+      if (modifiedFiles.length === 0) {
+        Message.showInfo('변경된 내용이 없습니다.');
+        return;
+      }
+
       await updateFiles(modifiedFiles);
       Message.showSuccess('파일 정보가 수정되었습니다.');
       setModifiedRows({});
@@ -183,22 +213,6 @@ const DriveManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCellEditCommit = (params) => {
-    const { id, field, value } = params;
-    const file = files.find(f => f.id === id);
-    
-    if (!file || (file[field] === value)) return;
-
-    setModifiedRows(prev => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        id,
-        [field]: value,
-      }
-    }));
   };
 
   const getMenuName = (menuId) => {
@@ -406,7 +420,9 @@ const DriveManagement = () => {
             sortingMode="server"
             rowHeight={40}
             headerHeight={40}
-            onCellEditCommit={handleCellEditCommit}
+            processRowUpdate={processRowUpdate}
+            onProcessRowUpdateError={handleProcessRowUpdateError}
+            experimentalFeatures={{ newEditingApi: true }}
             initialState={{
               sorting: {
                 sortModel: [{ field: 'name', sort: 'asc' }],
