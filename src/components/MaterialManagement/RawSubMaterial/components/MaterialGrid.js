@@ -25,7 +25,7 @@ export const COLUMNS = [
   },
   {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
   {field: 'userMaterialId', headerName: '사용자자재ID', width: 120, editable: true},
-  {field: 'materialName', headerName: '자재명', width: 180, flex: 1, editable: true},
+  {field: 'materialName', headerName: '자재명', width: 150, editable: true},
   {field: 'materialStandard', headerName: '규격', width: 120, editable: true},
   {
     field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
@@ -48,10 +48,10 @@ export const COLUMNS = [
       {value: 'SUP016', label: '제본용품샵'}
     ], editable: true
   },
-  { field: 'createUser', headerName: '작성자', width: 100},
-  { field: 'createDate', headerName: '작성일', width: 200},
-  { field: 'updateUser', headerName: '수정자', width: 100},
-  { field: 'updateDate', headerName: '수정일', width: 200},
+  { field: 'createUser', headerName: '작성자', width: 80},
+  { field: 'createDate', headerName: '작성일', width: 100},
+  { field: 'updateUser', headerName: '수정자', width: 80},
+  { field: 'updateDate', headerName: '수정일', width: 100},
 ];
 
 const MaterialGrid = ({
