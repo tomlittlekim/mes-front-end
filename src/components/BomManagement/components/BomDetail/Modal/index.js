@@ -1,35 +1,31 @@
-import React from 'react';
 import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
     Box,
-    Typography,
-    FormControl,
-    InputLabel,
+    Button,
+    Dialog, DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl, FormHelperText, Grid,
+    InputLabel, MenuItem,
     Select,
-    MenuItem,
-    Grid,
-    FormHelperText
-} from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import { useBomDetailModalData } from '../hooks/useBomDetailModalData';
+    Typography
+} from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import React from "react";
+import { useBomDetailModalData } from "../../../hooks/useBomDetailModalData";
 
 /**
- * 자재 선택 모달 컴포넌트
+ * BOM 상세 모달 컴포넌트
  * 부모-자식 자재 관계를 설정하기 위한 모달 다이얼로그
  */
-const MaterialSelectModal = ({
-                                 open,
-                                 onClose,
-                                 rowData,
-                                 setBomDetailList,
-                                 executeQuery,
-                                 generateId,
-                                 apiRef
-                             }) => {
+const BomDetailModal = ({
+    open, 
+    onClose,
+    executeQuery,
+    generateId,
+    rowData,
+    setBomDetailList,
+    apiRef
+}) => {
     // 상태 및 핸들러 함수를 훅에서 가져오기
     const {
         modalState,
@@ -283,7 +279,7 @@ const MaterialSelectModal = ({
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>취소</Button>
-                <Button 
+                <Button
                     onClick={onSubmit}
                     variant="contained"
                     disabled={!isAllValid}
@@ -295,4 +291,4 @@ const MaterialSelectModal = ({
     );
 };
 
-export default MaterialSelectModal;
+export default BomDetailModal;
