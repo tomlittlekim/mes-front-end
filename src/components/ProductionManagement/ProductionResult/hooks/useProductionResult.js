@@ -43,7 +43,6 @@ export const useProductionResult = () => {
 
         // 변수 준비
         let createdRows = null;
-        let updatedRows = null;
         let defectInfoInputs = null;
 
         // 제품ID 필수 확인
@@ -53,6 +52,12 @@ export const useProductionResult = () => {
           Message.showError({message: error.message});
           isSavingRef.current = false;
           return Promise.reject(error);
+        }
+
+        // 불량수량 검사 추가 - 불량수량이 있는데 불량정보가 없는 경우
+        if (productionResult.defectQty > 0 && (!defectInfos || defectInfos.length === 0)) {
+          console.warn('경고: 불량수량이 있지만 불량정보가 없습니다.', productionResult.defectQty);
+          // 여기서는 경고만 로그로 남기고 계속 진행
         }
 
         // 날짜 형식 변환 함수 (LocalDateTime 형식으로 변환)
@@ -81,6 +86,7 @@ export const useProductionResult = () => {
           goodQty: productionResult.goodQty || 0,
           defectQty: productionResult.defectQty || 0,
           equipmentId: productionResult.equipmentId || "",
+          warehouseId: productionResult.warehouseId || "",
           resultInfo: productionResult.resultInfo || "",
           defectCause: productionResult.defectCause || "",
           // 날짜 필드 처리 - 서버가 기대하는 형식으로 변환
@@ -93,15 +99,16 @@ export const useProductionResult = () => {
           // 신규 생산실적 생성
           createdRows = [baseData];
         } else {
-          // 기존 생산실적 수정
-          updatedRows = [{
-            prodResultId: productionResult.prodResultId,
-            ...baseData
-          }];
+          // 기존 생산실적이지만 수정 불가이므로 에러 메시지 표시
+          const error = new Error('등록된 생산실적은 수정할 수 없습니다. 삭제 후 재등록해주세요.');
+          Message.showError({message: error.message});
+          isSavingRef.current = false;
+          return Promise.reject(error);
         }
 
         // 불량정보가 있는 경우 데이터 구조 최적화
         if (defectInfos && defectInfos.length > 0) {
+          console.log('전달된 불량정보:', defectInfos);
           defectInfoInputs = defectInfos.map(defect => {
             // 불량정보 객체 최적화
             const optimizedDefect = {
@@ -120,14 +127,26 @@ export const useProductionResult = () => {
 
             return optimizedDefect;
           });
+          console.log('변환된 불량정보:', defectInfoInputs);
+        } else if (productionResult.defectQty > 0) {
+          // 불량수량이 있는데 불량정보가 없는 경우 빈 배열로 초기화
+          console.warn('불량수량이 있지만 불량정보가 제공되지 않았습니다. 빈 배열로 초기화합니다.');
+          defectInfoInputs = [];
+        } else {
+          // 불량수량이 없는 경우 빈 배열로 초기화
+          defectInfoInputs = [];
         }
+
+        console.log('생산실적 저장 요청 데이터:', {
+          createdRows: createdRows,
+          defectInfos: defectInfoInputs
+        });
 
         // GraphQL 뮤테이션 실행
         return executeMutation({
           mutation: SAVE_PRODUCTION_RESULT_MUTATION,
           variables: {
             createdRows: createdRows,
-            updatedRows: updatedRows,
             defectInfos: defectInfoInputs
           }
         })

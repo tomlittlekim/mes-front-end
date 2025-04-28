@@ -1,130 +1,219 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-// import { fetchPlanVsActualData } from '../../../api/reportApi'; // 가상의 API 함수
+import { GRAPHQL_URL } from '../../../../config';
+
+// GraphQL 쿼리 정의
+const PLAN_VS_ACTUAL_QUERY = `
+  query planVsActual($filter: PlanVsActualFilter) {
+    planVsActual(filter: $filter) {
+      prodPlanId
+      planQty
+      totalOrderQty
+      completedOrderQty
+      achievementRate
+      materialName
+      systemMaterialId
+    }
+  }
+`;
+
+const GET_MATERIALS_QUERY = `
+  query getMaterialNameAndSysId {
+    getMaterialNameAndSysId {
+      systemMaterialId
+      materialName
+    }
+  }
+`;
 
 /**
- * 계획 대비 실적 조회 로직 커스텀 훅
- *
- * @param {string} tabId - 탭 ID (필요시 사용)
- * @returns {object} - 상태 및 핸들러
+ * 계획대비 실적조회 커스텀 훅
+ * 
+ * @param {string} tabId - 탭 ID
+ * @returns {Object} - 계획대비 실적조회에 필요한 상태와 함수들
  */
 export const usePlanVsActual = (tabId) => {
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState([]);
-  const [chartData, setChartData] = useState([]); // 차트 데이터 상태 추가
-  const [refreshKey, setRefreshKey] = useState(0); // 데이터 리프레시용 키
+  const [chartData, setChartData] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [materialList, setMaterialList] = useState([]);
 
-  // react-hook-form 설정
-  const { control, handleSubmit, reset, setValue, watch, getValues } = useForm({
+  const { control, handleSubmit, reset, setValue, getValues } = useForm({
     defaultValues: {
-      planDateRange: [null, null], // 기본값 [시작일, 종료일]
-      item: '', // 품목 코드 또는 이름
-      equipment: '', // 설비 코드 또는 이름
+      dateRange: [null, null],
+      systemMaterialIds: [], // 선택된 자재 ID 배열
     },
   });
 
-  // API 호출 및 데이터 처리 로직
+  // 자재 목록 로드
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        const response = await fetch(GRAPHQL_URL, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: GET_MATERIALS_QUERY
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.errors) {
+          console.error('GraphQL Error:', result.errors);
+        } else if (result.data && result.data.getMaterialNameAndSysId) {
+          setMaterialList(result.data.getMaterialNameAndSysId);
+        }
+      } catch (error) {
+        console.error('Error fetching materials:', error);
+      }
+    };
+    
+    fetchMaterials();
+  }, []);
+
   const handleSearch = useCallback(async (formData) => {
     console.log('Search Params:', formData);
     setIsLoading(true);
-    setReportData([]); // 검색 시작 시 데이터 초기화
-    setChartData([]); // 검색 시작 시 차트 데이터 초기화
+    setReportData([]);
+    setChartData([]);
     try {
-      // API 파라미터 가공 (날짜 형식 등)
-      const params = {
-        startDate: formData.planDateRange[0] ? formData.planDateRange[0] : null,
-        endDate: formData.planDateRange[1] ? formData.planDateRange[1] : null,
-        item: formData.item || null,
-        equipment: formData.equipment || null,
-      };
-      console.log('API Params:', params);
-
-      // const data = await fetchPlanVsActualData(params); // 실제 API 호출
-      
-      // --- 가상 데이터 생성 로직 --- 
-      const mockGridData = [];
-      const mockChartData = [];
-      const itemCount = Math.floor(Math.random() * 7) + 3; // 3~9개 품목/설비 조합 생성
-      for (let i = 1; i <= itemCount; i++) {
-        const planQty = Math.floor(Math.random() * 500) + 50;
-        const actualQty = Math.floor(planQty * (Math.random() * 0.4 + 0.8));
-        const achievementRate = planQty > 0 ? parseFloat(((actualQty / planQty) * 100).toFixed(1)) : 0;
-        const itemName = `품목 ${String.fromCharCode(65 + i)}`;
-        const equipmentName = `설비 ${i}`;
+      // API 파라미터 설정
+      const filter = {
+        startDate: formData.dateRange?.[0] ? new Date(formData.dateRange[0]).toISOString().split('T')[0] : null,
+        endDate: formData.dateRange?.[1] ? new Date(formData.dateRange[1]).toISOString().split('T')[0] : null,
         
-        mockGridData.push({
-          id: i,
-          itemName: itemName,
-          equipmentName: equipmentName,
-          planQty: planQty,
-          actualQty: actualQty,
-          // achievementRate, difference는 valueGetter에서 계산
-        });
+        // systemMaterialIds 필드는 항상 포함 (필수 파라미터이므로)
+        systemMaterialIds: formData.systemMaterialIds || []
+      };
+      
+      console.log('API Params:', filter);
 
-        // 차트 데이터 가공 (품목별 달성률)
-        mockChartData.push({
-          name: itemName, // X축 레이블
-          달성률: achievementRate,
-        });
+      const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: PLAN_VS_ACTUAL_QUERY,
+          variables: { filter }
+        })
+      });
+      
+      const responseText = await response.text();
+      if (!responseText.trim()) {
+        throw new Error('빈 응답을 받았습니다');
       }
-      // --- 가상 데이터 종료 ---
+      const result = JSON.parse(responseText);
 
-      await new Promise(resolve => setTimeout(resolve, 700)); // 로딩 효과
-      setReportData(mockGridData); // 그리드 데이터 설정
-      setChartData(mockChartData); // 차트 데이터 설정
+      if (result.errors) {
+        console.error('GraphQL Error:', result.errors);
+        throw new Error(result.errors[0].message || 'GraphQL 데이터 조회 실패');
+      }
+
+      const planVsActualData = result.data?.planVsActual;
+      if (!planVsActualData || planVsActualData.length === 0) {
+        console.warn('No plan vs actual data found.');
+        setReportData([]);
+        setChartData([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Fetched Plan vs Actual Data:', planVsActualData);
+
+      // --- 데이터 가공 로직 ---
+      // 1. 차트 데이터 생성 - 품목별 계획수량, 지시수량, 완료수량 계산
+      const summaryMap = new Map();
+      
+      planVsActualData.forEach(item => {
+        const key = item.materialName;
+        if (!summaryMap.has(key)) {
+          summaryMap.set(key, { 
+            name: key, 
+            '계획수량': 0, 
+            '지시수량': 0,
+            '완료수량': 0
+          });
+        }
+        
+        const summary = summaryMap.get(key);
+        summary['계획수량'] += parseFloat(item.planQty) || 0;
+        summary['지시수량'] += parseFloat(item.totalOrderQty) || 0;
+        summary['완료수량'] += parseFloat(item.completedOrderQty) || 0;
+      });
+      
+      // 차트 데이터 형식으로 변환
+      const processedChartData = Array.from(summaryMap.values())
+        .sort((a, b) => b['계획수량'] - a['계획수량']); // 계획수량 기준 내림차순 정렬
+
+      // 2. 그리드 데이터 생성
+      const processedGridData = planVsActualData.map((item, index) => ({
+        id: `${item.prodPlanId}-${index}`,
+        prodPlanId: item.prodPlanId,
+        materialName: item.materialName,
+        systemMaterialId: item.systemMaterialId,
+        planQty: parseFloat(item.planQty) || 0,
+        orderQty: parseFloat(item.totalOrderQty) || 0,
+        completedQty: parseFloat(item.completedOrderQty) || 0,
+        remainingQty: (parseFloat(item.planQty) || 0) - (parseFloat(item.completedOrderQty) || 0),
+        achievementRate: parseFloat(item.achievementRate) || 0
+      }));
+
+      console.log('Processed Grid Data:', processedGridData);
+      console.log('Processed Chart Data:', processedChartData);
+      // --- 데이터 가공 종료 ---
+
+      // 짧은 지연 후 상태 업데이트 (UI 반응성 개선)
+      await new Promise(resolve => setTimeout(resolve, 300)); 
+      setReportData(processedGridData);
+      setChartData(processedChartData);
       setRefreshKey(prev => prev + 1);
     } catch (error) {
-      console.error('Error fetching report data:', error);
-      // 에러 처리 로직 (예: 사용자에게 알림 - SWR 또는 React Query 사용 고려)
-      setReportData([]); // 에러 발생 시 데이터 초기화
+      console.error('Error fetching or processing report data:', error);
+      setReportData([]);
       setChartData([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
+  // 초기 로드 시 검색 실행
   useEffect(() => {
-    handleSearch(getValues());
+    handleSearch(getValues()); 
   }, [handleSearch, getValues]);
 
-  // 검색 조건 초기화 핸들러
   const handleReset = useCallback(() => {
-    reset();
+    reset({
+      dateRange: [null, null],
+      systemMaterialIds: [], // 리셋 시 선택된 자재 ID 배열도 초기화
+    }); 
     setReportData([]);
-    setChartData([]); // 초기화 시 차트 데이터도 초기화
+    setChartData([]);
     setRefreshKey(prev => prev + 1);
-    // 초기화 후 바로 기본값으로 검색 실행 (선택적)
-    // handleSearch(getValues());
   }, [reset]);
 
-  // 날짜 범위 변경 핸들러 (SearchForm 에서 field.onChange 로 처리)
   const handleDateRangeChange = useCallback((newValue) => {
-    // setValue('planDateRange', newValue); // react-hook-form Controller 에서 처리
+    if(newValue && Array.isArray(newValue)) {
+      setValue('dateRange', newValue); 
+    }
     console.log('Date range changed in hook:', newValue);
-  }, []);
-
-  // 그리드 컬럼 정의 (PlanVsActualReport.js로 이동)
-  // const gridColumns = useMemo(() => [...], []);
-
-  // 그리드 추가 속성 (PlanVsActualReport.js로 이동)
-  // const gridProps = useMemo(() => ({...}), []);
+  }, [setValue]);
 
   return {
     control,
     handleSubmit,
     reset,
     setValue,
-    watch,
     handleDateRangeChange,
     handleReset,
     handleSearch,
     isLoading,
-    reportData, // 그리드용 데이터
-    chartData,  // 차트용 데이터
-    // gridColumns, // 제거
-    // gridProps, // 제거
+    reportData,
+    chartData,
     refreshKey,
+    materialList
   };
 };
 

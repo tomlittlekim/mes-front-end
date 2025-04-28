@@ -111,7 +111,8 @@ const DefectInfoDialog = ({
     // 불량정보 추가
     const updatedDefectInfo = {
       ...currentDefectInfo,
-      defectReason: currentDefectInfo.resultInfo || '', // defectReason 필드도 설정해서 호환성 유지
+      defectReason: currentDefectInfo.defectReason || '',
+      resultInfo: currentDefectInfo.resultInfo || ''
     };
 
     // 불량정보 추가

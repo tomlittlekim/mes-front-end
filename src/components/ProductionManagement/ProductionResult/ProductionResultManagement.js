@@ -90,6 +90,7 @@ const ProductionResultManagement = (props) => {
     // 옵션 데이터
     equipmentOptions,
     productOptions, // 제품 옵션 목록
+    warehouseOptions, // 창고 옵션 목록
 
     // 리프레시 키
     refreshKey
@@ -183,6 +184,23 @@ const ProductionResultManagement = (props) => {
           </Typography>
         </Alert>
 
+        {/* 수정 제한 안내 메시지 추가 */}
+        <Alert
+            severity="warning"
+            sx={{
+              mb: 2,
+              '& .MuiAlert-message': {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }
+            }}
+        >
+          <Typography variant="body2" align="center" fontWeight="500">
+            등록된 생산실적은 수정할 수 없으며, 삭제 후 재등록해야 합니다.
+          </Typography>
+        </Alert>
+
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid container spacing={2}>
@@ -209,10 +227,10 @@ const ProductionResultManagement = (props) => {
                     onDelete={handleDelete}
                     equipmentOptions={equipmentOptions}
                     productOptions={productOptions} // 제품 옵션 목록 확인
+                    warehouseOptions={warehouseOptions} // 창고 옵션 목록 추가
                     setProductionResultList={setProductionResultList}
                     setProductionResult={setProductionResult}
                     productionResult={productionResult}
-                    onRowEdit={handleProductionResultEdit}
                     tabId={props.tabId}
                     height={450}  // 높이 일치
                 />
@@ -275,24 +293,23 @@ const ProductionResultManagement = (props) => {
         </HelpModal>
 
         {/* 불량정보 모달 */}
-        {isDefectInfoModalOpen && (
-            <DefectInfoModal
-                open={isDefectInfoModalOpen}
-                onClose={closeDefectInfoModal}
-                onSave={handleSaveDefectInfos}
-                productionResult={currentProductionResult}
-                selectedWorkOrder={selectedWorkOrder}
-                defectTypes={defectTypes}
-            />
-        )}
+        <DefectInfoModal
+            open={isDefectInfoModalOpen}
+            onClose={closeDefectInfoModal}
+            onSave={handleSaveDefectInfos}
+            productionResult={currentProductionResult}
+            defectInfos={defectInfos}
+            defectTypes={defectTypes}
+        />
 
-        {/* 독립 생산실적 모달 - 새로 추가 */}
+        {/* 독립 생산실적 모달 */}
         <IndependentProductionModal
             open={isIndependentModalOpen}
             onClose={closeIndependentModal}
             onSave={handleSaveIndependentResult}
             equipmentOptions={equipmentOptions}
             productOptions={productOptions}
+            warehouseOptions={warehouseOptions} // 창고 옵션 목록 추가
         />
       </Box>
   );

@@ -1,116 +1,71 @@
 import React from 'react';
-import { Grid, TextField } from '@mui/material';
-// import { DateRangePicker } from '@mui/x-date-pickers-pro/DateRangePicker'; // Pro 버전 필요
-// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'; // Adapter 설치 필요
-// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { Grid, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import { Controller } from 'react-hook-form';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import ko from "date-fns/locale/ko"; 
+import DateRangePicker from '../../Common/DateRangePicker';
 
 /**
- * 계획 대비 실적 조회 검색 폼
- *
- * @param {object} props - { control, handleDateRangeChange }
+ * 계획대비 실적조회 검색 폼 컴포넌트
+ * 
+ * @param {Object} props - 컴포넌트 속성
+ * @param {Object} props.control - React Hook Form control 객체
+ * @param {Function} props.handleDateRangeChange - 날짜 범위 변경 핸들러
  * @returns {JSX.Element}
  */
 const SearchForm = ({ control, handleDateRangeChange }) => {
   return (
-    // <LocalizationProvider dateAdapter={AdapterDateFns}> {/* Date Picker 사용시 */} 
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
       <Grid container spacing={2} alignItems="center">
-        <Grid item xs={12} sm={6} md={4}>
-          {/* 계획일자 범위 (실제 구현에서는 DateRangePicker 또는 개별 DatePicker 사용) */} 
+        {/* 날짜 범위 필드 */}
+        <Grid item xs={12} sm={12} md={12}>
           <Controller
-            name="planDateRange"
+            name="dateRange"
             control={control}
+            defaultValue={[null, null]}
             render={({ field }) => (
-              // <DateRangePicker
-              //   localeText={{ start: '시작일', end: '종료일' }}
-              //   value={field.value}
-              //   onChange={(newValue) => {
-              //     field.onChange(newValue);
-              //     if (handleDateRangeChange) handleDateRangeChange(newValue);
-              //   }}
-              //   renderInput={(startProps, endProps) => (
-              //     <React.Fragment>
-              //       <TextField {...startProps} fullWidth helperText=""/>
-              //       <Box sx={{ mx: 2 }}> to </Box>
-              //       <TextField {...endProps} fullWidth helperText=""/>
-              //     </React.Fragment>
-              //   )}
-              // />
-              <TextField 
-                {...field} 
-                label="계획일자 범위 (시작일)" // 임시 텍스트 필드
-                type="date" 
-                fullWidth 
-                InputLabelProps={{ shrink: true }}
-                // value={field.value[0]} // 실제 DatePicker 사용 시 배열 처리 필요
-                onChange={(e) => { // 임시 로직
-                  const startDate = e.target.value;
-                  const endDate = field.value ? field.value[1] : null;
+              <DateRangePicker
+                startDate={field.value?.[0]}
+                endDate={field.value?.[1]}
+                onRangeChange={(startDate, endDate) => {
                   field.onChange([startDate, endDate]);
-                  if (handleDateRangeChange) handleDateRangeChange([startDate, endDate]);
-                }} 
+                  if (handleDateRangeChange) {
+                    handleDateRangeChange([startDate, endDate]);
+                  }
+                }}
+                startLabel="시작일"
+                endLabel="종료일"
+                label="계획일자"
+                size="small"
               />
             )}
           />
         </Grid>
-         <Grid item xs={12} sm={6} md={4}>
+        
+        {/* 상태 선택 필드 */}
+        <Grid item xs={12} sm={12} md={12}>
           <Controller
-            name="planEndDate"
+            name="state"
             control={control}
+            defaultValue="COMPLETED"
             render={({ field }) => (
-              <TextField 
-                {...field} 
-                label="계획일자 범위 (종료일)" // 임시 텍스트 필드
-                type="date" 
-                fullWidth 
-                InputLabelProps={{ shrink: true }}
-                // value={field.value[1]} // 실제 DatePicker 사용 시 배열 처리 필요
-                 onChange={(e) => { // 임시 로직
-                  const endDate = e.target.value;
-                  const startDate = field.value ? field.value[0] : null;
-                  field.onChange([startDate, endDate]);
-                  if (handleDateRangeChange) handleDateRangeChange([startDate, endDate]);
-                }} 
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          {/* 품목 선택 (Autocomplete 또는 Select 필요) */} 
-          <Controller
-            name="item"
-            control={control}
-            defaultValue="" // 기본값 설정
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="품목"
-                fullWidth
-                placeholder="품목 코드 또는 이름"
-                InputLabelProps={{ shrink: true }}
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          {/* 설비 선택 (Autocomplete 또는 Select 필요) */} 
-          <Controller
-            name="equipment"
-            control={control}
-            defaultValue="" // 기본값 설정
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비"
-                fullWidth
-                placeholder="설비 코드 또는 이름"
-                InputLabelProps={{ shrink: true }}
-              />
+              <FormControl fullWidth size="small">
+                <InputLabel>상태</InputLabel>
+                <Select
+                  {...field}
+                  label="상태"
+                >
+                  <MenuItem value="COMPLETED">완료됨</MenuItem>
+                  <MenuItem value="IN_PROGRESS">진행중</MenuItem>
+                  <MenuItem value="ALL">전체</MenuItem>
+                </Select>
+              </FormControl>
             )}
           />
         </Grid>
       </Grid>
-    // </LocalizationProvider>
+    </LocalizationProvider>
   );
 };
 

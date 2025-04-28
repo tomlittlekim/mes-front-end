@@ -182,7 +182,7 @@ const InventoryHistoryManagement = (props) => {
             manufacturerName: item.manufacturerName,
             materialName: item.materialName,
             unit: item.unit,
-            changeQty: item.changeQty,
+            changeQty: parseFloat(item.changeQty) || 0,
             createDate: item.createDate,
           })));
           
@@ -346,7 +346,7 @@ const InventoryHistoryManagement = (props) => {
             }}
           >
             <Typography sx={{ color, fontWeight: '' }}>
-              {value}
+              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
             </Typography>
           </Box>
         );

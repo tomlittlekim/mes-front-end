@@ -15,7 +15,6 @@ export const RAW_SUB_MATERIAL_QUERY = `
             baseQuantity
             manufacturerName
             supplierId
-            materialStorage
             flagActive
             createUser
             createDate
@@ -41,7 +40,6 @@ export const COMPLETE_MATERIAL_QUERY = `
             baseQuantity
             manufacturerName
             supplierId
-            materialStorage
             flagActive
             createUser
             createDate
@@ -67,7 +65,6 @@ export const HALF_MATERIAL_QUERY = `
             maxQuantity
             manufacturerName
             supplierId
-            materialStorage
             flagActive
             createUser
             createDate

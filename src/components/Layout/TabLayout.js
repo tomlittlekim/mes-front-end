@@ -30,7 +30,7 @@ import CompanyInfoPage from '../../pages/CompanyInfoPage';
 import MenuManagement from '../System/MenuManagement';
 import PlanVsActualPage from '../../pages/Report/PlanVsActualPage';
 import PeriodicProductionPage from '../../pages/Report/PeriodicProductionPage';
-import DailyYieldPage from '../../pages/Report/DailyYieldPage';
+import DefectRatePage from '../../pages/Report/DefectRatePage';
 import InventoryMovementPage from '../../pages/Report/InventoryMovementPage';
 import DailyProductionPage from '../../pages/Report/DailyProductionPage';
 import DriveManagementPage from '../../pages/DriveManagementPage';
@@ -69,7 +69,7 @@ const MemoizedCompanyInfo = typeof CompanyInfoPage === 'function' ? memo(Company
 const MemoizedMenuManagement = typeof MenuManagement === 'function' ? memo(MenuManagement) : MenuManagement;
 const MemoizedPlanVsActual = typeof PlanVsActualPage === 'function' ? memo(PlanVsActualPage) : PlanVsActualPage;
 const MemoizedPeriodicProduction = typeof PeriodicProductionPage === 'function' ? memo(PeriodicProductionPage) : PeriodicProductionPage;
-const MemoizedDailyYield = typeof DailyYieldPage === 'function' ? memo(DailyYieldPage) : DailyYieldPage;
+const MemoizedDefectRate = typeof DefectRatePage === 'function' ? memo(DefectRatePage) : DefectRatePage;
 const MemoizedInventoryMovement = typeof InventoryMovementPage === 'function' ? memo(InventoryMovementPage) : InventoryMovementPage;
 const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo(DailyProductionPage) : DailyProductionPage;
 const MemoizedIntegratedMonitoring = typeof IntegratedMonitoringPage === 'function' ? memo(IntegratedMonitoringPage) : IntegratedMonitoringPage;
@@ -139,7 +139,7 @@ const getTabComponent = (tabId) => {
     case 'rp-ppr':
       return <MemoizedPeriodicProduction tabId={tabId} />;
     case 'rp-dpr':
-      return <MemoizedDailyYield tabId={tabId} />;
+      return <MemoizedDefectRate tabId={tabId} />;
     case 'rp-imr':
       return <MemoizedInventoryMovement tabId={tabId} />;
     case 'rp-dr':
