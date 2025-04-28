@@ -34,7 +34,7 @@ export const deleteFile = async (id) => {
 
 // 파일 업로드
 export const uploadFile = async (formData) => {
-  const response = await fetch('/api/file/add', {
+  const response = await fetch('/api/drive/add', {
     method: 'POST',
     body: formData,
   });
