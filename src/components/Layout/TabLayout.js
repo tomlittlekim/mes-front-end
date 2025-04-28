@@ -33,6 +33,7 @@ import PeriodicProductionPage from '../../pages/Report/PeriodicProductionPage';
 import DailyYieldPage from '../../pages/Report/DailyYieldPage';
 import InventoryMovementPage from '../../pages/Report/InventoryMovementPage';
 import DailyProductionPage from '../../pages/Report/DailyProductionPage';
+import DriveManagementPage from '../../pages/DriveManagementPage';
 import './TabLayout.css';
 import IntegratedMonitoringPage from "../../pages/Monitoring/IntegratedMonitoringPage";
 import KPIMonitoringPage from "../../pages/Monitoring/KPIMonitoringPage";
@@ -73,6 +74,7 @@ const MemoizedInventoryMovement = typeof InventoryMovementPage === 'function' ? 
 const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo(DailyProductionPage) : DailyProductionPage;
 const MemoizedIntegratedMonitoring = typeof IntegratedMonitoringPage === 'function' ? memo(IntegratedMonitoringPage) : IntegratedMonitoringPage;
 const MemoizedKPIMonitoring = typeof KPIMonitoringPage === 'function' ? memo(KPIMonitoringPage) : KPIMonitoringPage;
+const MemoizedDriveManagement = typeof DriveManagementPage === 'function' ? memo(DriveManagementPage) : DriveManagementPage;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -146,6 +148,8 @@ const getTabComponent = (tabId) => {
       return <MemoizedIntegratedMonitoring tabId={tabId} />;
     case 'mo-kpi':
       return <MemoizedKPIMonitoring tabId={tabId} />;
+    case 'sy-drive':
+      return <MemoizedDriveManagement tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
       console.warn(`No component found for tab ID: ${tabId}`);

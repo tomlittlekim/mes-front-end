@@ -5,42 +5,81 @@ export const getAllFiles = async () => {
   const query = `
     query GetAllFiles {
       getAllFiles {
-        seq
+        id
         name
         extension
         size
         path
-        createdAt
-        updatedAt
+        menuId
       }
     }
   `;
 
   const response = await graphFetch(query);
-  return response.data.getAllFiles;
+  return response.getAllFiles;
 };
 
 // 파일 삭제
-export const deleteFile = async (seq) => {
+export const deleteFile = async (id) => {
   const mutation = `
-    mutation DeleteFile($seq: Int!) {
-      deleteFile(seq: $seq)
+    mutation DeleteFile($id: Int!) {
+      deleteFile(id: $id)
     }
   `;
 
-  const variables = { seq };
+  const variables = { id };
   const response = await graphFetch(mutation, variables);
-  return response.data.deleteFile;
+  return response;
 };
 
 // 파일 업로드
 export const uploadFile = async (formData) => {
-  const response = await apiFetch('/api/file', {
+  const response = await fetch('/api/file/add', {
     method: 'POST',
     body: formData,
-    headers: {
-      // FormData를 사용하므로 Content-Type 헤더를 설정하지 않습니다.
-    },
   });
   return response;
-}; 
+};
+
+// 메뉴 목록 조회
+export const getMenus = async () => {
+  const query = `
+    query {
+      getMenus {
+        menuId
+        menuName
+      }
+    }
+  `;
+  
+  const response = await graphFetch(query);
+  return response.getMenus;
+};
+
+// 파일 정보 수정
+export const updateFiles = async (files) => {
+  const mutation = `
+    mutation UpdateFiles($list: [ModifyFilesRequest]) {
+      updateFiles(list: $list)
+    }
+  `;
+
+  const variables = {
+    list: files.map(file => ({
+      id: file.id,
+      name: file.name,
+      menuId: file.menuId
+    }))
+  };
+
+  const response = await graphFetch(mutation, variables);
+  return response;
+};
+
+// 파일 다운로드
+export const downloadFile = async (id) => {
+  const response = await apiFetch.get(`/api/file/download/${id}`, {
+    responseType: 'blob'
+  });
+  return response;
+};
