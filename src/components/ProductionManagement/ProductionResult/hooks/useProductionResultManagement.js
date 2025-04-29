@@ -68,7 +68,11 @@ export const useProductionResultManagement = (tabId) => {
         }
       } catch (error) {
         console.error("제품 정보 로드 오류:", error);
-        alert('제품 정보를 불러오는데 실패했습니다.');
+        Swal.fire({
+          icon: 'error',
+          title: '오류',
+          text: '제품 정보를 불러오는데 실패했습니다.'
+        });
         return [];
       } finally {
         setIsLoading(false);

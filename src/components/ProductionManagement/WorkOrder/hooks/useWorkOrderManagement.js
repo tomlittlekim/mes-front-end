@@ -436,6 +436,35 @@ export const useWorkOrderManagement = (tabId) => {
         processedRow.orderQty = 0;
       }
     }
+    
+    // 수량 변경 시 생산계획 수량 초과 검증
+    if (selectedPlan && processedRow.prodPlanId === selectedPlan.prodPlanId) {
+      const planQty = selectedPlan.planQty || 0;
+      const oldQty = parseFloat(oldRow.orderQty) || 0;
+      const newQty = parseFloat(processedRow.orderQty) || 0;
+      const qtyDiff = newQty - oldQty;
+      
+      if (qtyDiff > 0) {
+        // 현재 계획에 속한 모든 작업지시 수량의 합 계산
+        const currentTotal = workOrderList
+          .filter(wo => wo.prodPlanId === selectedPlan.prodPlanId)
+          .reduce((sum, wo) => {
+            // 현재 편집 중인 행은 제외하고 합산
+            if (wo.id === oldRow.id) {
+              return sum;
+            }
+            return sum + (parseFloat(wo.orderQty) || 0);
+          }, 0);
+          
+        // 신규 수량 포함 전체 합계
+        const totalWithNew = currentTotal + newQty;
+        
+        if (totalWithNew > planQty) {
+          Message.showWarning(`작업지시수량의 합(${totalWithNew})이 생산계획수량(${planQty})을 초과할 수 없습니다.`);
+          return oldRow; // 변경 거부, 원래 값 유지
+        }
+      }
+    }
 
     // 그리드 상태 업데이트
     setWorkOrderList((prev) => {
@@ -467,7 +496,7 @@ export const useWorkOrderManagement = (tabId) => {
     }
 
     return processedRow;
-  }, [setAddRows, setUpdatedRows]);
+  }, [setAddRows, setUpdatedRows, workOrderList, selectedPlan]);
 
   // 등록 버튼 클릭 핸들러
   const handleAddWorkOrder = useCallback(() => {
@@ -509,6 +538,51 @@ export const useWorkOrderManagement = (tabId) => {
     if (!validateRequiredFields(newRows, requiredFields) ||
         !validateRequiredFields(updatedRows, requiredFields)) {
       return;
+    }
+    
+    // 생산계획수량 초과 검증
+    if (selectedPlan) {
+      const planId = selectedPlan.prodPlanId;
+      const planQty = selectedPlan.planQty || 0;
+      
+      // 현재 선택한 생산계획에 해당하는 작업지시만 필터링
+      const existingWorkOrders = workOrderList.filter(wo => 
+        wo.prodPlanId === planId && !wo.id.startsWith('NEW_') && wo.id !== selectedWorkOrder?.id
+      );
+      
+      // 기존 작업지시들의 수량 합계
+      const existingTotal = existingWorkOrders.reduce((sum, wo) => sum + (parseFloat(wo.orderQty) || 0), 0);
+      
+      // 신규 추가 작업지시들 중 현재 계획에 해당하는 것들만 필터링
+      const newWorkOrders = newRows.filter(wo => wo.prodPlanId === planId);
+      
+      // 신규 작업지시들의 수량 합계
+      const newTotal = newWorkOrders.reduce((sum, wo) => sum + (parseFloat(wo.orderQty) || 0), 0);
+      
+      // 수정된 기존 작업지시들 중 현재 계획에 해당하는 것들만 필터링
+      const updatedWorkOrders = workOrderList.filter(wo => 
+        wo.prodPlanId === planId && 
+        updatedRows.some(ur => ur.workOrderId === wo.workOrderId)
+      );
+      
+      // 수정된 작업지시들의 수량 합계
+      const updatedTotal = updatedWorkOrders.reduce((sum, wo) => sum + (parseFloat(wo.orderQty) || 0), 0);
+      
+      // 기존 작업지시들 중 수정되지 않은 것들의 수량 합계
+      const unchangedTotal = existingWorkOrders
+        .filter(wo => !updatedWorkOrders.some(uo => uo.workOrderId === wo.workOrderId))
+        .reduce((sum, wo) => sum + (parseFloat(wo.orderQty) || 0), 0);
+      
+      // 전체 작업지시 수량 합계 계산
+      const totalOrderQty = newTotal + updatedTotal + unchangedTotal;
+      
+      // 작업지시 수량 합계가 생산계획수량을 초과하는지 검증
+      if (totalOrderQty > planQty) {
+        Message.showError({ 
+          message: `작업지시수량의 합(${totalOrderQty})이 생산계획수량(${planQty})을 초과할 수 없습니다.` 
+        });
+        return;
+      }
     }
 
     // 생성할 행 변환

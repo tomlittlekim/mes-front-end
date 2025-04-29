@@ -49,7 +49,7 @@ const ProductionResultList = ({
     // 제품ID 필드 (수정 불가)
     {
       field: 'productId',
-      headerName: '제품ID (수정불가)',
+      headerName: '제품ID* (수정불가)',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -288,7 +288,7 @@ const ProductionResultList = ({
     // 창고 필드 (신규 등록시 수정 가능)
     {
       field: 'warehouseId',
-      headerName: '창고',
+      headerName: '창고*',
       width: 150,
       headerAlign: 'center',
       align: 'center',
