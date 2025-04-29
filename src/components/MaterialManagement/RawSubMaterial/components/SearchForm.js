@@ -31,7 +31,10 @@ export const formatMaterialSearchParams = (data) => ({
   toDate: data.toDate ? format(data.toDate, 'yyyy-MM-dd') : null
 });
 
-const SearchForm = ({ onSearch }) => {
+const SearchForm = ({ 
+  onSearch,
+  rawSubTypeOptions = []
+}) => {
   const { control, handleSubmit, reset, setValue } = useForm({
     defaultValues: SEARCH_CONDITIONS
   });
@@ -74,8 +77,11 @@ const SearchForm = ({ onSearch }) => {
               <InputLabel id="materialType-label">자재종류</InputLabel>
               <Select {...field} labelId="materialType-label" label="자재종류">
                 <MenuItem value="">전체</MenuItem>
-                <MenuItem value="RAW_MATERIAL">원자재</MenuItem>
-                <MenuItem value="SUB_MATERIAL">부자재</MenuItem>
+                {Array.isArray(rawSubTypeOptions) && rawSubTypeOptions.map(option => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           )}
@@ -115,20 +121,14 @@ const SearchForm = ({ onSearch }) => {
       </Grid>
       <Grid item xs={12} sm={6} md={3}>
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-          <Controller
-            name="dateRange"
-            control={control}
-            render={({ field }) => (
-              <DateRangePicker
-                startDate={dateRange.startDate}
-                endDate={dateRange.endDate}
-                onRangeChange={handleDateRangeChange}
-                startLabel="시작일"
-                endLabel="종료일"
-                label="날짜"
-                size="small"
-              />
-            )}
+          <DateRangePicker
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onRangeChange={handleDateRangeChange}
+              startLabel="시작일"
+              endLabel="종료일"
+              label="날짜"
+              size="small"
           />
         </LocalizationProvider>
       </Grid>

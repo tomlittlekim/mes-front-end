@@ -7,46 +7,51 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { materialTypeRenderCell } from '../../editors/cellRenderEditor';
 
 // 그리드 컬럼 정의
-export const COLUMNS = [
+export const getColumns = ({
+  unitOptions = [],
+  materialCategoryOptions = [],
+  rawSubTypeOptions = [],
+  vendorOptions = []
+}) => [
   {
-    field: 'materialType', headerName: '자재종류', width: 100, type: 'singleSelect',
-    valueOptions: [
-      {value: 'RAW_MATERIAL', label: '원자재'},
-      {value: 'SUB_MATERIAL', label: '부자재'}
-    ], editable: true,
+    field: 'materialType', 
+    headerName: '자재종류', 
+    width: 100, 
+    type: 'singleSelect',
+    valueOptions: rawSubTypeOptions,
+    editable: true,
     renderCell: materialTypeRenderCell
   },
   {
-    field: 'materialCategory', headerName: '자재유형', width: 100, type: 'singleSelect',
-    valueOptions: [
-      {value: '잉크', label: '잉크'},
-      {value: '포장재', label: '포장재'}
-    ], editable: true
+    field: 'materialCategory', 
+    headerName: '자재유형', 
+    width: 100, 
+    type: 'singleSelect',
+    valueOptions: materialCategoryOptions,
+    editable: true
   },
   {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
   {field: 'userMaterialId', headerName: '사용자자재ID', width: 120, editable: true},
   {field: 'materialName', headerName: '자재명', width: 150, editable: true},
   {field: 'materialStandard', headerName: '규격', width: 120, editable: true},
   {
-    field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
-    valueOptions: [
-      {value: 'EA', label: '개'},
-      {value: 'roll', label: '롤'},
-      {value: 'bottle', label: '병'},
-      {value: 'pack', label: '팩'}
-    ], editable: true
+    field: 'unit', 
+    headerName: '단위', 
+    width: 70, 
+    type: 'singleSelect',
+    valueOptions: unitOptions,
+    editable: true
   },
   {field: 'minQuantity', headerName: '최소수량', width: 80, type: 'number', editable: true},
   {field: 'maxQuantity', headerName: '최대수량', width: 80, type: 'number', editable: true},
   {field: 'manufacturerName', headerName: '제조사명', width: 120, editable: true},
   {
-    field: 'supplierId', headerName: '공급업체명', width: 120, type: 'singleSelect',
-    valueOptions: [
-      {value: 'SUP010', label: '광학용품마트'},
-      {value: 'SUP018', label: '도서용품샵'},
-      {value: 'SUP017', label: '제본재료마트'},
-      {value: 'SUP016', label: '제본용품샵'}
-    ], editable: true
+    field: 'supplierId', 
+    headerName: '공급업체명', 
+    width: 120, 
+    type: 'singleSelect',
+    valueOptions: vendorOptions,
+    editable: true
   },
   { field: 'createUser', headerName: '작성자', width: 80},
   { field: 'createDate', headerName: '작성일', width: 100},
@@ -63,7 +68,12 @@ const MaterialGrid = ({
   handleDelete,
   setMaterialList,
   generateId,
-  tabId
+  tabId,
+  // 드롭다운 옵션
+  unitOptions,
+  materialCategoryOptions,
+  rawSubTypeOptions,
+  vendorOptions
 }) => {
   
   // 그리드 버튼 정의
@@ -73,13 +83,21 @@ const MaterialGrid = ({
     {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
   ];
   
+  // 드롭다운 옵션이 포함된 컬럼 생성
+  const columns = getColumns({
+    unitOptions,
+    materialCategoryOptions,
+    rawSubTypeOptions,
+    vendorOptions
+  });
+  
   return (
     <Grid container spacing={2}>
       <Grid item xs={12}>
         <EnhancedDataGridWrapper
           title="원부자재 목록"
           rows={materialList}
-          columns={COLUMNS}
+          columns={columns}
           buttons={gridButtons}
           height={590}
           tabId={tabId ? tabId + "-materials" : undefined}
