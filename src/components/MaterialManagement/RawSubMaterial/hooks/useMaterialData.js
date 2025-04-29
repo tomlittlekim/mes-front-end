@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { useGridUtils } from '../../../../utils/grid/useGridUtils';
 import { useGridDataCall } from '../../../../utils/grid/useGridDataCall';
 import { useGridRow } from '../../../../utils/grid/useGridRow';
@@ -6,15 +6,19 @@ import { gql } from '@apollo/client';
 import {
   RAW_SUB_MATERIAL_QUERY,
   MATERIAL_MUTATION,
-  DELETE_MUTATION
+  DELETE_MUTATION, VENDOR_LIST_BY_TYPE_QUERY
 } from '../../../../graphql-queries/material-master/materialQueries';
 import { SEARCH_CONDITIONS } from '../components/SearchForm';
 import Message from '../../../../utils/message/Message';
+import {getGridCodeList} from "../../../../api/standardInfo/commonCodeApi";
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${RAW_SUB_MATERIAL_QUERY}`;
 const MATERIAL_SAVE = gql`${MATERIAL_MUTATION}`;
 const MATERIAL_DELETE = gql`${DELETE_MUTATION}`;
+
+// 거래처 정보 쿼리 정의
+const VENDOR_CODE_LIST_GET_BY_TYPE = gql`${VENDOR_LIST_BY_TYPE_QUERY}`;
 
 /** 신규 행추가 시 생성되는 구조 */
 export const NEW_ROW_STRUCTURE = {
@@ -39,6 +43,52 @@ export const NEW_ROW_STRUCTURE = {
 export const useMaterialData = (executeQuery, executeMutation) => {
   const [materialList, setMaterialList] = useState([]);
   const { generateId, formatDateToYYYYMMDD, formatGridData } = useGridUtils();
+  const [commonCodes, setCommonCodes] = useState({});
+  const [vendorOptions, setVendorOptions] = useState([]);
+
+  // 공통코드 로드
+  useEffect(() => {
+    const loadCommonCodes = async () => {
+      const codeClassIds = [
+        'CD20250402131435416', // 단위
+        'CD20250428144831625', //자재유형
+        'CD20250428145908166' //원부자재
+      ];
+
+      try {
+        const codes = await getGridCodeList(codeClassIds);
+        setCommonCodes(codes);
+      } catch (error) {
+        console.error('공통코드 로드 실패:', error);
+      }
+    };
+
+    loadCommonCodes();
+  }, []);
+
+  // 거래처 정보 로드
+  useEffect(() => {
+    const loadInitialVendorOptions = async () => {
+      await loadVendorOptions(['C20250331110117958']); // 구매처로 codeclassID 설정
+    };
+
+    loadInitialVendorOptions();
+  }, []);
+
+  // 거래처 정보 로드 함수
+  const loadVendorOptions = async (vendorTypes) => {
+    const response = await executeQuery({
+      query: VENDOR_CODE_LIST_GET_BY_TYPE,
+      variables: { vendorType: vendorTypes }
+    });
+
+    const options = response?.data?.getVendorsByType?.map(vendor => ({
+      value: vendor.vendorId,
+      label: vendor.vendorName
+    })) || [];
+
+    setVendorOptions(options);
+  };
   
   // 데이터 포맷팅 함수 정의
   const formatMaterialData = (data) => formatGridData(data, 'getRawSubMaterials', material => ({
@@ -184,7 +234,13 @@ export const useMaterialData = (executeQuery, executeMutation) => {
     handleSearch,
     handleSave,
     handleDelete,
-    generateId
+    generateId,
+    //드랍다운 옵션들
+    unitOptions: commonCodes['CD20250402131435416'] || [],
+    materialCategoryOptions: commonCodes['CD20250428144831625'] || [],
+    rawSubTypeOptions: commonCodes['CD20250428145908166'] || [],
+    // 거래처 옵션 관련
+    vendorOptions: vendorOptions || []
   };
 };
 
