@@ -59,7 +59,6 @@ export const dontLoginFetch = createFetch(true);
 export const apiFetch = createFetch(true);
 
 // query, mutation 모두 동작함
-// variables 의 캡슐화는 req 고정
 export const graphFetch = async <T>(
     body: string, // query || mutation
     variables?: Record<string, any>,

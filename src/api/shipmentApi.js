@@ -78,10 +78,7 @@ const PREPARE_SHIPMENT_DETAILS = `
       shipmentDate
       shippedQuantity
       unshippedQuantity
-      cumulativeShipmentQuantity
       shipmentWarehouse
-      shipmentHandler
-      remark
     }
   }
 `;
@@ -124,6 +121,7 @@ const GET_MATERIAL_BY_ORDER_NO = `
     getMaterialByOrderNo(orderNo: $orderNo) {
       systemMaterialId
       materialName
+      orderSubNo
     }
   }
 `;
@@ -139,10 +137,11 @@ export const getShipmentDetails = async (id) => {
   return result.getShipmentDetails;
 };
 
-export const prepareShipmentDetailsForEntry = async (orderNo, warehouseId) => {
+export const prepareShipmentDetailsForEntry = async (orderNo, orderSubNo, warehouseId) => {
   const result = await graphFetch(PREPARE_SHIPMENT_DETAILS, { 
     req: { 
       orderNo,
+      orderSubNo,
       warehouseId
     } 
   });

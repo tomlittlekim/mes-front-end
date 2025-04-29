@@ -266,9 +266,9 @@ const ShipmentManagement = () => {
       })),
       renderCell: (params) => renderRequiredCell(params, 'shipmentWarehouse')
     },
-    {
-      field: 'shipmentDate',
-      headerName: '출하일자(*)',
+    { 
+      field: 'shipmentDate', 
+      headerName: '출하일자(*)', 
       width: 120,
       editable: true,
       required: true,
@@ -331,8 +331,7 @@ const ShipmentManagement = () => {
       required: true,
       renderCell: (params) => renderRequiredCell(params, 'cumulativeShipmentQuantity'),
       preProcessEditCellProps: (params) => {
-        const hasError = params.props.value > params.row.stockQuantity || 
-                        params.props.value > params.row.unshippedQuantity;
+        const hasError = params.props.value > params.row.stockQuantity;
         return { ...params.props, error: hasError };
       }
     },
@@ -372,7 +371,7 @@ const ShipmentManagement = () => {
         case 'shipmentDate':
         case 'cumulativeShipmentQuantity':
         case 'shipmentHandler':
-          return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
+      return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
         default:
           return null;
       }
@@ -417,6 +416,7 @@ const ShipmentManagement = () => {
         setLoading(false);
       }
     } else {
+      setMaterials([]);
       setDetailRows([]);
       setMaterials([]);
       setWarehouses([]);
@@ -435,28 +435,27 @@ const ShipmentManagement = () => {
       try {
         // 품목 정보 조회
         const materialInfo = await getMaterialByOrderNo(selectedHeader.orderNo);
-        if (materialInfo) {
-          const selectedMaterial = materialInfo.find(m => m.systemMaterialId === newRow.systemMaterialId);
-          if (selectedMaterial) {
-            // 창고 정보 조회
-            const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
-            setWarehouses(warehouseInfo || []);
-            
-            // 출하창고가 이미 선택된 경우에만 prepareShipmentDetailsForEntry 호출
-            if (newRow.shipmentWarehouse) {
-              const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, newRow.shipmentWarehouse);
-              if (prepared) {
-                const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
-                if (selectedDetail) {
-                  const updatedRow = { 
-                    ...newRow,
-                    ...selectedDetail,
-                    id: newRow.id
-                  };
-                  // 수정된 row 추적
-                  setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-                  return updatedRow;
-                }
+        setMaterials(materialInfo || []);
+        const selectedMaterial = materialInfo.find(m => m.systemMaterialId === newRow.systemMaterialId);
+        if (selectedMaterial) {
+          // 창고 정보 조회
+          const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
+          setWarehouses(warehouseInfo || []);
+          
+          // 출하창고가 이미 선택된 경우에만 prepareShipmentDetailsForEntry 호출
+          if (newRow.shipmentWarehouse) {
+            const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
+            if (prepared) {
+              const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
+              if (selectedDetail) {
+                const updatedRow = { 
+                  ...newRow,
+                  ...selectedDetail,
+                  id: newRow.id
+                };
+                // 수정된 row 추적
+                setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+                return updatedRow;
               }
             }
           }
@@ -472,19 +471,26 @@ const ShipmentManagement = () => {
       try {
         // 품목ID가 선택된 경우에만 prepareShipmentDetailsForEntry 호출
         if (newRow.systemMaterialId) {
-          const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, newRow.shipmentWarehouse);
+          const selectedMaterial = materials.find(m => m.systemMaterialId === newRow.systemMaterialId);
+          
+          if (!selectedMaterial) {
+            Message.showError('선택한 품목에 대한 정보를 찾을 수 없습니다.');
+            return oldRow;
+          }
+
+          const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
+          
+          // prepared가 배열이 아닌 경우 처리
           if (prepared) {
-            const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
-            if (selectedDetail) {
-              const updatedRow = { 
-                ...newRow,
-                ...selectedDetail,
-                id: newRow.id
-              };
-              // 수정된 row 추적
-              setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-              return updatedRow;
-            }
+            const updatedRow = { 
+              ...newRow,
+              ...prepared,  // 전체 데이터를 직접 사용
+              id: newRow.id,
+              shipmentWarehouse: newRow.shipmentWarehouse
+            };
+            // 수정된 row 추적
+            setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+            return updatedRow;
           }
         }
       } catch (error) {
@@ -511,9 +517,6 @@ const ShipmentManagement = () => {
     const updatedRow = { ...newRow };
     // 수정된 row 추적
     setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-    setDetailRows(prev => prev.map(row => 
-      row.id === oldRow.id ? updatedRow : row
-    ));
     return updatedRow;
   };
 
@@ -616,6 +619,7 @@ const ShipmentManagement = () => {
         return;
       }
 
+      debugger
       // 필수 필드 체크
       const invalidRows = rowsToSave.filter(row => {
         return !row.shipmentDate || !row.systemMaterialId || 
