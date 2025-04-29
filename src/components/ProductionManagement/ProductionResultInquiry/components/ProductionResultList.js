@@ -144,6 +144,24 @@ const ProductionResultList = ({
       }
     },
     {
+      field: 'totalQty',
+      headerName: '생산수량',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => {
+        const goodQty = params.row.goodQty || 0;
+        const defectQty = params.row.defectQty || 0;
+        const totalQty = goodQty + defectQty;
+        
+        return (
+          <Typography variant="body2">
+            {totalQty.toLocaleString()}
+          </Typography>
+        );
+      }
+    },
+    {
       field: 'goodQty',
       headerName: '양품수량',
       width: 120,
