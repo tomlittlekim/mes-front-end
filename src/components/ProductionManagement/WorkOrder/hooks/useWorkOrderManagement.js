@@ -244,24 +244,6 @@ export const useWorkOrderManagement = (tabId) => {
     }));
   }, []);
 
-  // 초기화 함수
-  const handleReset = useCallback(() => {
-    reset({
-      prodPlanId: '',
-      productId: '',
-      productName: '',
-      materialCategory: '',
-      planStartDateRange: {
-        startDate: null,
-        endDate: null
-      },
-      planEndDateRange: {
-        startDate: null,
-        endDate: null
-      }
-    });
-  }, [reset]);
-
   // 검색 실행 함수
   const handleSearch = useCallback((data) => {
     setIsLoading(true);
@@ -277,10 +259,10 @@ export const useWorkOrderManagement = (tabId) => {
     // planStartDateRange 객체에서 시작일 범위를 추출하여 필터 데이터로 변환
     if (filterData.planStartDateRange) {
       if (filterData.planStartDateRange.startDate) {
-        filterData.planStartDateFrom = filterData.planStartDateRange.startDate;
+        filterData.planStartDateFrom = format(filterData.planStartDateRange.startDate, 'yyyy-MM-dd');
       }
       if (filterData.planStartDateRange.endDate) {
-        filterData.planStartDateTo = filterData.planStartDateRange.endDate;
+        filterData.planStartDateTo = format(filterData.planStartDateRange.endDate, 'yyyy-MM-dd');
       }
       delete filterData.planStartDateRange;
     }
@@ -288,10 +270,10 @@ export const useWorkOrderManagement = (tabId) => {
     // planEndDateRange 객체에서 종료일 범위를 추출하여 필터 데이터로 변환
     if (filterData.planEndDateRange) {
       if (filterData.planEndDateRange.startDate) {
-        filterData.planEndDateFrom = filterData.planEndDateRange.startDate;
+        filterData.planEndDateFrom = format(filterData.planEndDateRange.startDate, 'yyyy-MM-dd');
       }
       if (filterData.planEndDateRange.endDate) {
-        filterData.planEndDateTo = filterData.planEndDateRange.endDate;
+        filterData.planEndDateTo = format(filterData.planEndDateRange.endDate, 'yyyy-MM-dd');
       }
       delete filterData.planEndDateRange;
     }
@@ -387,6 +369,19 @@ export const useWorkOrderManagement = (tabId) => {
       setPlanList([]);
     });
   }, [executeQuery, PRODUCTION_PLANS_QUERY, formatPlanGridData, setUpdatedRows, setAddRows, reset, productMaterials]);
+
+  // 초기화 함수
+  const handleReset = useCallback(() => {
+    // 초기화 후 검색 실행
+    handleSearch({
+      prodPlanId: '',
+      productId: '',
+      productName: '',
+      materialCategory: '',
+      planStartDateRange: { startDate: null, endDate: null },
+      planEndDateRange: { startDate: null, endDate: null }
+    });
+  }, [handleSearch]);
 
   // 계획 선택 핸들러
   const handlePlanSelect = useCallback((params) => {

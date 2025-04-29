@@ -82,6 +82,10 @@ const IndependentProductionModal = ({
         (productionData.goodQty >= 0 || productionData.goodQty === "") &&
         (productionData.defectQty >= 0 || productionData.defectQty === "");
 
+    // 양품수량과 불량수량이 모두 0인지 검증
+    const totalQuantityValid = 
+        (Number(productionData.goodQty) + Number(productionData.defectQty)) > 0;
+
     // 시작일시가 종료일시보다 이후인지 검증
     let dateValid = true;
     if (productionData.prodStartTime && productionData.prodEndTime) {
@@ -89,12 +93,12 @@ const IndependentProductionModal = ({
     }
 
     // 전체 유효성 상태 업데이트
-    setIsValid(productIdValid && quantityValid && dateValid && warehouseIdValid);
+    setIsValid(productIdValid && quantityValid && dateValid && warehouseIdValid && totalQuantityValid);
 
     // 유효성 오류 메시지 상태 업데이트
     setValidationErrors({
       productId: !productIdValid,
-      quantity: !quantityValid,
+      quantity: !quantityValid || !totalQuantityValid,
       date: !dateValid,
       warehouseId: !warehouseIdValid
     });
@@ -189,7 +193,11 @@ const IndependentProductionModal = ({
         errorMessage += '창고는 필수 입력 항목입니다.\n';
       }
       if (validationErrors.quantity) {
-        errorMessage += '양품수량과 불량수량은 0 이상이어야 합니다.\n';
+        if (productionData.goodQty < 0 || productionData.defectQty < 0) {
+          errorMessage += '양품수량과 불량수량은 0 이상이어야 합니다.\n';
+        } else if ((Number(productionData.goodQty) + Number(productionData.defectQty)) <= 0) {
+          errorMessage += '양품수량과 불량수량의 합이 1 이상이어야 합니다.\n';
+        }
       }
       if (validationErrors.date) {
         errorMessage += '생산종료일시는 생산시작일시 이후여야 합니다.\n';
@@ -222,38 +230,12 @@ const IndependentProductionModal = ({
     onClose();
   };
 
-  // 닫기 핸들러 (변경 사항 있을 경우 확인)
+  // 닫기 핸들러
   const handleClose = (event, reason) => {
     console.log('handleClose 함수 호출됨', { event, reason });
     
-    // 데이터가 기본값과 다르면 확인 대화상자 표시
-    const hasChanges = productionData.productId !== "" ||
-        productionData.goodQty !== 0 ||
-        productionData.defectQty !== 0 ||
-        productionData.equipmentId !== "" ||
-        productionData.warehouseId !== "" ||
-        productionData.prodStartTime !== null ||
-        productionData.prodEndTime !== null;
-
-    if (hasChanges) {
-      Swal.fire({
-        title: '변경 사항 취소',
-        text: '입력한 데이터가 저장되지 않습니다. 계속하시겠습니까?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: '확인',
-        cancelButtonText: '취소'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          if (onClose) {
-            onClose();
-          }
-        }
-      });
-    } else {
-      if (onClose) {
-        onClose();
-      }
+    if (onClose) {
+      onClose();
     }
   };
 

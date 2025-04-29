@@ -26,7 +26,7 @@ import DateRangePicker from '../../Common/DateRangePicker';
  */
 const SearchForm = ({ onSearch, onReset, productOptions = [] }) => {
   // React Hook Form 설정
-  const { control, handleSubmit, setValue } = useForm({
+  const { control, handleSubmit, setValue, reset } = useForm({
     defaultValues: {
       prodPlanId: '',
       productId: '',
@@ -87,10 +87,32 @@ const SearchForm = ({ onSearch, onReset, productOptions = [] }) => {
     }
   };
 
+  // 초기화 핸들러
+  const handleReset = () => {
+    // 폼 초기화
+    reset({
+      prodPlanId: '',
+      productId: '',
+      productName: '',
+      materialCategory: '',
+      planStartDateRange: {
+        startDate: null,
+        endDate: null
+      },
+      planEndDateRange: {
+        startDate: null,
+        endDate: null
+      }
+    });
+    
+    // 부모 컴포넌트의 초기화 함수 호출
+    onReset();
+  };
+
   return (
       <SearchCondition
           onSearch={handleSubmit(onSearch)}
-          onReset={onReset}
+          onReset={handleReset}
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller

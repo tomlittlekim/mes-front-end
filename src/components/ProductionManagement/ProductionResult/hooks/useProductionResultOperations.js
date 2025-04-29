@@ -344,7 +344,13 @@ export const useProductionResultOperations = (
 
           // 음수 검사
           if (currentRow.goodQty < 0 || currentRow.defectQty < 0) {
-            Message.showWarning('양품수량과 불량수량은 0 이상이어야 합니다.');
+            Message.showWarning('생산수량이 1 이상이어야 합니다.');
+            return Promise.resolve();
+          }
+
+          // 양품수량과 불량수량의 합이 1 이상인지 검사
+          if ((Number(currentRow.goodQty) + Number(currentRow.defectQty)) <= 0) {
+            Message.showWarning('생산수량이 1 이상이어야 합니다.');
             return Promise.resolve();
           }
 
@@ -641,6 +647,12 @@ export const useProductionResultOperations = (
     // 양품수량과 불량수량이 음수인지 검사
     if (newIndependentResult.goodQty < 0 || newIndependentResult.defectQty < 0) {
       Message.showWarning('양품수량과 불량수량은 0 이상이어야 합니다.');
+      return;
+    }
+    
+    // 양품수량과 불량수량의 합이 1 이상인지 검사
+    if ((Number(newIndependentResult.goodQty) + Number(newIndependentResult.defectQty)) <= 0) {
+      Message.showWarning('양품수량과 불량수량의 합이 1 이상이어야 합니다.');
       return;
     }
     
