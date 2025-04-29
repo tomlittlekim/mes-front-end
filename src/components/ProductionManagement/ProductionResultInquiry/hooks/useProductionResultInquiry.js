@@ -331,20 +331,20 @@ export const useProductionResultInquiry = (tabId) => {
   // 출력 핸들러
   const handlePrint = useCallback(() => {
     if (productionResultList.length > 0) {
-      printProductionResult(null, productionResultList, loginUser?.userName);
+      printProductionResult(null, productionResultList, loginUser?.userName, productOptions, equipmentOptions);
     } else {
       Message.showWarning({ message: '출력할 생산실적이 없습니다.' });
     }
-  }, [productionResultList, loginUser?.userName]);
+  }, [productionResultList, loginUser?.userName, productOptions, equipmentOptions]);
 
   // 엑셀 내보내기 핸들러
   const handleExport = useCallback(() => {
     if (productionResultList.length > 0) {
-      exportProductionResultToCSV(null, productionResultList);
+      exportProductionResultToCSV(null, productionResultList, productOptions, equipmentOptions);
     } else {
       Message.showWarning({ message: '내보낼 생산실적이 없습니다.' });
     }
-  }, [productionResultList]);
+  }, [productionResultList, productOptions, equipmentOptions]);
 
   // 도메인별 색상 설정 함수
   const getTextColor = useCallback(() => {

@@ -21,44 +21,4 @@ export const formatDefectInfoData = (responseData) => {
       defectQty: defect.defectQty ? parseFloat(defect.defectQty) : 0, // 불량수량 숫자 형식으로 변환
     };
   });
-};
-
-/**
- * 불량 상태에 따른 표시 이름 반환
- * 
- * @param {string} state - 불량 상태 코드
- * @returns {string} 불량 상태 표시 이름
- */
-export const getDefectStateName = (state) => {
-  if (!state) return '-';
-
-  // 불량 상태 코드에 따른 표시 이름 매핑
-  const stateMap = {
-    'REGISTERED': '등록됨',
-    'ANALYZED': '분석됨',
-    'CLOSED': '종결됨',
-    'PENDING': '대기중'
-  };
-
-  return stateMap[state] || state;
-};
-
-/**
- * 불량 상태에 따른 CSS 클래스 반환
- * 
- * @param {string} state - 불량 상태 코드
- * @returns {string} CSS 클래스 이름
- */
-export const getDefectStateClass = (state) => {
-  if (!state) return '';
-
-  // 불량 상태 코드에 따른 CSS 클래스 매핑
-  const stateClassMap = {
-    'REGISTERED': 'status-pending',
-    'ANALYZED': 'status-pending',
-    'CLOSED': 'status-active',
-    'PENDING': 'status-inactive'
-  };
-
-  return stateClassMap[state] || '';
 }; 

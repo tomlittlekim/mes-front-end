@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import { getDefectStateName, getDefectStateClass } from '../utils/gridDataUtils';
 
 /**
  * 불량정보 목록 그리드 컴포넌트
@@ -45,7 +44,7 @@ const DefectInfoList = ({
     {
       field: 'defectId',
       headerName: '불량ID',
-      width: 140,
+      width: 150,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -57,7 +56,7 @@ const DefectInfoList = ({
     {
       field: 'prodResultId',
       headerName: '생산실적ID',
-      width: 140,
+      width: 150,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -69,7 +68,7 @@ const DefectInfoList = ({
     {
       field: 'productId',
       headerName: '제품ID',
-      width: 140,
+      width: 150,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -95,7 +94,7 @@ const DefectInfoList = ({
     {
       field: 'productName',
       headerName: '제품명',
-      width: 160,
+      width: 180,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -121,7 +120,7 @@ const DefectInfoList = ({
     {
       field: 'defectQty',
       headerName: '불량수량',
-      width: 120,
+      width: 130,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -135,7 +134,7 @@ const DefectInfoList = ({
     {
       field: 'resultInfo',
       headerName: '불량정보',
-      width: 150,
+      width: 170,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -147,7 +146,7 @@ const DefectInfoList = ({
     {
       field: 'defectCause',
       headerName: '불량원인',
-      width: 150,
+      width: 170,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -157,24 +156,9 @@ const DefectInfoList = ({
       )
     },
     {
-      field: 'state',
-      headerName: '상태',
-      width: 120,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params) => {
-        const stateClass = getDefectStateClass(params.value);
-        return (
-          <div className={`status-cell ${stateClass}`}>
-            {getDefectStateName(params.value)}
-          </div>
-        );
-      }
-    },
-    {
       field: 'equipmentId',
       headerName: '설비',
-      width: 140,
+      width: 150,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -207,7 +191,7 @@ const DefectInfoList = ({
     {
       field: 'createDate',
       headerName: '등록일시',
-      width: 160,
+      width: 170,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -219,7 +203,7 @@ const DefectInfoList = ({
     {
       field: 'createUser',
       headerName: '등록자',
-      width: 120,
+      width: 130,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
