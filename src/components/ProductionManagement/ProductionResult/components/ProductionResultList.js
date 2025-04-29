@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Typography, Button, Stack } from '@mui/material';
+import { Typography, Button, Stack, Select, MenuItem } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -49,7 +49,7 @@ const ProductionResultList = ({
     // 제품ID 필드 (수정 불가)
     {
       field: 'productId',
-      headerName: '제품ID (수정불가)',
+      headerName: '제품ID* (수정불가)',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -288,11 +288,11 @@ const ProductionResultList = ({
     // 창고 필드 (신규 등록시 수정 가능)
     {
       field: 'warehouseId',
-      headerName: '창고',
+      headerName: '창고*',
       width: 150,
       headerAlign: 'center',
       align: 'center',
-      editable: (params) => params.row.isNew === true,
+      editable: (params) => params.row?.isNew === true,
       type: 'singleSelect',
       valueOptions: warehouseOptions.map(option => ({
         value: option.value,
@@ -301,10 +301,66 @@ const ProductionResultList = ({
       renderCell: (params) => {
         const warehouse = warehouseOptions.find(w => w.value === params.value);
         return (
-            <Typography variant="body2">
-              {warehouse ? warehouse.label : (params.value || '-')}
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: !params.value && params.row?.isNew ? 'error.main' : 'inherit',
+                fontWeight: !params.value && params.row?.isNew ? 'bold' : 'normal'
+              }}
+            >
+              {warehouse ? warehouse.label : (params.value || '선택 필요')}
             </Typography>
         );
+      },
+      renderEditCell: (params) => {
+        const warehouse = warehouseOptions.find(w => w.value === params.value);
+        return (
+            <Select
+                value={params.value || ''}
+                onChange={(e) => {
+                  params.api.setEditCellValue({
+                    id: params.id,
+                    field: params.field,
+                    value: e.target.value
+                  });
+                  // 선택 후 자동으로 편집 모드 종료
+                  params.api.stopCellEditMode({
+                    id: params.id,
+                    field: params.field
+                  });
+                }}
+                fullWidth
+                size="small"
+                error={!params.value && params.row?.isNew}
+                sx={{ 
+                  minWidth: 120,
+                  '& .MuiSelect-select': {
+                    py: 0.5
+                  }
+                }}
+            >
+                <MenuItem value="" disabled>
+                    <em>선택하세요</em>
+                </MenuItem>
+                {warehouseOptions.map((option) => (
+                    <MenuItem 
+                      key={option.value} 
+                      value={option.value}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
+                    >
+                        {option.label}
+                    </MenuItem>
+                ))}
+            </Select>
+        );
+      },
+      // valueSetter 대신 valueParser 사용
+      valueParser: (value) => {
+        return value || null;
       }
     },
     {

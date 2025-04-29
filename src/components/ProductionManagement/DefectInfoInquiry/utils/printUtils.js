@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { getDefectStateName, getDefectStateClass } from './gridDataUtils';
+import Swal from 'sweetalert2';
 
 /**
  * 날짜 형식화 함수
@@ -180,7 +181,11 @@ export const printDefectInfo = (defectInfoList, productOptions = [], equipmentOp
  */
 export const exportDefectInfoToCSV = (defectInfoList, productOptions = [], equipmentOptions = []) => {
   if (!defectInfoList || defectInfoList.length === 0) {
-    alert('내보낼 데이터가 없습니다.');
+    Swal.fire({
+      icon: 'warning',
+      title: '알림',
+      text: '내보낼 데이터가 없습니다.'
+    });
     return;
   }
 
