@@ -441,21 +441,30 @@ const ShipmentManagement = () => {
         const selectedMaterial = materialInfo.find(m => m.systemMaterialId === newRow.systemMaterialId);
         
         if (selectedMaterial) {
-          const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
-          setWarehouses(warehouseInfo || []);
-          
-          if (newRow.shipmentWarehouse) {
-            const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
-            if (prepared) {
-              const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
-              if (selectedDetail) {
-                updatedRow = { 
-                  ...updatedRow,
-                  ...selectedDetail,
-                  id: newRow.id
-                };
+          try {
+            const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
+            if (!warehouseInfo || warehouseInfo.length === 0) {
+              Message.showWarning('선택한 품목의 재고가 없습니다. 다른 품목을 선택해주세요.');
+              return oldRow;
+            }
+            setWarehouses(warehouseInfo || []);
+
+            if (newRow.shipmentWarehouse) {
+              const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
+              if (prepared) {
+                const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
+                if (selectedDetail) {
+                  updatedRow = {
+                    ...updatedRow,
+                    ...selectedDetail,
+                    id: newRow.id
+                  };
+                }
               }
             }
+          } catch (error) {
+            Message.showError('창고 정보 조회 중 오류가 발생했습니다.');
+            return oldRow;
           }
         }
       }
@@ -463,16 +472,28 @@ const ShipmentManagement = () => {
       // 출하창고가 변경된 경우
       if (newRow.shipmentWarehouse !== oldRow.shipmentWarehouse && newRow.systemMaterialId) {
         const selectedMaterial = materials.find(m => m.systemMaterialId === newRow.systemMaterialId);
-        
+
         if (selectedMaterial) {
-          const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
-          if (prepared) {
-            updatedRow = { 
-              ...updatedRow,
-              ...prepared,
-              id: newRow.id,
-              shipmentWarehouse: newRow.shipmentWarehouse
-            };
+          try {
+            const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
+            if (!warehouseInfo || warehouseInfo.length === 0) {
+              Message.showWarning('선택한 품목의 재고가 없습니다. 다른 품목을 선택해주세요.');
+              return oldRow;
+            }
+            setWarehouses(warehouseInfo || []);
+
+            const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
+            if (prepared) {
+              updatedRow = {
+                ...updatedRow,
+                ...prepared,
+                id: newRow.id,
+                shipmentWarehouse: newRow.shipmentWarehouse
+              };
+            }
+          } catch (error) {
+            Message.showError('창고 정보 조회 중 오류가 발생했습니다.');
+            return oldRow;
           }
         }
       }
