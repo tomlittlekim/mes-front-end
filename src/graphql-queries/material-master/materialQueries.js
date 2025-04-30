@@ -104,3 +104,12 @@ export const ALL_MATERIALS_QUERY = `
         }
     }
 `;
+
+export const VENDOR_LIST_BY_TYPE_QUERY = `
+        query getVendorsByType($vendorType: [String!]) {
+            getVendorsByType(vendorType: $vendorType) {
+                vendorId
+                vendorName
+            }
+        }
+`

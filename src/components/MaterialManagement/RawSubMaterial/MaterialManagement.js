@@ -36,7 +36,12 @@ const MaterialManagement = ({ tabId }) => {
     handleSearch,
     handleSave,
     handleDelete,
-    generateId
+    generateId,
+    // 드롭다운 옵션들
+    unitOptions,
+    materialCategoryOptions,
+    rawSubTypeOptions,
+    vendorOptions
   } = useMaterialData(executeQuery, executeMutation);
 
   /** 초기 데이터 로드 */
@@ -55,7 +60,10 @@ const MaterialManagement = ({ tabId }) => {
       />
 
       {/* 검색 폼 컴포넌트 */}
-      <SearchForm onSearch={handleSearch} />
+      <SearchForm 
+        onSearch={handleSearch}
+        rawSubTypeOptions={rawSubTypeOptions}
+      />
 
       {/* 그리드 컴포넌트 */}
       {!isLoading && (
@@ -69,6 +77,11 @@ const MaterialManagement = ({ tabId }) => {
           setMaterialList={setMaterialList}
           generateId={generateId}
           tabId={tabId}
+          // 드롭다운 옵션 전달
+          unitOptions={unitOptions}
+          materialCategoryOptions={materialCategoryOptions}
+          rawSubTypeOptions={rawSubTypeOptions}
+          vendorOptions = {vendorOptions}
         />
       )}
       

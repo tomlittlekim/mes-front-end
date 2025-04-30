@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { getDefectStateName, getDefectStateClass } from './gridDataUtils';
+import Swal from 'sweetalert2';
 
 /**
  * 날짜 형식화 함수
@@ -68,28 +68,6 @@ export const printDefectInfo = (defectInfoList, productOptions = [], equipmentOp
     th { background-color: #f2f2f2; }
     .no-data { text-align: center; padding: 50px; font-size: 16px; color: #666; }
     .defect-highlight { color: #f44336; font-weight: bold; }
-    .status-cell {
-      padding: 3px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-align: center;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      display: inline-block;
-      min-width: 80px;
-    }
-    .status-active {
-      background-color: rgba(84, 214, 44, 0.16);
-      color: #229A16;
-    }
-    .status-inactive {
-      background-color: rgba(255, 72, 66, 0.16);
-      color: #B71D18;
-    }
-    .status-pending {
-      background-color: rgba(255, 193, 7, 0.16);
-      color: #B78103;
-    }
     @media print {
       body { -webkit-print-color-adjust: exact; color-adjust: exact; }
     }
@@ -118,7 +96,6 @@ export const printDefectInfo = (defectInfoList, productOptions = [], equipmentOp
                 <th>불량수량</th>
                 <th>불량정보</th>
                 <th>불량원인</th>
-                <th>상태</th>
                 <th>설비</th>
                 <th>등록일시</th>
                 <th>등록자</th>
@@ -138,11 +115,6 @@ export const printDefectInfo = (defectInfoList, productOptions = [], equipmentOp
                   }</td>
                   <td>${defect.resultInfo || '-'}</td>
                   <td>${defect.defectCause || '-'}</td>
-                  <td>
-                    <span class="status-cell ${getDefectStateClass(defect.state)}">
-                      ${getDefectStateName(defect.state)}
-                    </span>
-                  </td>
                   <td>${equipmentMap[defect.equipmentId]?.name || defect.equipmentId || '-'}</td>
                   <td>${formatDate(defect.createDate)}</td>
                   <td>${defect.createUser || '-'}</td>
@@ -180,7 +152,11 @@ export const printDefectInfo = (defectInfoList, productOptions = [], equipmentOp
  */
 export const exportDefectInfoToCSV = (defectInfoList, productOptions = [], equipmentOptions = []) => {
   if (!defectInfoList || defectInfoList.length === 0) {
-    alert('내보낼 데이터가 없습니다.');
+    Swal.fire({
+      icon: 'warning',
+      title: '알림',
+      text: '내보낼 데이터가 없습니다.'
+    });
     return;
   }
 
@@ -217,7 +193,6 @@ export const exportDefectInfoToCSV = (defectInfoList, productOptions = [], equip
     '불량수량',
     '불량정보',
     '불량원인',
-    '상태',
     '설비',
     '등록일시',
     '등록자'
@@ -242,7 +217,6 @@ export const exportDefectInfoToCSV = (defectInfoList, productOptions = [], equip
       defect.defectQty !== null && defect.defectQty !== undefined ? defect.defectQty : '0',
       defect.resultInfo || '',
       defect.defectCause || '',
-      getDefectStateName(defect.state),
       equipmentName,
       formatDate(defect.createDate),
       defect.createUser || ''

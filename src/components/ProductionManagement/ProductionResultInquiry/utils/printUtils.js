@@ -24,8 +24,10 @@ const formatDateDisplay = (dateString) => {
  * @param {Object} selectedWorkOrder - 선택된 작업지시 객체 (없을 수 있음)
  * @param {Array} productionResultList - 생산실적 목록
  * @param {String} userName - 현재 사용자 이름
+ * @param {Array} productOptions - 제품 옵션 목록
+ * @param {Array} equipmentOptions - 설비 옵션 목록
  */
-export const printProductionResult = (selectedWorkOrder, productionResultList, userName) => {
+export const printProductionResult = (selectedWorkOrder, productionResultList, userName, productOptions = [], equipmentOptions = []) => {
   if (productionResultList.length === 0) {
     Message.showWarning('출력할 생산실적이 없습니다.');
     return;
@@ -33,20 +35,35 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
 
   try {
     // 생산실적 데이터를 출력 가능한 형태로 준비
-    const printData = productionResultList.map(item => ({
-      생산실적ID: item.prodResultId || '-',
-      작업지시ID: item.workOrderId || '-',
-      제품ID: item.productId || '-',
-      양품수량: item.goodQty || 0,
-      불량수량: item.defectQty || 0,
-      진척률: `${item.progressRate || 0}%`,
-      불량률: `${item.defectRate || 0}%`,
-      설비: item.equipmentId || '-',
-      생산시작일시: formatDateDisplay(item.prodStartTime),
-      생산종료일시: formatDateDisplay(item.prodEndTime),
-      등록일시: formatDateDisplay(item.createDate),
-      등록자: item.createUser || '-'
-    }));
+    const printData = productionResultList.map(item => {
+      // 제품 정보 찾기
+      const product = productOptions.find(p => p.systemMaterialId === item.productId);
+      const productId = product ? product.userMaterialId : item.productId;
+      const productName = product ? product.materialName : '-';
+      const unit = product ? product.unit : '-';
+      
+      // 설비 정보 찾기
+      const equipment = equipmentOptions.find(e => e.equipmentId === item.equipmentId);
+      const equipmentName = equipment ? equipment.equipmentName : item.equipmentId || '-';
+      
+      return {
+        생산실적ID: item.prodResultId || '-',
+        작업지시ID: item.workOrderId || '-',
+        제품ID: productId || '-',
+        제품명: productName || '-',
+        단위: unit || '-',
+        생산수량: (item.goodQty || 0) + (item.defectQty || 0),
+        양품수량: item.goodQty || 0,
+        불량수량: item.defectQty || 0,
+        진척률: `${item.progressRate || 0}%`,
+        불량률: `${item.defectRate || 0}%`,
+        설비: equipmentName || '-',
+        생산시작일시: formatDateDisplay(item.prodStartTime),
+        생산종료일시: formatDateDisplay(item.prodEndTime),
+        등록일시: formatDateDisplay(item.createDate),
+        등록자: item.createUser || '-'
+      };
+    });
 
     // 새 창에 출력용 HTML 생성
     const printWindow = window.open('', '_blank');
@@ -104,6 +121,9 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
               <th>생산실적ID</th>
               <th>작업지시ID</th>
               <th>제품ID</th>
+              <th>제품명</th>
+              <th>단위</th>
+              <th>생산수량</th>
               <th>양품수량</th>
               <th>불량수량</th>
               <th>진척률</th>
@@ -121,6 +141,9 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
                 <td>${item.생산실적ID}</td>
                 <td>${item.작업지시ID}</td>
                 <td>${item.제품ID}</td>
+                <td>${item.제품명}</td>
+                <td>${item.단위}</td>
+                <td>${item.생산수량}</td>
                 <td>${item.양품수량}</td>
                 <td>${item.불량수량}</td>
                 <td>${item.진척률}</td>
@@ -166,8 +189,10 @@ export const printProductionResult = (selectedWorkOrder, productionResultList, u
  *
  * @param {Object} selectedWorkOrder - 선택된 작업지시 객체 (없을 수 있음)
  * @param {Array} productionResultList - 생산실적 목록
+ * @param {Array} productOptions - 제품 옵션 목록
+ * @param {Array} equipmentOptions - 설비 옵션 목록
  */
-export const exportProductionResultToCSV = (selectedWorkOrder, productionResultList) => {
+export const exportProductionResultToCSV = (selectedWorkOrder, productionResultList, productOptions = [], equipmentOptions = []) => {
   if (productionResultList.length === 0) {
     Message.showWarning('내보낼 데이터가 없습니다.');
     return;
@@ -178,19 +203,32 @@ export const exportProductionResultToCSV = (selectedWorkOrder, productionResultL
     const fileName = `생산실적_${format(new Date(), 'yyyyMMdd')}.csv`;
 
     // CSV 헤더 생성
-    let csvContent = "생산실적ID,작업지시ID,제품ID,양품수량,불량수량,진척률,불량률,설비,생산시작일시,생산종료일시,등록일시,등록자\n";
+    let csvContent = "생산실적ID,작업지시ID,제품ID,제품명,단위,생산수량,양품수량,불량수량,진척률,불량률,설비,생산시작일시,생산종료일시,등록일시,등록자\n";
 
     // 데이터 행 추가
     productionResultList.forEach(item => {
+      // 제품 정보 찾기
+      const product = productOptions.find(p => p.systemMaterialId === item.productId);
+      const productId = product ? product.userMaterialId : item.productId;
+      const productName = product ? product.materialName : '-';
+      const unit = product ? product.unit : '-';
+      
+      // 설비 정보 찾기
+      const equipment = equipmentOptions.find(e => e.equipmentId === item.equipmentId);
+      const equipmentName = equipment ? equipment.equipmentName : item.equipmentId || '-';
+      
       const row = [
         item.prodResultId || '',
         item.workOrderId || '',
-        item.productId || '',
+        productId || '',
+        productName || '',
+        unit || '',
+        (item.goodQty || 0) + (item.defectQty || 0),
         item.goodQty || 0,
         item.defectQty || 0,
         `${item.progressRate || 0}%`,
         `${item.defectRate || 0}%`,
-        item.equipmentId || '',
+        equipmentName || '',
         formatDateDisplay(item.prodStartTime),
         formatDateDisplay(item.prodEndTime),
         formatDateDisplay(item.createDate),

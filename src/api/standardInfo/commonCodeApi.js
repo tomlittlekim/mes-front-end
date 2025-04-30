@@ -50,6 +50,20 @@ const initialCodeQuery = `
   }
 `;
 
+const getCodeListQuery = `
+  query getGridCodeList($codeClassIds: [String!]!) {
+    getGridCodeList(codeClassIds: $codeClassIds) {
+        codeClassId
+        codeClassName
+        codeClassDesc
+        codes {
+          codeId
+          codeName
+        }
+      }
+    }
+`
+
 const saveCodeMutation = `
       mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
         saveCode(createdRows: $createdRows, updatedRows: $updatedRows)
@@ -102,7 +116,17 @@ export const getInitialCodes = async (codeClassId) =>{
   }));
 }
 
+export const getGridCodeList = async (codeClassIds) => {
+  const response = await graphFetch(getCodeListQuery, { codeClassIds });
 
+  return response.getGridCodeList.reduce((acc, codeClass) => {
+    acc[codeClass.codeClassId] = codeClass.codes.map(row => ({
+      value: row.codeId,
+      label: row.codeName,
+    }));
+    return acc;
+  }, {});
+};
 
 export const saveCodeClass = (req) =>  graphFetch(saveCodeClassMutation,req)
 

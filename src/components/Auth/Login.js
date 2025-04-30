@@ -44,7 +44,18 @@ const Login = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     if (urlParams.get('expired') === 'true') {
-      alert('인증이 만료되었습니다. 다시 로그인해 주세요.');
+      Swal.fire({
+        icon: 'warning',
+        title: '세션 만료',
+        text: '인증이 만료되었습니다. 다시 로그인해 주세요.',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        background: isDarkMode ? '#333' : '#fff',
+        customClass: {
+          timerProgressBar: 'swal-timer-progress-bar'
+        }
+      });
     }
 
     const isAuth = localStorage.getItem('isAuthenticated');
@@ -111,7 +122,7 @@ const Login = () => {
 
       if (res.status === 200) { // 명시적 상태 코드 확인
         setUserInfo(res);
-        
+
         // 성공 메시지를 보여주고 자동으로 다음 화면으로 이동
         Swal.fire({
           icon: 'success',
@@ -120,7 +131,7 @@ const Login = () => {
           timer: 1000,
           showConfirmButton: false
         });
-        
+
         // 타이머와 동시에 리다이렉트 처리
         setTimeout(() => {
           window.location.href = '/';

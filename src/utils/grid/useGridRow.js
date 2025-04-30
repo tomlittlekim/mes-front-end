@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import {getGridCodes, getInitialCodes} from "../../api/standardInfo/commonCodeApi";
+import {getGridCodes, getGridCodeList, getInitialCodes} from "../../api/standardInfo/commonCodeApi";
 
 /**
  * 그리드 행 관련 커스텀 훅
@@ -121,6 +121,4 @@ export function fetchDefaultCodesByCodeClassId(codeClassId, setOptions) {
     })
     .catch((err) => console.error(err));
 }
-
-
 
