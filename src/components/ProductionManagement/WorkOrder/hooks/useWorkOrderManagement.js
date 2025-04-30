@@ -278,6 +278,12 @@ export const useWorkOrderManagement = (tabId) => {
       delete filterData.planEndDateRange;
     }
 
+    // productName 값이 있으면 productId로 설정
+    if (filterData.productName) {
+      filterData.productId = filterData.productName;
+      delete filterData.productName;
+    }
+
     // state 필드 처리 - 값이 있으면 배열로 변환
     if (filterData.state) {
       filterData.state = [filterData.state]; // 단일 값을 배열로 변환
@@ -312,44 +318,6 @@ export const useWorkOrderManagement = (tabId) => {
       }
       // 검색 후에는 제품명 조건 제거
       delete filterData.productName;
-    }
-
-    // materialCategory 값이 있으면, 해당 유형과 일치하는 제품들의 systemMaterialId를 찾아 필터링
-    if (filterData.materialCategory && productMaterials.length > 0) {
-      const matchingProducts = productMaterials.filter(m => 
-        m.materialCategory?.toLowerCase().includes(filterData.materialCategory.toLowerCase())
-      );
-      
-      if (matchingProducts.length > 0) {
-        // 일치하는 제품들의 systemMaterialId를 배열로 만들어 필터에 추가
-        const matchingProductIds = matchingProducts.map(m => m.systemMaterialId);
-        
-        // 이미 productIds 값이 있으면 교집합으로 필터링
-        if (filterData.productIds) {
-          filterData.productIds = filterData.productIds.filter(id => matchingProductIds.includes(id));
-          if (filterData.productIds.length === 0) {
-            // 교집합이 없으면 빈 결과가 나오도록 존재하지 않는 ID 설정
-            filterData.productId = 'NO_MATCH_PRODUCT_ID';
-            delete filterData.productIds;
-          }
-        } 
-        // 이미 productId 값이 있으면 해당 ID가 matchingProductIds에 포함되는지 확인
-        else if (filterData.productId && filterData.productId !== 'NO_MATCH_PRODUCT_ID') {
-          if (!matchingProductIds.includes(filterData.productId)) {
-            // 포함되지 않으면 빈 결과가 나오도록 존재하지 않는 ID 설정
-            filterData.productId = 'NO_MATCH_PRODUCT_ID';
-          }
-        }
-        // 둘 다 없으면 matchingProductIds 설정
-        else if (!filterData.productId || filterData.productId !== 'NO_MATCH_PRODUCT_ID') {
-          filterData.productIds = matchingProductIds;
-        }
-      } else {
-        // 일치하는 제품이 없으면 빈 결과가 나오도록 존재하지 않는 ID 설정
-        filterData.productId = 'NO_MATCH_PRODUCT_ID';
-      }
-      // 검색 후에는 제품유형 조건 제거
-      delete filterData.materialCategory;
     }
 
     // 생산계획 검색

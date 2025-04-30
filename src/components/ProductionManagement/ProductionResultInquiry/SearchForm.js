@@ -109,11 +109,11 @@ const SearchForm = ({
           fieldState: { invalid, error }
         }) => (
           <FormControl variant="outlined" size="small" fullWidth>
-            <InputLabel id="product-label">제품</InputLabel>
+            <InputLabel id="product-label">제품 ID</InputLabel>
             <Select
               {...field}
               labelId="product-label"
-              label="제품"
+              label="제품 ID"
               error={invalid}
               onKeyDown={handleKeyDown}
             >
