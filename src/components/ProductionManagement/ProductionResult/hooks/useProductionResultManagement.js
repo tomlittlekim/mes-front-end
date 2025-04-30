@@ -279,8 +279,8 @@ export const useProductionResultManagement = (tabId) => {
 
   // 저장 핸들러
   const handleSave = useCallback(() => {
-    saveResult(productionResult, productionResultList, setProductionResult, setProductionResultList);
-  }, [saveResult, productionResult, productionResultList]);
+    saveResult(productionResult, setProductionResult, setProductionResultList);
+  }, [saveResult, productionResult, setProductionResult, setProductionResultList]);
 
   // 삭제 핸들러
   const handleDelete = useCallback(() => {

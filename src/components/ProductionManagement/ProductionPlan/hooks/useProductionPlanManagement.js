@@ -575,7 +575,11 @@ export const useProductionPlanManagement = (tabId) => {
       for (const row of rows) {
         for (const field of fieldNames) {
           if (row[field] === undefined || row[field] === null || row[field] === '') {
-            Message.showError({ message: `${field} 필드는 필수 입력값입니다.` });
+            if (field === 'productId') {
+              Message.showError({ message: "제품 ID는 필수 입력 항목입니다." });
+            } else {
+              Message.showError({ message: `${field} 필드는 필수 입력값입니다.` });
+            }
             return false;
           }
         }

@@ -66,18 +66,6 @@ export const useProductionResultOperations = (
           return Promise.resolve();
         }
 
-        // 캐시된 데이터가 있는 경우 재사용
-        if (
-            lastLoadedWorkOrderId.current === workOrder.workOrderId &&
-            cachedProductionResults.current.length >= 0
-        ) {
-          setProductionResultList(cachedProductionResults.current);
-          setProductionResult(null);
-          return Promise.resolve({
-            data: {productionResultsByWorkOrderId: cachedProductionResults.current}
-          });
-        }
-
         // 중복 API 호출 방지
         if (isLoadingRef.current) {
           return Promise.resolve();
@@ -354,170 +342,40 @@ export const useProductionResultOperations = (
             return Promise.resolve();
           }
 
-          // 불량수량이 0보다 큰데 불량정보가 없는 경우 불량정보 입력 모달 표시
-          if (currentRow.defectQty > 0 && (!defectInfosForSave || defectInfosForSave.length === 0)) {
-            // 불량정보 모달 표시
-            openDefectInfoModal(currentRow);
-            isLoadingRef.current = false;
+          isLoadingRef.current = true;
 
-            // Promise 반환하여 모달 처리 완료 후 계속 진행
-            return new Promise((resolve, reject) => {
-              // 불량정보가 저장된 후 실행할 액션 저장
-              setModalResolveReject({
-                resolve,
-                reject,
-                // saveAction에 최신 불량정보를 전달받도록 수정
-                saveAction: (latestDefectInfos) => {
-                  isLoadingRef.current = true;
-                  
-                  // 여기서 latestDefectInfos는 handleSaveDefectInfos에서 생성된 최신 불량정보
-                  // Promise가 반환되면 resolve하여 실제 값을 추출
-                  const processDefectInfos = (defectsPromise) => {
-                    if (defectsPromise && typeof defectsPromise.then === 'function') {
-                      return defectsPromise.then(defects => {
-                        return defects || [];
-                      });
-                    }
-                    return Promise.resolve(defectsPromise || []);
-                  };
-                  
-                  processDefectInfos(latestDefectInfos).then(resolvedDefects => {
-                    // 최종 불량정보 (Promise에서 추출된 값 또는 현재 상태의 값)
-                    const finalDefectInfos = resolvedDefects && resolvedDefects.length > 0 
-                      ? resolvedDefects 
-                      : defectInfosForSave || [];
-                      
-                    if (finalDefectInfos.length === 0 && currentRow.defectQty > 0) {
-                      Message.showWarning('불량수량이 입력되었으나 불량정보가 없습니다. 불량정보를 입력해주세요.');
-                      isLoadingRef.current = false;
-                      resolve();
-                      return;
-                    }
-                    
-                    saveProductionResult(
-                        !currentRow.prodResultId,
-                        currentRow,
-                        selectedWorkOrder || {productId: currentRow.productId}, // 작업지시가 없으면 생산실적의 제품ID 사용
-                        finalDefectInfos, // 최종 확정된 불량정보 사용
-                        () => {
-                          // 성공 메시지 표시 후, 생산실적 저장 이후 항상 상태 초기화
-                          setTimeout(() => {
-                            // 작업지시 목록 갱신
-                            refreshWorkOrderList();
-                            // 항상 오른쪽 그리드 초기화
-                            setSelectedWorkOrder(null);
-                            // setProductionResult가 함수인지 확인 후 호출
-                            if (typeof setProductionResult === 'function') {
-                              setProductionResult(null);
-                            } else {
-                              console.error('setProductionResult is not a function:', setProductionResult);
-                            }
-                            // setProductionResultList가 함수인지 확인 후 호출
-                            if (typeof setProductionResultList === 'function') {
-                              setProductionResultList([]);
-                            } else {
-                              console.warn('setProductionResultList is not a function');
-                            }
-                            // 불량정보 상태 초기화
-                            setDefectInfosForSave([]);
-                            isLoadingRef.current = false;
-                            resolve();
-                          }, 500);
-                        }
-                    ).catch(error => {
-                      console.error("Error during saveProductionResult:", error);
-                      Swal.fire({
-                        title: '저장 실패',
-                        text: '생산실적 저장 중 오류가 발생했습니다.',
-                        icon: 'error',
-                        confirmButtonText: '확인'
-                      });
-                      isLoadingRef.current = false;
-                      resolve();
-                    });
-                  });
-                }
-              });
-            });
+          // 불량수량이 있는 경우 불량정보 모달 표시
+          if (currentRow.defectQty > 0) {
+            setCurrentProductionResult(currentRow);
+            openDefectInfoModal(currentRow);
+            return;
           }
 
-          // 생산실적 데이터 준비
-          const isNewResult = !currentRow.prodResultId;
-          const productionInfo = selectedWorkOrder
-              || {productId: currentRow.productId}; // 작업지시가 없으면 생산실적의 제품ID 사용
-              
-          // 불량수량이 있지만 불량정보가 없는 경우 빈 배열 전달
-          const finalDefectInfos = currentRow.defectQty > 0 
-            ? (defectInfosForSave && defectInfosForSave.length > 0 ? defectInfosForSave : [])
-            : []; // 불량수량이 0이면 빈 배열
-            
-          return saveProductionResult(
-              isNewResult,
+          // 불량수량이 없는 경우 바로 저장
+          await saveProductionResult(
+              true,
               currentRow,
-              productionInfo,
-              finalDefectInfos, // 준비된 불량정보 사용
+              selectedWorkOrder,
+              [],
               () => {
-                // 성공 메시지 표시 후, 생산실적 저장 이후 항상 상태 초기화
+                // 성공 후 작업지시 목록 새로 조회 및 생산실적 목록 초기화
                 setTimeout(() => {
-                  // 작업지시 목록 갱신
                   refreshWorkOrderList();
-
-                  // 항상 오른쪽 그리드 초기화
                   setSelectedWorkOrder(null);
-                  
-                  // setProductionResult가 함수인지 확인 후 호출
-                  if (typeof setProductionResult === 'function') {
-                    setProductionResult(null);
-                  } else {
-                    console.error('setProductionResult is not a function:', setProductionResult);
-                  }
-                  
-                  // setProductionResultList가 함수인지 확인 후 호출
-                  if (typeof setProductionResultList === 'function') {
-                    setProductionResultList([]);
-                  } else {
-                    console.warn('setProductionResultList is not a function');
-                  }
-
-                  // 불량정보 상태 초기화
+                  setProductionResult(null);
+                  setProductionResultList([]);
                   setDefectInfosForSave([]);
                   isLoadingRef.current = false;
                 }, 500);
               }
-          ).catch(error => {
-            console.error("Error during saveProductionResult:", error);
-            isLoadingRef.current = false;
-
-            if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-              const errorMessage = error.graphQLErrors[0].message;
-
-              if (errorMessage.includes('작업지시수량') && errorMessage.includes(
-                  '초과')) {
-                Message.showError({message: errorMessage});
-              } else {
-                Message.showError({message: '생산실적 저장 중 오류가 발생했습니다.'});
-              }
-            } else {
-              Message.showError({message: '생산실적 저장 중 오류가 발생했습니다.'});
-            }
-            return Promise.resolve();
-          });
+          );
         } catch (error) {
-          console.error("Unexpected error in saveResult:", error);
-          Message.showError({message: '저장 중 오류가 발생했습니다.'});
+          console.error('Error saving production result:', error);
+          Message.showError({message: '생산실적 저장 중 오류가 발생했습니다.'});
           isLoadingRef.current = false;
-          return Promise.resolve();
         }
       },
-      [
-        selectedWorkOrder,
-        saveProductionResult,
-        refreshWorkOrderList,
-        setSelectedWorkOrder,
-        defectInfosForSave,
-        openDefectInfoModal,
-        setModalResolveReject
-      ]
+      [saveProductionResult, selectedWorkOrder, refreshWorkOrderList, setSelectedWorkOrder, setDefectInfosForSave]
   );
 
   /**
@@ -560,10 +418,8 @@ export const useProductionResultOperations = (
         deleteProductionResult(
             productionResult.prodResultId,
             () => {
-              // 삭제 후 상태 초기화
+              // 삭제 후 작업지시 목록 새로 조회 및 생산실적 목록 초기화
               refreshWorkOrderList();
-
-              // 항상 오른쪽 그리드 초기화
               setSelectedWorkOrder(null);
               setProductionResult(null);
               setProductionResultList([]);

@@ -182,7 +182,7 @@ const SearchForm = ({ onSearch, onReset, productOptions = [] }) => {
                       {filteredProductOptions.map(option => (
                           <MenuItem
                               key={option.systemMaterialId}
-                              value={option.materialName || ''}
+                              value={option.systemMaterialId}
                           >
                             {/* 보여지는 값은 materialName(제품명)과 userMaterialId(제품ID) */}
                             {option.materialName || ''} {option.userMaterialId ? `(${option.userMaterialId})` : ''}
@@ -214,7 +214,10 @@ const SearchForm = ({ onSearch, onReset, productOptions = [] }) => {
                     >
                       <MenuItem value="">전체</MenuItem>
                       {materialCategoryOptions.map(option => (
-                          <MenuItem key={option.value} value={option.value}>
+                          <MenuItem 
+                            key={option.value} 
+                            value={option.value}
+                          >
                             {option.label}
                           </MenuItem>
                       ))}
