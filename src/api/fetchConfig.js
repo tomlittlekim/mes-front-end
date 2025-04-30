@@ -57,6 +57,46 @@ const createFetch = (withAuth = true) => {
 
 export const dontLoginFetch = createFetch(true);
 export const apiFetch = createFetch(true);
+export const initialFetch = async <T>(
+    method: FetchMethod,
+    path: string,
+    data?: any,
+    customHeaders?: Record<string, string>,
+    options?: FetchOptions
+): Promise<T> => {
+    const defaultHeaders = {
+        "Content-Type": "application/json",
+    };
+
+    const fetchOptions: RequestInit = {
+        method,
+        headers: customHeaders || defaultHeaders,
+        credentials: "include",
+        ...options,
+    };
+
+    if (data && method !== "GET") {
+        fetchOptions.body = JSON.stringify(data);
+    }
+
+    const queryString = method === "GET" && data
+        ? `?${new URLSearchParams(data).toString()}`
+        : "";
+
+    const relativeUrl = `${path}${queryString}`;
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const fullUrl = isLocalhost ? REST_URL + relativeUrl : relativeUrl;
+
+    const response = await fetch(fullUrl, fetchOptions);
+
+    if (!response.ok) {
+        const isUnAuthorized = (response?.status === 401)
+        if (isUnAuthorized) handleTokenExpiration();
+        console.error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response;
+};
 
 // query, mutation 모두 동작함
 export const graphFetch = async <T>(

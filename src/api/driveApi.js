@@ -1,4 +1,4 @@
-import { graphFetch, apiFetch } from '../../src/api/fetchConfig';
+import { graphFetch, initialFetch } from '../../src/api/fetchConfig';
 
 // 모든 파일 목록 조회
 export const getAllFiles = async () => {
@@ -78,8 +78,6 @@ export const updateFiles = async (files) => {
 
 // 파일 다운로드
 export const downloadFile = async (id) => {
-  const response = await fetch(`/api/file/download/${id}`, {
-    responseType: 'blob'
-  });
-  return response;
+  const response = await initialFetch("GET", '/api/drive/get', {id: id})
+  return response.blob();
 };

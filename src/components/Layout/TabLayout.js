@@ -34,7 +34,7 @@ import DefectRatePage from '../../pages/Report/DefectRatePage';
 import InventoryMovementPage from '../../pages/Report/InventoryMovementPage';
 import DailyProductionPage from '../../pages/Report/DailyProductionPage';
 import DriveManagementPage from '../../pages/DriveManagementPage';
-import './TabLayout.css';
+import TransactionStatementPage from '../../pages/TransactionStatementPage';
 import IntegratedMonitoringPage from "../../pages/Monitoring/IntegratedMonitoringPage";
 import KPIMonitoringPage from "../../pages/Monitoring/KPIMonitoringPage";
 
@@ -75,6 +75,7 @@ const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo
 const MemoizedIntegratedMonitoring = typeof IntegratedMonitoringPage === 'function' ? memo(IntegratedMonitoringPage) : IntegratedMonitoringPage;
 const MemoizedKPIMonitoring = typeof KPIMonitoringPage === 'function' ? memo(KPIMonitoringPage) : KPIMonitoringPage;
 const MemoizedDriveManagement = typeof DriveManagementPage === 'function' ? memo(DriveManagementPage) : DriveManagementPage;
+const MemoizedTransactionStatement = typeof TransactionStatementPage === 'function' ? memo(TransactionStatementPage) : TransactionStatementPage;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -106,6 +107,8 @@ const getTabComponent = (tabId) => {
       return <MemoizedOrderRegistration tabId={tabId} />;
     case 'sm-sales':
       return <MemoizedShipmentManagement tabId={tabId} />;
+    case 'sm-transaction':
+      return <MemoizedTransactionStatement tabId={tabId} />;
     case 'mi-inbound':
       return <MemoizedReceivingManagement tabId={tabId} />;
     case 'mi-outbound':
