@@ -430,94 +430,81 @@ const ShipmentManagement = () => {
 
   // 행 수정 처리 - 상세
   const processDetailRowUpdate = async (newRow, oldRow) => {
-    // 품목ID가 변경된 경우
-    if (newRow.systemMaterialId !== oldRow.systemMaterialId) {
-      try {
-        // 품목 정보 조회
+    try {
+      // 기본 업데이트된 row 생성
+      let updatedRow = { ...newRow };
+
+      // 품목ID가 변경된 경우
+      if (newRow.systemMaterialId !== oldRow.systemMaterialId) {
         const materialInfo = await getMaterialByOrderNo(selectedHeader.orderNo);
         setMaterials(materialInfo || []);
         const selectedMaterial = materialInfo.find(m => m.systemMaterialId === newRow.systemMaterialId);
+        
         if (selectedMaterial) {
-          // 창고 정보 조회
           const warehouseInfo = await getWarehouseByMaterialId(newRow.systemMaterialId);
           setWarehouses(warehouseInfo || []);
           
-          // 출하창고가 이미 선택된 경우에만 prepareShipmentDetailsForEntry 호출
           if (newRow.shipmentWarehouse) {
             const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
             if (prepared) {
               const selectedDetail = prepared.find(d => d.systemMaterialId === newRow.systemMaterialId);
               if (selectedDetail) {
-                const updatedRow = { 
-                  ...newRow,
+                updatedRow = { 
+                  ...updatedRow,
                   ...selectedDetail,
                   id: newRow.id
                 };
-                // 수정된 row 추적
-                setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-                return updatedRow;
               }
             }
           }
         }
-      } catch (error) {
-        Message.showError(error);
-        return oldRow;
       }
-    }
 
-    // 출하창고가 변경된 경우
-    if (newRow.shipmentWarehouse !== oldRow.shipmentWarehouse) {
-      try {
-        // 품목ID가 선택된 경우에만 prepareShipmentDetailsForEntry 호출
-        if (newRow.systemMaterialId) {
-          const selectedMaterial = materials.find(m => m.systemMaterialId === newRow.systemMaterialId);
-          
-          if (!selectedMaterial) {
-            Message.showError('선택한 품목에 대한 정보를 찾을 수 없습니다.');
-            return oldRow;
-          }
-
+      // 출하창고가 변경된 경우
+      if (newRow.shipmentWarehouse !== oldRow.shipmentWarehouse && newRow.systemMaterialId) {
+        const selectedMaterial = materials.find(m => m.systemMaterialId === newRow.systemMaterialId);
+        
+        if (selectedMaterial) {
           const prepared = await prepareShipmentDetailsForEntry(selectedHeader.orderNo, selectedMaterial.orderSubNo, newRow.shipmentWarehouse);
-          
-          // prepared가 배열이 아닌 경우 처리
           if (prepared) {
-            const updatedRow = { 
-              ...newRow,
-              ...prepared,  // 전체 데이터를 직접 사용
+            updatedRow = { 
+              ...updatedRow,
+              ...prepared,
               id: newRow.id,
               shipmentWarehouse: newRow.shipmentWarehouse
             };
-            // 수정된 row 추적
-            setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-            return updatedRow;
           }
         }
-      } catch (error) {
-        Message.showError(error);
-        return oldRow;
       }
-    }
 
-    // 금회출하수량 체크
-    if (newRow.field === 'cumulativeShipmentQuantity') {
-      // 재고수량 체크
-      if (newRow.cumulativeShipmentQuantity > newRow.stockQuantity) {
-        Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
-        return oldRow;
+      // 금회출하수량 검증
+      if (newRow.cumulativeShipmentQuantity) {
+        if (newRow.cumulativeShipmentQuantity > newRow.stockQuantity) {
+          Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
+          return oldRow;
+        }
+
+        if (newRow.cumulativeShipmentQuantity > newRow.unshippedQuantity) {
+          Message.showWarning('금회출하수량은 미출하수량을 초과할 수 없습니다.');
+          return oldRow;
+        }
       }
+
+      // 수정된 row 추적
+      setModifiedRows(prev => new Set([...prev, updatedRow.id]));
       
-      // 미출하수량 체크
-      if (newRow.cumulativeShipmentQuantity > newRow.unshippedQuantity) {
-        Message.showWarning('금회출하수량은 미출하수량을 초과할 수 없습니다.');
-        return oldRow;
-      }
-    }
+      // detailRows 상태 업데이트
+      setDetailRows(prevRows => 
+        prevRows.map(row => 
+          row.id === updatedRow.id ? updatedRow : row
+        )
+      );
 
-    const updatedRow = { ...newRow };
-    // 수정된 row 추적
-    setModifiedRows(prev => new Set([...prev, updatedRow.id]));
-    return updatedRow;
+      return updatedRow;
+    } catch (error) {
+      Message.showError(error);
+      return oldRow;
+    }
   };
 
   // 상세 추가 핸들러
@@ -608,7 +595,7 @@ const ShipmentManagement = () => {
   const handleSaveDetail = async () => {
     try {
       setLoading(true);
-      
+      debugger
       // 수정된 row와 신규 row만 필터링
       const rowsToSave = detailRows.filter(row => 
         row.id < 0 || modifiedRows.has(row.id)
@@ -619,7 +606,6 @@ const ShipmentManagement = () => {
         return;
       }
 
-      debugger
       // 필수 필드 체크
       const invalidRows = rowsToSave.filter(row => {
         return !row.shipmentDate || !row.systemMaterialId || 
@@ -634,23 +620,12 @@ const ShipmentManagement = () => {
       // 금회출하수량 체크
       const invalidQuantityRows = rowsToSave.filter(row => {
         const isOverStock = row.cumulativeShipmentQuantity > row.stockQuantity;
-        const isOverUnshipped = row.cumulativeShipmentQuantity > row.unshippedQuantity;
-        return isOverStock || isOverUnshipped;
+        return isOverStock;
       });
 
       if (invalidQuantityRows.length > 0) {
-        const overStockRows = invalidQuantityRows.filter(row => row.cumulativeShipmentQuantity > row.stockQuantity);
-        const overUnshippedRows = invalidQuantityRows.filter(row => row.cumulativeShipmentQuantity > row.unshippedQuantity);
-        
-        if (overStockRows.length > 0) {
-          Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
-          return;
-        }
-        
-        if (overUnshippedRows.length > 0) {
-          Message.showWarning('금회출하수량은 미출하수량을 초과할 수 없습니다.');
-          return;
-        }
+        Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
+        return;
       }
 
       // 저장할 데이터 준비
@@ -663,10 +638,9 @@ const ShipmentManagement = () => {
       await upsertShipmentDetails(dataToSave);
       
       // 저장 성공 후 데이터 리로드
-      const [headers, details, prepared] = await Promise.all([
+      const [headers, details] = await Promise.all([
         getShipmentHeaders(searchParams),
-        getShipmentDetails(selectedHeader.id),
-        prepareShipmentDetailsForEntry(selectedHeader.orderNo)
+        getShipmentDetails(selectedHeader.id)
       ]);
 
       // 헤더 데이터 업데이트
@@ -678,7 +652,6 @@ const ShipmentManagement = () => {
       
       // 상세 데이터 업데이트
       setDetailRows(details || []);
-      setPreparedDetails(prepared || []);
       setIsNewDetailRow(false);
       // 수정된 row 추적 초기화
       setModifiedRows(new Set());
