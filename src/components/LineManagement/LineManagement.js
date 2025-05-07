@@ -115,7 +115,7 @@ const LineManagement = (props) => {
       flex: 1
     },
     { field: 'factoryName', headerName: '공장 명', width: 130 },
-    { field: 'factoryCode', headerName: '공장 코드', width: 100 },
+    // { field: 'factoryCode', headerName: '공장 코드', width: 100 },
     { field: 'lineId', headerName: '라인 ID', width: 100, flex: 1 },
     {
       field: 'lineName',
@@ -506,22 +506,22 @@ const LineManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="factoryCode"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="공장코드"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="공장코드를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="factoryCode"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <TextField*/}
+        {/*        {...field}*/}
+        {/*        label="공장코드"*/}
+        {/*        variant="outlined"*/}
+        {/*        size="small"*/}
+        {/*        fullWidth*/}
+        {/*        placeholder="공장코드를 입력하세요"*/}
+        {/*      />*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
         <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="lineId"

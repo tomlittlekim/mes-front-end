@@ -598,6 +598,77 @@ const EquipmentManagement = (props) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
+              name="equipmentId"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="설비 ID"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="설비ID를 입력하세요"
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="equipmentName"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="설비 명"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="설비명을 입력하세요"
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="equipmentSn"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="설비 S/N"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="설비 S/N을 입력하세요"
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="equipmentType"
+              control={control}
+              render={({ field }) => (
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="equipmentType-label">설비 유형</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="equipmentType-label"
+                        label="설비 유형"
+                    >
+                      <MenuItem value="">전체</MenuItem>
+                      {equipmentTypeOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
             name="factoryId"
             control={control}
             render={({ field }) => (
@@ -657,77 +728,6 @@ const EquipmentManagement = (props) => {
                 fullWidth
                 placeholder="라인명을 입력하세요"
               />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비 ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비 명"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentSn"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비 S/N"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비 S/N을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentType"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="equipmentType-label">설비 유형</InputLabel>
-                <Select
-                  {...field}
-                  labelId="equipmentType-label"
-                  label="설비 유형"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  {equipmentTypeOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             )}
           />
         </Grid>
