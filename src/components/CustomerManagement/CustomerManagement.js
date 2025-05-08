@@ -49,7 +49,7 @@ const CustomerManagement = (props) => {
       vendorId: '',
       vendorName: '',
       ceoName: '',
-      businessType: '',
+      businessRegNo: '',
     }
   });
 
@@ -160,7 +160,7 @@ const CustomerManagement = (props) => {
       vendorId: '',
       vendorName: '',
       ceoName: '',
-      businessType: '',
+      businessRegNo: '',
     });
   };
 
@@ -469,7 +469,7 @@ const CustomerManagement = (props) => {
             onSearch={handleSubmit(handleSearch)}
             onReset={handleReset}
         >
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={3}>
             <Controller
                 name="vendorId"
                 control={control}
@@ -485,7 +485,7 @@ const CustomerManagement = (props) => {
                 )}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={3}>
             <Controller
                 name="vendorName"
                 control={control}
@@ -501,7 +501,7 @@ const CustomerManagement = (props) => {
                 )}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={3}>
             <Controller
                 name="ceoName"
                 control={control}
@@ -517,7 +517,23 @@ const CustomerManagement = (props) => {
                 )}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Controller
+                name="businessRegNo"
+                control={control}
+                render={({ field }) => (
+                    <TextField
+                        {...field}
+                        label="사업자등록번호"
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        placeholder="사업자등록번호를 입력하세요"
+                    />
+                )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
             <Controller
                 name="businessType"
                 control={control}

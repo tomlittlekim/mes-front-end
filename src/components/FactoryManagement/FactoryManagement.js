@@ -431,7 +431,7 @@ const FactoryManagement = (props) => {
         onSearch={handleSubmit(handleSearch)}
         onReset={handleReset}
       >
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
             name="factoryId"
             control={control}
@@ -447,7 +447,7 @@ const FactoryManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
             name="factoryName"
             control={control}
@@ -463,7 +463,7 @@ const FactoryManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
             name="factoryCode"
             control={control}
