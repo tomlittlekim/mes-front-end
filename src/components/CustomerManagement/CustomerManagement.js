@@ -20,7 +20,7 @@ import {graphFetch} from "../../api/fetchConfig";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
 import {deleteVendor, getVendors, saveVendor} from "../../api/standardInfo/customerApi";
-import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow"; // Message 유틸리티 클래스 임포트
+import {fetchGridCodesByCodeClassId, useSelectionModel} from "../../utils/grid/useGridRow"; // Message 유틸리티 클래스 임포트
 
 const CustomerManagement = (props) => {
   // 현재 테마 가져오기
@@ -58,11 +58,16 @@ const CustomerManagement = (props) => {
   const [vendorList, setVendorList] = useState([]);
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
   const [addRows,setAddRows] = useState([]);
-  const [selectedVendor, setSelectedVendor] = useState(null);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   //거래처 유형 리스트 불러오기
   const [vendorTypeOptions, setVendorTypeOptions] = useState([]);
+
+  const {
+    selectionModel,            // 선택된 ID 배열
+    onSelectionModelChange,    // DataGrid에 넘길 핸들러
+    removeSelectedRows
+  } = useSelectionModel([], setAddRows, setUpdatedRows, setVendorList);
 
   useEffect(() => {
     fetchGridCodesByCodeClassId("CD20250331110039125",setVendorTypeOptions)
@@ -188,12 +193,6 @@ const CustomerManagement = (props) => {
     });
   };
 
-  // 거래처 선택 핸들러
-  const handleCustomerSelect = (params) => {
-    const vendor = vendorList.find(c => c.id === params.id);
-    setSelectedVendor(vendor);
-  };
-
   const transformRowForMutation = (row) => ({
     vendorName: row.vendorName,
     vendorType: row.vendorType,
@@ -283,7 +282,7 @@ const CustomerManagement = (props) => {
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (!selectedVendor) {
+    if (selectionModel.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -292,20 +291,6 @@ const CustomerManagement = (props) => {
       });
       return;
     }
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedVendor.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedVendor.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedVendor.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedVendor.id);
-      setUpdatedRows(updatedRowsLit)
-    }
-
 
     Swal.fire({
       title: '삭제 확인',
@@ -320,7 +305,7 @@ const CustomerManagement = (props) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
         deleteVendor(
-            {vendorId: selectedVendor.vendorId}
+            {vendorIds: selectionModel}
         ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -331,9 +316,7 @@ const CustomerManagement = (props) => {
                 });
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = vendorList.filter(f => f.id !== selectedVendor.id);
-                setVendorList(updatedList);
-                setSelectedVendor(null);
+                removeSelectedRows(selectionModel);
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
@@ -373,7 +356,6 @@ const CustomerManagement = (props) => {
     };
 
     setVendorList([newVendor, ...vendorList]);
-    setSelectedVendor(newVendor);
   };
 
   // 거래처 목록 그리드 버튼
@@ -582,8 +564,9 @@ const CustomerManagement = (props) => {
                   columns={customerColumns}
                   buttons={customerGridButtons}
                   height={640}
-                  onRowClick={handleCustomerSelect}
                   gridProps={{
+                    checkboxSelection: true,
+                    onSelectionModelChange: onSelectionModelChange,
                     editMode: 'cell',
                     onProcessUpdate: handleProcessRowUpdate
                   }}
