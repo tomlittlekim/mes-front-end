@@ -24,8 +24,8 @@ const saveWarehouseMutation = `
 `;
 
 const deleteWarehouseMutation = `
-      mutation deleteWarehouse($warehouseId: String!) {
-        deleteWarehouse(warehouseId: $warehouseId)
+      mutation deleteWarehouse($warehouseIds: [String!]!) {
+        deleteWarehouse(warehouseIds: $warehouseIds)
       }
 `;
 

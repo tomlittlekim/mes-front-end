@@ -19,7 +19,11 @@ import Message from "../../utils/message/Message";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
 import {deleteWarehouse, getWarehouse, saveWarehouse} from "../../api/standardInfo/wareHouseApi";
-import {fetchDefaultCodesByCodeClassId, fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
+import {
+  fetchDefaultCodesByCodeClassId,
+  fetchGridCodesByCodeClassId,
+  useSelectionModel
+} from "../../utils/grid/useGridRow";
 import {getGridFactory} from "../../api/standardInfo/factoryApi";
 
 const WarehouseManagement = (props) => {
@@ -41,7 +45,6 @@ const WarehouseManagement = (props) => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [warehouseList, setWarehouseList] = useState([]);
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [addRows, setAddRows] = useState([]);
   const [updatedRows, setUpdatedRows] = useState([]);
 
@@ -50,6 +53,13 @@ const WarehouseManagement = (props) => {
   const [factoryModel,setFactoryModel] = useState([]);
 
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  const {
+    selectionModel,            // 선택된 ID 배열
+    onSelectionModelChange,    // DataGrid에 넘길 핸들러
+    removeSelectedRows
+  } = useSelectionModel([], setAddRows, setUpdatedRows, setWarehouseList);
+
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -200,12 +210,6 @@ const WarehouseManagement = (props) => {
         });
   };
 
-  // 창고 선택 핸들러
-  const handleWarehouseSelect = (params) => {
-    const warehouse = warehouseList.find(w => w.id === params.id);
-    setSelectedWarehouse(warehouse);
-  };
-
   // 행 추가 핸들러
   const handleAddRow = () => {
     const newWarehouse = {
@@ -304,7 +308,7 @@ const WarehouseManagement = (props) => {
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (!selectedWarehouse) {
+    if (selectionModel.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -312,19 +316,6 @@ const WarehouseManagement = (props) => {
         confirmButtonText: '확인'
       });
       return;
-    }
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedWarehouse.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedWarehouse.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedWarehouse.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedWarehouse.id);
-      setUpdatedRows(updatedRowsLit)
     }
 
     Swal.fire({
@@ -340,7 +331,7 @@ const WarehouseManagement = (props) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
         deleteWarehouse(
-            {warehouseId: selectedWarehouse.warehouseId}
+            {warehouseIds: selectionModel}
         ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -351,9 +342,7 @@ const WarehouseManagement = (props) => {
                 });
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = warehouseList.filter(f => f.id !== selectedWarehouse.id);
-                setWarehouseList(updatedList);
-                setSelectedWarehouse(null);
+                removeSelectedRows(selectionModel);
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
@@ -553,8 +542,9 @@ const WarehouseManagement = (props) => {
               columns={warehouseColumns}
               buttons={warehouseGridButtons}
               height={640}
-              onRowClick={handleWarehouseSelect}
               gridProps={{
+                checkboxSelection: true,
+                onSelectionModelChange: onSelectionModelChange,
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate,
                 isCellEditable: (params) => {
