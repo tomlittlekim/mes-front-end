@@ -144,10 +144,6 @@ export function useSelectionModel(
         setSelectionModel(newModel);
     }, []);
 
-    const clearSelection = useCallback(() => {
-        setSelectionModel([]);
-    }, []);
-
     // 훅 안에서 일반 콜백 함수로 선언
     const removeSelectedRows = useCallback((ids) => {
         rowSetters.forEach(setFn =>
@@ -158,7 +154,6 @@ export function useSelectionModel(
     return {
         selectionModel,
         onSelectionModelChange,
-        clearSelection,
         removeSelectedRows
     };
 }

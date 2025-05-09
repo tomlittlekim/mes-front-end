@@ -48,7 +48,6 @@ const FactoryManagement = (props) => {
   const {
     selectionModel,            // 선택된 ID 배열
     onSelectionModelChange,    // DataGrid에 넘길 핸들러
-    clearSelection,             // 선택 초기화 함수
     removeSelectedRows
   } = useSelectionModel([], setAddRows, setUpdatedRows, setFactoryList);
 
@@ -267,7 +266,7 @@ const FactoryManagement = (props) => {
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
                 removeSelectedRows(selectionModel);
-
+                // clearSelection();
                 Swal.fire({
                   icon: 'success',
                   title: '성공',

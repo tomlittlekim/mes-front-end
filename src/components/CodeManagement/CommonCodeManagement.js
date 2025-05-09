@@ -60,7 +60,6 @@ const CommonCodeManagement = (props) => {
   const {
     selectionModel,            // 선택된 ID 배열
     onSelectionModelChange,    // DataGrid에 넘길 핸들러
-    clearSelection,             // 선택 초기화 함수
     removeSelectedRows
   } = useSelectionModel([], setAddCodeRows, setUpdatedCodeRows, setCodes);
 
@@ -406,7 +405,6 @@ const CommonCodeManagement = (props) => {
                   text: '삭제되었습니다.',
                   confirmButtonText: '확인'
                 });
-                clearSelection();
               }
             })
             .catch((error) => {
