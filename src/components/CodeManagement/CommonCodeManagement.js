@@ -19,6 +19,7 @@ import Message from "../../utils/message/Message";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import HelpModal from "../Common/HelpModal";
 import {deleteCode, getCodeClass, getCodeList, saveCode, saveCodeClass} from "../../api/standardInfo/commonCodeApi";
+import {useSelectionModel} from "../../utils/grid/useGridRow";
 
 const CommonCodeManagement = (props) => {
   // 현재 테마 가져오기
@@ -48,13 +49,20 @@ const CommonCodeManagement = (props) => {
   // 선택된 코드 그룹
   const [selectedCodeGroup, setSelectedCodeGroup] = useState(null);
   //선택된 코드
-  const [selectedCode, setSelectedCode] = useState(null);
+  // const [selectedCode, setSelectedCode] = useState(null);
 
   const [addCodeClassRows,setAddCodeClassRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
   const [updatedCodeClassRows, setUpdatedCodeClassRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
 
   const [addCodeRows,setAddCodeRows] = useState([]); // 추가된 코드클레스 필드만 저장하는 객체
   const [updatedCodeRows, setUpdatedCodeRows] = useState([]); // 수정된 코드클레스 필드만 저장하는 객체
+
+  const {
+    selectionModel,            // 선택된 ID 배열
+    onSelectionModelChange,    // DataGrid에 넘길 핸들러
+    clearSelection,             // 선택 초기화 함수
+    removeSelectedRows
+  } = useSelectionModel([], setAddCodeRows, setUpdatedCodeRows, setCodes);
 
   // 코드 그룹 DataGrid 컬럼 정의
   const codeGroupColumns = [
@@ -261,13 +269,6 @@ const CommonCodeManagement = (props) => {
         });
   };
 
-  //코드 선택 핸들러
-  const handleCodeSelect = (params) => {
-    const code = codes.find(c => c.id === params.id);
-    setSelectedCode(code);
-  }
-
-
   // 코드 추가 핸들러
   const handleAddCode = () => {
     if (!selectedCodeGroup) {
@@ -287,7 +288,6 @@ const CommonCodeManagement = (props) => {
       codeName: '',
       codeDesc: '',
       sortOrder: 0,
-      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -364,7 +364,7 @@ const CommonCodeManagement = (props) => {
   // 코드 삭제 핸들러
   const handleDeleteCode = () => {
 
-    if (!selectedCode) {
+    if (selectionModel.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -372,19 +372,6 @@ const CommonCodeManagement = (props) => {
         confirmButtonText: '확인'
       });
       return;
-    }
-
-    const isDeleteAddRows = addCodeRows.find(f => f.id === selectedCode.id)
-    const isDeleteUpdateRows = updatedCodeRows.find(f => f.id === selectedCode.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addCodeRows.filter(f => f.id !== selectedCode.id);
-      setAddCodeRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedCodeRows.filter(f => f.id !== selectedCode.id);
-      setUpdatedCodeRows(updatedRowsLit)
     }
 
     Swal.fire({
@@ -400,7 +387,7 @@ const CommonCodeManagement = (props) => {
       if (result.isConfirmed) {
         // 백엔드 삭제 요청 (GraphQL)
         deleteCode(
-            { codeId: selectedCode.codeId }
+            { codeIds: selectionModel }
         ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -411,15 +398,15 @@ const CommonCodeManagement = (props) => {
                 });
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = codes.filter(f => f.id !== selectedCode.id);
-                setCodes(updatedList);
+                removeSelectedRows(selectionModel);
+
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
                   text: '삭제되었습니다.',
                   confirmButtonText: '확인'
                 });
-                setSelectedCode(null);
+                clearSelection();
               }
             })
             .catch((error) => {
@@ -593,9 +580,6 @@ const CommonCodeManagement = (props) => {
     return { ...oldRow, ...newRow };
   }
 
-
-
-
   return (
       <Box sx={{ p: 0, minHeight: '100vh' }}>
         <Box sx={{
@@ -700,36 +684,18 @@ const CommonCodeManagement = (props) => {
                     buttons={codeButtons}
                     height={630}
                     gridProps={{
+                      checkboxSelection: true,
+                      onSelectionModelChange: onSelectionModelChange,
                       editMode: 'cell',
                       onProcessUpdate: codeRowUpdate
                     }}
-                    onRowClick={handleCodeSelect}
+                    // onRowClick={handleCodeSelect}
                     tabId={props.tabId + "-codes"}
                 />
               </Grid>
             </Grid>
         )}
 
-        {/* 하단 정보 영역 */}
-        {/*<Box mt={2} p={2} sx={{*/}
-        {/*  bgcolor: getBgColor(),*/}
-        {/*  borderRadius: 1,*/}
-        {/*  border: `1px solid ${getBorderColor()}`*/}
-        {/*}}>*/}
-        {/*  <Stack spacing={1}>*/}
-        {/*    <Typography variant="body2" color={getTextColor()}>*/}
-        {/*      • 공통코드관리에서는 시스템에서 사용하는 코드 그룹 및 코드 정보를 등록, 수정, 삭제할 수 있습니다.*/}
-        {/*    </Typography>*/}
-        {/*    <Typography variant="body2" color={getTextColor()}>*/}
-        {/*      • 코드 그룹을 선택하면 해당 그룹에 속한 코드 목록을 확인하고 관리할 수 있습니다.*/}
-        {/*    </Typography>*/}
-        {/*    <Typography variant="body2" color={getTextColor()}>*/}
-        {/*      • 코드는 시스템 전반에서 사용되므로 코드 값과 명칭을 명확하게 입력하고 관리해야 합니다.*/}
-        {/*    </Typography>*/}
-        {/*  </Stack>*/}
-        {/*</Box>*/}
-
-        {/* 도움말 모달 */}
         <HelpModal
             open={isHelpModalOpen}
             onClose={() => setIsHelpModalOpen(false)}

@@ -71,8 +71,8 @@ const saveCodeMutation = `
   `;
 
 const deleteCodeMutation = `
-      mutation DeleteCode($codeId: String!) {
-        deleteCode(codeId: $codeId)
+      mutation DeleteCode($codeIds: [String!]!) {
+        deleteCode(codeIds: $codeIds)
       }
     `;
 
@@ -132,4 +132,4 @@ export const saveCodeClass = (req) =>  graphFetch(saveCodeClassMutation,req)
 
 export const saveCode = (req) => graphFetch(saveCodeMutation,req)
 
-export const deleteCode = (codeId) => graphFetch(deleteCodeMutation, codeId)
+export const deleteCode = (codeIds) => graphFetch(deleteCodeMutation, codeIds)
