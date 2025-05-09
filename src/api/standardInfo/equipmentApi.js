@@ -30,8 +30,8 @@ const saveEquipmentMutation = `
   `;
 
 const deleteEquipmentMutation = `
-      mutation deleteEquipment($equipmentId: String!) {
-        deleteEquipment(equipmentId: $equipmentId)
+      mutation deleteEquipment($equipmentIds: [String!]!) {
+        deleteEquipment(equipmentIds: $equipmentIds)
       }
     `;
 
