@@ -271,6 +271,7 @@ const MuiDataGridWrapper = ({
           data-tab-id={tabId}
         >
           <DataGrid
+            localeText={{ noRowsLabel: '데이터가 존재하지 않습니다.' }}
             columns={centeredColumns}
             rows={rows || []}
             pageSizeOptions={[25, 50, 100]}
