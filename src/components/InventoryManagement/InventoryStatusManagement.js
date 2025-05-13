@@ -17,6 +17,7 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
 
+
 const InventoryStatusManagement = (props) => {
   // 현재 테마 가져오기
   const theme = useTheme();
@@ -48,32 +49,20 @@ const InventoryStatusManagement = (props) => {
   // React Hook Form 설정
   const { control, handleSubmit, reset, getValues, setValue } = useForm({
     defaultValues: {
-      inManagementId: '',
-      inType: '',
-      factoryName: '',
       warehouseName: '',
-      createUser: '',
-      hasInvoice: '',
-      dateRange: {
-        startDate: null,
-        endDate: null
-      }
+      supplierName: '',
+      manufacturerName: '',
+      materialName: '',
     }
   });
 
   // 초기화 함수
   const handleReset = () => {
     reset({
-      inManagementId: '',
-      inType: '',
-      factoryName: '',
       warehouseName: '',
-      createUser: '',
-      hasInvoice: '',
-      dateRange: {
-        startDate: null,
-        endDate: null
-      }
+      supplierName: '',
+      manufacturerName: '',
+      materialName: '',
     });
   };
   
@@ -196,7 +185,7 @@ const InventoryStatusManagement = (props) => {
             id: item.systemMaterialId,
             warehouseName: item.warehouseName,
             supplierName: item.supplierName,
-            manufactureName: item.manufacturerName,
+            manufacturerName: item.manufacturerName,
             systemMaterialId: item.systemMaterialId,
             materialName: item.materialName,
             unit: item.unit,
@@ -270,7 +259,7 @@ const InventoryStatusManagement = (props) => {
       editable: false,
       flex: 1,
       },
-    { field: 'manufactureName', 
+    { field: 'manufacturerName', 
       headerName: '제조사', 
       width: 100,
       headerAlign: 'center',
@@ -411,7 +400,7 @@ const InventoryStatusManagement = (props) => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Controller
-            name="manufactureName"
+            name="manufacturerName"
             control={control}
             render={({ field }) => (
               <TextField

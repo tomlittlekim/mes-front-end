@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import { useGridUtils } from '../../../../utils/grid/useGridUtils';
 import { useGridDataCall } from '../../../../utils/grid/useGridDataCall';
 import { useGridRow } from '../../../../utils/grid/useGridRow';
+import { useGridValidation } from '../../../../utils/grid/useGridValidation';
 import { gql } from '@apollo/client';
 import {
   RAW_SUB_MATERIAL_QUERY,
@@ -11,6 +12,7 @@ import {
 import { SEARCH_CONDITIONS } from '../components/SearchForm';
 import Message from '../../../../utils/message/Message';
 import {getGridCodeList} from "../../../../api/standardInfo/commonCodeApi";
+import { getColumns } from '../components/MaterialGrid';
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${RAW_SUB_MATERIAL_QUERY}`;
@@ -195,9 +197,52 @@ export const useMaterialData = (executeQuery, executeMutation) => {
     return result;
   };
 
+  // 커스텀 validation 함수
+  const customValidation = (row) => {
+    const errors = {};
+    
+    // 수량 validation
+    if (row.minQuantity && row.maxQuantity && Number(row.minQuantity) > Number(row.maxQuantity)) {
+      errors.minQuantity = '최소수량은 최대수량보다 작아야 합니다';
+    }
+
+    return errors;
+  };
+
+  // 드롭다운 옵션들
+  const unitOptions = commonCodes['CD20250402131435416'] || [];
+  const materialCategoryOptions = commonCodes['CD20250428144831625'] || [];
+  const rawSubTypeOptions = commonCodes['CD20250428145908166'] || [];
+
+  const { validateRows, validationErrors, clearValidationErrors } = useGridValidation({
+    columns: getColumns({
+      unitOptions,
+      materialCategoryOptions,
+      rawSubTypeOptions,
+      vendorOptions
+    }),
+    customValidation
+  });
+
   // 저장 처리
   const handleSave = async () => {
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Message.showWarning('변경사항이 존재하지 않습니다.');
+      return;
+    }
+
     const saveData = formatSaveData(addRows, updatedRows);
+    
+    // validation 체크
+    const { isValid } = validateRows([...addRows, ...updatedRows]);
+    
+    if (!isValid) {
+      return;
+    }
+
     await handleGridSave(saveData);
   };
 
@@ -215,7 +260,8 @@ export const useMaterialData = (executeQuery, executeMutation) => {
         systemMaterialIds: deleteData.existingRows.map(row => row.systemMaterialId)
       } : null,
       setDataList: setMaterialList,
-      newRows: deleteData.newRows
+      newRows: deleteData.newRows,
+      refreshFilter: { filter: SEARCH_CONDITIONS }
     });
   };
 
@@ -236,11 +282,13 @@ export const useMaterialData = (executeQuery, executeMutation) => {
     handleDelete,
     generateId,
     //드랍다운 옵션들
-    unitOptions: commonCodes['CD20250402131435416'] || [],
-    materialCategoryOptions: commonCodes['CD20250428144831625'] || [],
-    rawSubTypeOptions: commonCodes['CD20250428145908166'] || [],
+    unitOptions,
+    materialCategoryOptions,
+    rawSubTypeOptions,
     // 거래처 옵션 관련
-    vendorOptions: vendorOptions || []
+    vendorOptions: vendorOptions || [],
+    validationErrors,
+    clearValidationErrors
   };
 };
 

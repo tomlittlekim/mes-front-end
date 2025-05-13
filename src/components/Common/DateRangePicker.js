@@ -170,7 +170,7 @@ const DateRangePicker = ({
     setTempEndDate(null);
     // 초기화 후 바로 적용
     if (onRangeChange) onRangeChange(null, null);
-    setAnchorEl(null);
+    // setAnchorEl(null);
   };
 
   // 미리 정의된 기간 선택 핸들러 (1주일, 1개월, 3개월, 6개월)

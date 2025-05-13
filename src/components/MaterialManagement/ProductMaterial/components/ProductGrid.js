@@ -4,35 +4,36 @@ import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
+import {renderRequiredCell} from "../../../../utils/grid/useGridValidation";
 
 // 그리드 컬럼 정의
-export const COLUMNS = [
+export const getColumns = ({
+    unitOptions = [],
+    materialCategoryOptions = [],
+}) =>[
   {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
   {field: 'materialCategory', headerName: '자재유형', width: 100, type: 'singleSelect',
-    valueOptions: [
-      { value: '잉크', label: '잉크' },
-      { value: '포장재', label: '포장재' },
-    ], editable: true},
-  {field: 'userMaterialId', headerName: '제품ID', width: 120, editable: true },
-  {field: 'materialName', headerName: '자재명', width: 150, editable: true },
+    valueOptions: materialCategoryOptions,
+    editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'materialCategory', { valueOptions: materialCategoryOptions })},
+  {field: 'userMaterialId', headerName: '제품ID', width: 120, editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'userMaterialId')},
+  {field: 'materialName', headerName: '제품명', width: 150, editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'materialName')},
   {field: 'materialStandard', headerName: '규격', width: 120, editable: true },
   {field: 'unit', headerName: '단위', width: 70, type: 'singleSelect',
-    valueOptions: [
-      { value: 'EA', label: '개' },
-      { value: 'roll', label: '롤' },
-      { value: 'bottle', label: '병' },
-      { value: 'pack', label: '팩' },
-      { value: 'can', label: '캔' },
-      { value: 'sheet', label: '장' },
-      { value: 'set', label: '세트' },
-      { value: 'ream', label: '연' },
-      { value: 'pair', label: '쌍' },
-    ], editable: true },
+    valueOptions: unitOptions,
+    editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'unit', { valueOptions: unitOptions }) },
   {field: 'baseQuantity', headerName: '기본수량', width: 80, type: 'number', editable: true },
   { field: 'createUser', headerName: '작성자', width: 80},
-  { field: 'createDate', headerName: '작성일', width: 100},
+  { field: 'createDate', headerName: '작성일', width: 120},
   { field: 'updateUser', headerName: '수정자', width: 80},
-  { field: 'updateDate', headerName: '수정일', width: 100},
+  { field: 'updateDate', headerName: '수정일', width: 120},
 ];
 
 const ProductGrid = ({
@@ -44,7 +45,10 @@ const ProductGrid = ({
   handleDelete,
   setMaterialList,
   generateId,
-  tabId
+  tabId,
+  // 드롭다운 옵션
+  unitOptions,
+  materialCategoryOptions,
 }) => {
   
   // 그리드 버튼 정의
@@ -53,6 +57,12 @@ const ProductGrid = ({
     {label: '저장', onClick: handleSave, icon: <SaveIcon/>},
     {label: '삭제', onClick: handleDelete, icon: <DeleteIcon/>}
   ];
+
+  // 드롭다운 옵션이 포함된 컬럼 생성
+  const columns = getColumns({
+    unitOptions,
+    materialCategoryOptions,
+  });
   
   return (
     <Grid container spacing={2}>
@@ -60,7 +70,7 @@ const ProductGrid = ({
         <EnhancedDataGridWrapper
           title="제품 정보"
           rows={materialList}
-          columns={COLUMNS}
+          columns={columns}
           buttons={gridButtons}
           height={590}
           tabId={tabId + "-materials"}

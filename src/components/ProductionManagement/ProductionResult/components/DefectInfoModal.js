@@ -402,7 +402,7 @@ const DefectInfoModal = ({
                   {editMode ? '불량정보 수정' : '불량정보 추가'}
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={3}>
                     <TextField
                         name="defectQty"
                         label="불량수량"
@@ -430,7 +430,7 @@ const DefectInfoModal = ({
                         size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid item xs={12} sm={5}>
                     <TextField
                         name="resultInfo"
                         label="상세내용(선택)"
@@ -440,24 +440,22 @@ const DefectInfoModal = ({
                         size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} sm={1} display="flex" alignItems="center" justifyContent="center">
-                    <Button
-                        variant="contained"
-                        color={editMode ? "primary" : "success"}
-                        onClick={handleAddDefect}
-                        startIcon={editMode ? <EditIcon /> : <AddIcon />}
-                        size="small"
-                        sx={{
-                          minWidth: '80px',
-                          height: '36px',
-                          padding: '6px 16px',
-                          fontWeight: 'medium'
-                        }}
-                    >
-                      {editMode ? '수정' : '추가'}
-                    </Button>
-                  </Grid>
                 </Grid>
+                <Box display="flex" justifyContent="flex-end" mt={2}>
+                  <Button
+                      variant="contained"
+                      color={editMode ? "primary" : "success"}
+                      onClick={handleAddDefect}
+                      size="medium"
+                      sx={{
+                        minWidth: '80px',
+                        padding: '6px 16px',
+                        fontWeight: 'medium'
+                      }}
+                  >
+                    {editMode ? '수정' : '추가'}
+                  </Button>
+                </Box>
               </Paper>
             </Grid>
 
