@@ -30,6 +30,8 @@ import { GRAPHQL_URL } from '../../config';
 import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
 import { graphFetch } from "../../api/fetchConfig";
+import { toKSTISOString } from './InventoryUtils';
+
 
 
 const OutboundManagement = (props) => {
@@ -220,8 +222,8 @@ const OutboundManagement = (props) => {
         factoryName: data.factoryName || null,
         warehouseName: data.warehouseName || null,
         createUser: data.createUser || null,
-        startDate: data.dateRange?.startDate ? new Date(data.dateRange.startDate).toISOString().split('T')[0] : null,
-        endDate: data.dateRange?.endDate ? new Date(data.dateRange.endDate).toISOString().split('T')[0] : null
+        startDate: data.dateRange?.startDate ? toKSTISOString(new Date(data.dateRange.startDate)) : null,
+        endDate: data.dateRange?.endDate ? toKSTISOString(new Date(data.dateRange.endDate)) : null
       };
 
       console.log('GraphQL 필터:', filter);
@@ -370,7 +372,7 @@ const OutboundManagement = (props) => {
     const newDetailedInventory = {
       id: `NEW_${Date.now()}`,
       outManagementId: selectedOutbound.outManagementId,
-      outInventoryId: crypto.randomUUID(),
+      outInventoryId: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
       supplierName: '자동입력',
       manufactureName: '자동입력',
       systemMaterialId: null,
@@ -846,10 +848,10 @@ const OutboundManagement = (props) => {
     { field: 'materialInfo', headerName: '자재정보', width: 120, headerAlign: 'center', align: 'center', editable: false },
     { field: 'totalPrice', headerName: '총 금액', width: 70, headerAlign: 'center', align: 'center', editable: false }, // 서버 계산 시 editable: false
     { field: 'userName', headerName: '생성자', width: 100, headerAlign: 'center', align: 'center', editable: false },
-    { field: 'createDate', headerName: '생성일', width: 100, headerAlign: 'center', align: 'center', editable: false, type: 'dateTime',
-      valueGetter: (params) => {
-        return params.value ? new Date(params.value) : null;
-      }
+    { field: 'createDate', headerName: '생성일', width: 100, headerAlign: 'center', align: 'center', editable: false,
+      // valueGetter: (params) => {
+      //   return params.value ? new Date(params.value) : null;
+      // }
     }
   ];
   

@@ -611,7 +611,10 @@ const InventoryMovement = (props) => {
   // 선택 완료
   const handleComplete = () => {
     if (materialSelectModal.selectedMaterials.length === 0) {
-      Message.showWarning('최소한 하나의 제품을 선택해주세요.');
+      handleCloseMaterialSelect();
+      setTimeout(() => {
+        Message.showWarning('최소한 하나의 제품을 선택해주세요.');
+      }, 200);
       return;
     }
 
@@ -902,7 +905,7 @@ const InventoryMovement = (props) => {
               </Select>
             </FormControl>
 
-            <FormControl fullWidth disabled={!materialSelectModal.materialType}>
+            {/* <FormControl fullWidth disabled={!materialSelectModal.materialType}>
               <InputLabel>제품 유형</InputLabel>
               <Select
                 value={materialSelectModal.materialCategory}
@@ -918,7 +921,7 @@ const InventoryMovement = (props) => {
                     </MenuItem>
                   ))}
               </Select>
-            </FormControl>
+            </FormControl> */}
 
             {/* 제품 목록 체크박스 */}
             <Box sx={{ mt: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: '300px', overflow: 'auto' }}>

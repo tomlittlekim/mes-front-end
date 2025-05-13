@@ -30,6 +30,7 @@ import { GRAPHQL_URL } from '../../config';
 import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
 import {graphFetch} from "../../api/fetchConfig";
+import { toKSTISOString } from './InventoryUtils';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -218,7 +219,7 @@ const ReceivingManagement = (props) => {
       throw error;
     }
   };
-
+  
   // 검색 실행 함수
   const handleSearch = useCallback(async (data) => {
     console.log(inTypeOptions);
@@ -236,8 +237,8 @@ const ReceivingManagement = (props) => {
         warehouseName: data.warehouseName || null,
         createUser: data.createUser || null,
         hasInvoice: data.hasInvoice || null,
-        startDate: data.dateRange?.startDate ? new Date(data.dateRange.startDate).toISOString().split('T')[0] : null,
-        endDate: data.dateRange?.endDate ? new Date(data.dateRange.endDate).toISOString().split('T')[0] : null
+        startDate: data.dateRange?.startDate ? toKSTISOString(new Date(data.dateRange.startDate)) : null,
+        endDate: data.dateRange?.endDate ? toKSTISOString(new Date(data.dateRange.endDate)) : null,
       };
 
       console.log('GraphQL 필터:', filter);
