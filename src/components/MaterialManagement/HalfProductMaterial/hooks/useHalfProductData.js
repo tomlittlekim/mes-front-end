@@ -141,6 +141,13 @@ export const useHalfProductData = (executeQuery, executeMutation) => {
 
   // 저장 처리
   const handleSave = async () => {
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Message.showWarning('변경사항이 존재하지 않습니다.');
+      return;
+    }
     const saveData = formatSaveData(addRows, updatedRows);
     await handleGridSave(saveData);
   };
