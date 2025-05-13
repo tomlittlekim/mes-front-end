@@ -79,9 +79,9 @@ export const getColumns = ({
     editable: true
   },
   { field: 'createUser', headerName: '작성자', width: 80},
-  { field: 'createDate', headerName: '작성일', width: 100},
+  { field: 'createDate', headerName: '작성일', width: 120},
   { field: 'updateUser', headerName: '수정자', width: 80},
-  { field: 'updateDate', headerName: '수정일', width: 100},
+  { field: 'updateDate', headerName: '수정일', width: 120},
 ];
 
 const MaterialGrid = ({
