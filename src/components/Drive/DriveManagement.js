@@ -17,7 +17,7 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
+import { EnhancedDataGridWrapper } from '../Common';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -410,25 +410,28 @@ const DriveManagement = () => {
         </Box>
 
         <Box sx={{ flex: 1, width: '100%' }}>
-          <DataGrid
+          <EnhancedDataGridWrapper
             rows={files}
             columns={columns}
             loading={loading}
-            getRowId={(row) => row.id}
-            disableSelectionOnClick
-            autoPageSize
-            sortingMode="server"
-            rowHeight={40}
-            headerHeight={40}
-            processRowUpdate={processRowUpdate}
-            onProcessRowUpdateError={handleProcessRowUpdateError}
-            experimentalFeatures={{ newEditingApi: true }}
-            initialState={{
-              sorting: {
-                sortModel: [{ field: 'name', sort: 'asc' }],
-              },
+            hideToolbar
+            gridProps={{
+              getRowId: (row) => row.id,
+              disableSelectionOnClick: true,
+              autoPageSize: true,
+              sortingMode: 'server',
+              rowHeight: 40,
+              headerHeight: 40,
+              processRowUpdate: processRowUpdate,
+              onProcessRowUpdateError: handleProcessRowUpdateError,
+              experimentalFeatures: { newEditingApi: true },
+              initialState: {
+                sorting: {
+                  sortModel: [{ field: 'name', sort: 'asc' }],
+                },
+              }
             }}
-            sx={{
+            customStyle={{
               border: 'none',
               '& .MuiDataGrid-cell': {
                 borderBottom: '1px solid rgba(224, 224, 224, 0.2)',
