@@ -158,6 +158,14 @@ export const useBomDetailData = (executeQuery, executeMutation, selectedBom) => 
     // BOM 상세 저장 처리
     const handleDetailSave = async (selectedBomId) => {
         if (!selectedBomId) return false;
+
+        const addRowQty = addRows.length;
+        const updateRowQty = updatedRows.length;
+
+        if(addRowQty + updateRowQty === 0 ){
+            Message.showWarning('변경사항이 존재하지 않습니다.');
+            return;
+        }
         
         const { createdRows: newCreatedRows, updatedRows: newUpdatedRows } = formatSaveData(addRows, updatedRows);
 
