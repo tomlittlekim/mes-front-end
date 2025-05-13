@@ -592,12 +592,8 @@ const ShipmentManagement = () => {
           
           // 상세 데이터 재조회
           if (updatedHeader) {
-            const [details, prepared] = await Promise.all([
-              getShipmentDetails(updatedHeader.id),
-              prepareShipmentDetailsForEntry(updatedHeader.orderNo)
-            ]);
+            const details = await getShipmentDetails(updatedHeader.id);
             setDetailRows(details || []);
-            setPreparedDetails(prepared || []);
           } else {
             setDetailRows([]);
             setPreparedDetails([]);
@@ -616,7 +612,6 @@ const ShipmentManagement = () => {
   const handleSaveDetail = async () => {
     try {
       setLoading(true);
-      debugger
       // 수정된 row와 신규 row만 필터링
       const rowsToSave = detailRows.filter(row => 
         row.id < 0 || modifiedRows.has(row.id)
