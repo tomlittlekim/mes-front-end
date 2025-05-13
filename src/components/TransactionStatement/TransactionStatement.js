@@ -345,7 +345,7 @@ const TransactionStatement = () => {
     Message.showDeleteConfirm(async () => {
       try {
         setLoading(true);
-        await deleteTransactionStatement(selectedHeader.id);
+        await deleteTransactionStatement(selectedHeader.orderNo);
         Message.showSuccess('거래명세서 삭제 성공', async () => {
           const headers = await getTransactionStatementHeaders(searchParams);
           setHeaderRows(headers || []);

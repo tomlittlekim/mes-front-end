@@ -86,15 +86,15 @@ export const getTransactionStatementDetails = async (orderNo) => {
  * @param {number} headerId - 거래명세서 헤더 ID
  * @returns {Promise<string>} 삭제 결과 메시지
  */
-export const deleteTransactionStatement = async (headerId) => {
+export const deleteTransactionStatement = async (orderNo) => {
   const query = `
-    mutation DeleteTransactionStatement($headerId: Int!) {
-      deleteTransactionStatement(headerId: $headerId)
+    mutation deleteTransactionStatement($orderNo: String!) {
+      deleteTransactionStatement(orderNo: $orderNo)
     }
   `;
 
   const variables = {
-    headerId
+    orderNo
   };
 
   const response = await graphFetch(query, variables);
