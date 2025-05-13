@@ -60,11 +60,11 @@ const SearchForm = ({ control, productOptions = [], workTypeOptions = [] }) => {
               control={control}
               render={({ field }) => (
                   <FormControl variant="outlined" size="small" fullWidth>
-                    <InputLabel id="product-label">제품ID</InputLabel>
+                    <InputLabel id="product-label">제품</InputLabel>
                     <Select
                         {...field}
                         labelId="product-label"
-                        label="제품ID"
+                        label="제품"
                     >
                       <MenuItem value="">전체</MenuItem>
                       {productOptions.map(option => (
