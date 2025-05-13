@@ -36,7 +36,10 @@ const HalfProductManagement = ({ tabId }) => {
     handleSearch,
     handleSave,
     handleDelete,
-    generateId
+    generateId,
+    // 드롭다운 옵션들
+    unitOptions,
+    materialCategoryOptions,
   } = useHalfProductData(executeQuery, executeMutation);
 
   /** 초기 데이터 로드 */
@@ -69,6 +72,9 @@ const HalfProductManagement = ({ tabId }) => {
           setMaterialList={setMaterialList}
           generateId={generateId}
           tabId={tabId}
+            // 드롭다운 옵션 전달
+          unitOptions={unitOptions}
+          materialCategoryOptions={materialCategoryOptions}
         />
       )}
       
