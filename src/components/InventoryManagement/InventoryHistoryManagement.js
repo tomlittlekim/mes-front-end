@@ -25,6 +25,8 @@ import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
 import ko from "date-fns/locale/ko";
+import { toKSTISOString } from './InventoryUtils';
+
 
 
 const InventoryHistoryManagement = (props) => {
@@ -133,21 +135,14 @@ const InventoryHistoryManagement = (props) => {
         warehouseName: data.warehouseName || null,
         supplierName: data.supplierName || null,
         manufacturerName: data.manufacturerName || null,
+        startDate: data.dateRange?.startDate ? toKSTISOString(new Date(data.dateRange.startDate)) : null,
+        endDate: data.dateRange?.endDate ? toKSTISOString(new Date(data.dateRange.endDate)) : null,
         // 필드명을 백엔드 DTO와 일치시킴
       };
 
       // 자재명이 있는 경우에만 materialNames 필드 추가
       if (data.materialName && data.materialName.trim() !== '') {
         filter.materialNames = [data.materialName.trim()];
-      }
-      
-      // 날짜 필드 추가
-      if (data.dateRange?.startDate) {
-        filter.startDate = new Date(data.dateRange.startDate).toISOString().split('T')[0];
-      }
-      
-      if (data.dateRange?.endDate) {
-        filter.endDate = new Date(data.dateRange.endDate).toISOString().split('T')[0];
       }
 
       console.log('GraphQL 필터:', filter);

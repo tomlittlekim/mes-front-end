@@ -20,6 +20,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../Common/HelpModal';
 import Message from "../../utils/message/Message";
 import {deleteFactory, getFactory, saveFactory} from "../../api/standardInfo/factoryApi";
+import {useSelectionModel} from "../../utils/grid/useGridRow";
 
 const FactoryManagement = (props) => {
   // 현재 테마 가져오기
@@ -37,16 +38,18 @@ const FactoryManagement = (props) => {
   });
   
   // 상태 관리
-  const [selectedFactory, setSelectedFactory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [factoryList, setFactoryList] = useState([]);
   const [updatedRows, setUpdatedRows] = useState([]); // 수정된 필드만 저장하는 객체
   const [addRows,setAddRows] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링용 키
-
-  // 더미 데이터
-  const [factoryList, setFactoryList] = useState([]);
-
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  const {
+    selectionModel,            // 선택된 ID 배열
+    onSelectionModelChange,    // DataGrid에 넘길 핸들러
+    removeSelectedRows
+  } = useSelectionModel([], setAddRows, setUpdatedRows, setFactoryList);
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -139,12 +142,6 @@ const FactoryManagement = (props) => {
     });
   };
 
-  // 공장 선택 핸들러
-  const handleFactorySelect = (params) => {
-    const factory = factoryList.find(f => f.id === params.id);
-    setSelectedFactory(factory);
-  };
-
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
 
@@ -233,7 +230,7 @@ const FactoryManagement = (props) => {
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (!selectedFactory) {
+    if (selectionModel.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -241,19 +238,6 @@ const FactoryManagement = (props) => {
         confirmButtonText: '확인'
       });
       return;
-    }
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedFactory.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedFactory.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedFactory.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedFactory.id);
-      setUpdatedRows(updatedRowsLit)
     }
 
     Swal.fire({
@@ -270,7 +254,7 @@ const FactoryManagement = (props) => {
         // 백엔드 삭제 요청 (GraphQL)
 
         deleteFactory(
-            {factoryId: selectedFactory.factoryId}
+            {factoryIds: selectionModel}
         ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -281,8 +265,8 @@ const FactoryManagement = (props) => {
                 });
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = factoryList.filter(f => f.id !== selectedFactory.id);
-                setFactoryList(updatedList);
+                removeSelectedRows(selectionModel);
+                // clearSelection();
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
@@ -431,7 +415,7 @@ const FactoryManagement = (props) => {
         onSearch={handleSubmit(handleSearch)}
         onReset={handleReset}
       >
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
             name="factoryId"
             control={control}
@@ -447,7 +431,7 @@ const FactoryManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
             name="factoryName"
             control={control}
@@ -463,7 +447,7 @@ const FactoryManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Controller
             name="factoryCode"
             control={control}
@@ -479,28 +463,6 @@ const FactoryManagement = (props) => {
             )}
           />
         </Grid>
-        {/*<Grid item xs={12} sm={6} md={3}>*/}
-        {/*  <Controller*/}
-        {/*    name="flagActive"*/}
-        {/*    control={control}*/}
-        {/*    render={({ field }) => (*/}
-        {/*      <FormControl variant="outlined" size="small" fullWidth>*/}
-        {/*        <InputLabel id="flagActive-label" shrink>사용여부</InputLabel>*/}
-        {/*        <Select*/}
-        {/*          {...field}*/}
-        {/*          labelId="flagActive-label"*/}
-        {/*          label="사용여부"*/}
-        {/*          displayEmpty*/}
-        {/*          notched*/}
-        {/*        >*/}
-        {/*          <MenuItem value={null}>전체</MenuItem>*/}
-        {/*          <MenuItem value="Y">사용</MenuItem>*/}
-        {/*          <MenuItem value="N">미사용</MenuItem>*/}
-        {/*        </Select>*/}
-        {/*      </FormControl>*/}
-        {/*    )}*/}
-        {/*  />*/}
-        {/*</Grid>*/}
       </SearchCondition>
       
       {/* 그리드 영역 */}
@@ -512,36 +474,17 @@ const FactoryManagement = (props) => {
               columns={factoryColumns}
               buttons={factoryGridButtons}
               height={640}
-              onRowClick={handleFactorySelect}
               tabId={props.tabId + "-factories"}
               gridProps={{
+                checkboxSelection: true,
+                onSelectionModelChange: onSelectionModelChange,
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}
             />
           </Grid>
       )}
-      
-      {/* 하단 정보 영역 */}
-      {/*<Box mt={2} p={2} sx={{ */}
-      {/*  bgcolor: getBgColor(), */}
-      {/*  borderRadius: 1,*/}
-      {/*  border: `1px solid ${getBorderColor()}`*/}
-      {/*}}>*/}
-      {/*  <Stack spacing={1}>*/}
-      {/*    <Typography variant="body2" color={getTextColor()}>*/}
-      {/*      • 공장관리에서는 기업의 공장 시설 정보를 등록, 수정, 삭제할 수 있습니다.*/}
-      {/*    </Typography>*/}
-      {/*    <Typography variant="body2" color={getTextColor()}>*/}
-      {/*      • 공장 목록에서 공장을 선택하면 해당 공장의 상세 정보를 확인하고 관리할 수 있습니다.*/}
-      {/*    </Typography>*/}
-      {/*    <Typography variant="body2" color={getTextColor()}>*/}
-      {/*      • 공장별 위치, 면적, 가동 상태 등 기본 정보를 관리하여 생산 환경을 효율적으로 관리할 수 있습니다.*/}
-      {/*    </Typography>*/}
-      {/*  </Stack>*/}
-      {/*</Box>*/}
 
-      {/* 도움말 모달 */}
       <HelpModal
         open={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}

@@ -63,6 +63,7 @@ export const HALF_MATERIAL_QUERY = `
             unit
             minQuantity
             maxQuantity
+            baseQuantity
             manufacturerName
             supplierId
             flagActive

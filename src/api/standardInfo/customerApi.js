@@ -26,8 +26,8 @@ const saveVendorMutation = `
   `;
 
 const deleteVendorMutation = `
-      mutation DeleteVendor($vendorId: String!) {
-        deleteVendor(vendorId: $vendorId)
+      mutation DeleteVendor($vendorIds: [String!]!) {
+        deleteVendor(vendorIds: $vendorIds)
       }
     `;
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { useGridUtils } from '../../../../utils/grid/useGridUtils';
 import { useGridDataCall } from '../../../../utils/grid/useGridDataCall';
 import { useGridRow } from '../../../../utils/grid/useGridRow';
@@ -10,6 +10,9 @@ import {
 } from '../../../../graphql-queries/material-master/materialQueries';
 import { SEARCH_CONDITIONS } from '../components/SearchForm';
 import Message from '../../../../utils/message/Message';
+import {getGridCodeList} from "../../../../api/standardInfo/commonCodeApi";
+import {useGridValidation} from "../../../../utils/grid/useGridValidation";
+import {getColumns} from "../components/HalfProductGrid";
 
 // GraphQL 쿼리 정의
 const MATERIAL_GET = gql`${HALF_MATERIAL_QUERY}`;
@@ -36,6 +39,26 @@ export const NEW_ROW_STRUCTURE = {
 export const useHalfProductData = (executeQuery, executeMutation) => {
   const [materialList, setMaterialList] = useState([]);
   const { generateId, formatDateToYYYYMMDD, formatGridData } = useGridUtils();
+  const [commonCodes, setCommonCodes] = useState({});
+
+  // 공통코드 로드
+  useEffect(() => {
+    const loadCommonCodes = async () => {
+      const codeClassIds = [
+        'CD20250402131435416', // 단위
+        'CD20250428144831625', //자재유형
+      ];
+
+      try {
+        const codes = await getGridCodeList(codeClassIds);
+        setCommonCodes(codes);
+      } catch (error) {
+        console.error('공통코드 로드 실패:', error);
+      }
+    };
+
+    loadCommonCodes();
+  }, []);
   
   // 데이터 포맷팅 함수 정의
   const formatMaterialData = (data) => formatGridData(data, 'getHalfMaterials', material => ({
@@ -139,9 +162,43 @@ export const useHalfProductData = (executeQuery, executeMutation) => {
     return result;
   };
 
+  // 커스텀 validation 함수
+  const customValidation = (row) => {
+    const errors = {};
+
+    return errors;
+  };
+
+  // 드롭다운 옵션들
+  const unitOptions = commonCodes['CD20250402131435416'] || [];
+  const materialCategoryOptions = commonCodes['CD20250428144831625'] || [];
+
+  const { validateRows, validationErrors, clearValidationErrors } = useGridValidation({
+    columns: getColumns({
+      unitOptions,
+      materialCategoryOptions
+    }),
+    customValidation
+  });
+
   // 저장 처리
   const handleSave = async () => {
+    const addRowQty = addRows.length;
+    const updateRowQty = updatedRows.length;
+
+    if(addRowQty + updateRowQty === 0 ){
+      Message.showWarning('변경사항이 존재하지 않습니다.');
+      return;
+    }
     const saveData = formatSaveData(addRows, updatedRows);
+
+    // validation 체크
+    const { isValid } = validateRows([...addRows, ...updatedRows]);
+
+    if (!isValid) {
+      return;
+    }
+
     await handleGridSave(saveData);
   };
 
@@ -159,7 +216,8 @@ export const useHalfProductData = (executeQuery, executeMutation) => {
         systemMaterialIds: deleteData.existingRows.map(row => row.systemMaterialId)
       } : null,
       setDataList: setMaterialList,
-      newRows: deleteData.newRows
+      newRows: deleteData.newRows,
+      refreshFilter: { filter: SEARCH_CONDITIONS }
     });
   };
 
@@ -178,7 +236,10 @@ export const useHalfProductData = (executeQuery, executeMutation) => {
     handleSearch,
     handleSave,
     handleDelete,
-    generateId
+    generateId,
+    //드랍다운 옵션들
+    unitOptions,
+    materialCategoryOptions,
   };
 };
 

@@ -577,7 +577,10 @@ const PlanVsActualCombined = (props) => {
   // 선택 완료
   const handleComplete = () => {
     if (materialSelectModal.selectedMaterials.length === 0) {
-      Message.showWarning('최소한 하나의 자재를 선택해주세요.');
+      handleCloseMaterialSelect();
+      setTimeout(() => {
+        Message.showWarning('최소한 하나의 제품을 선택해주세요.');
+      }, 200);
       return;
     }
 

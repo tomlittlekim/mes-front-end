@@ -1,10 +1,11 @@
 import React from 'react';
-import { Grid } from '@mui/material';
+import { Grid, Box } from '@mui/material';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { materialTypeRenderCell } from '../../editors/cellRenderEditor';
+import { renderRequiredCell } from '../../../../utils/grid/useGridValidation';
 
 // 그리드 컬럼 정의
 export const getColumns = ({
@@ -20,7 +21,13 @@ export const getColumns = ({
     type: 'singleSelect',
     valueOptions: rawSubTypeOptions,
     editable: true,
-    renderCell: materialTypeRenderCell
+    required: true,
+    renderCell: (params) => {
+      if (!params.value) {
+        return <Box sx={{ color: 'error.main', fontWeight: 'bold' }}>필수</Box>;
+      }
+      return materialTypeRenderCell(params);
+    }
   },
   {
     field: 'materialCategory', 
@@ -28,11 +35,27 @@ export const getColumns = ({
     width: 100, 
     type: 'singleSelect',
     valueOptions: materialCategoryOptions,
-    editable: true
+    editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'materialCategory', { valueOptions: materialCategoryOptions })
   },
   {field: 'systemMaterialId', headerName: '시스템자재ID', width: 120},
-  {field: 'userMaterialId', headerName: '사용자자재ID', width: 120, editable: true},
-  {field: 'materialName', headerName: '자재명', width: 150, editable: true},
+  {
+    field: 'userMaterialId', 
+    headerName: '사용자자재ID', 
+    width: 120, 
+    editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'userMaterialId')
+  },
+  {
+    field: 'materialName', 
+    headerName: '자재명', 
+    width: 150, 
+    editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'materialName')
+  },
   {field: 'materialStandard', headerName: '규격', width: 120, editable: true},
   {
     field: 'unit', 
@@ -40,7 +63,9 @@ export const getColumns = ({
     width: 70, 
     type: 'singleSelect',
     valueOptions: unitOptions,
-    editable: true
+    editable: true,
+    required: true,
+    renderCell: (params) => renderRequiredCell(params, 'unit', { valueOptions: unitOptions })
   },
   {field: 'minQuantity', headerName: '최소수량', width: 80, type: 'number', editable: true},
   {field: 'maxQuantity', headerName: '최대수량', width: 80, type: 'number', editable: true},
@@ -54,9 +79,9 @@ export const getColumns = ({
     editable: true
   },
   { field: 'createUser', headerName: '작성자', width: 80},
-  { field: 'createDate', headerName: '작성일', width: 100},
+  { field: 'createDate', headerName: '작성일', width: 120},
   { field: 'updateUser', headerName: '수정자', width: 80},
-  { field: 'updateDate', headerName: '수정일', width: 100},
+  { field: 'updateDate', headerName: '수정일', width: 120},
 ];
 
 const MaterialGrid = ({

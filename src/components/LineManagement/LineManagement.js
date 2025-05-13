@@ -21,6 +21,7 @@ import HelpModal from "../Common/HelpModal";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {deleteLine, getLines, saveLine} from "../../api/standardInfo/lineApi";
 import {getGridFactory} from "../../api/standardInfo/factoryApi";
+import {useSelectionModel} from "../../utils/grid/useGridRow";
 
 const LineManagement = (props) => {
   // 현재 테마 가져오기
@@ -44,11 +45,16 @@ const LineManagement = (props) => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [lineList, setLineList] = useState([]);
-  const [selectedLine, setSelectedLine] = useState(null);
   const [addRows, setAddRows] = useState([]);
   const [updatedRows, setUpdatedRows] = useState([]);
   const [factoryTypeOptions, setFactoryTypeOptions] = useState([]);
   const [factoryModel,setFactoryModel] = useState([]);
+
+  const {
+    selectionModel,            // 선택된 ID 배열
+    onSelectionModelChange,    // DataGrid에 넘길 핸들러
+    removeSelectedRows
+  } = useSelectionModel([], setAddRows, setUpdatedRows, setLineList);
 
   useEffect(() => {
     getGridFactory()
@@ -115,7 +121,7 @@ const LineManagement = (props) => {
       flex: 1
     },
     { field: 'factoryName', headerName: '공장 명', width: 130 },
-    { field: 'factoryCode', headerName: '공장 코드', width: 100 },
+    // { field: 'factoryCode', headerName: '공장 코드', width: 100 },
     { field: 'lineId', headerName: '라인 ID', width: 100, flex: 1 },
     {
       field: 'lineName',
@@ -179,12 +185,6 @@ const LineManagement = (props) => {
     });
   };
 
-  // 라인 선택 핸들러
-  const handleLineSelect = (params) => {
-    const line = lineList.find(l => l.id === params.id);
-    setSelectedLine(line);
-  };
-
   // 등록 버튼 클릭 핸들러
   const handleAdd = () => {
     const newLine = {
@@ -195,7 +195,6 @@ const LineManagement = (props) => {
       lineId: '자동입력',
       lineName: '',
       lineDesc: '',
-      // flagActive: 'Y',
       createUser: '자동입력',
       createDate: '자동입력',
       updateUser: '자동입력',
@@ -271,7 +270,7 @@ const LineManagement = (props) => {
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (!selectedLine) {
+    if (selectionModel.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -280,20 +279,6 @@ const LineManagement = (props) => {
       });
       return;
     }
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedLine.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedLine.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedLine.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedLine.id);
-      setUpdatedRows(updatedRowsLit)
-    }
-
 
     Swal.fire({
       title: '삭제 확인',
@@ -309,7 +294,7 @@ const LineManagement = (props) => {
         // 백엔드 삭제 요청 (GraphQL)
 
         deleteLine(
-            { lineId: selectedLine.lineId }
+            { lineIds: selectionModel }
         ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -320,9 +305,7 @@ const LineManagement = (props) => {
                 });
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = lineList.filter(f => f.id !== selectedLine.id);
-                setLineList(updatedList);
-                setSelectedLine(null);
+                removeSelectedRows(selectionModel);
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
@@ -506,22 +489,22 @@ const LineManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="factoryCode"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="공장코드"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="공장코드를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
+        {/*<Grid item xs={12} sm={6} md={3}>*/}
+        {/*  <Controller*/}
+        {/*    name="factoryCode"*/}
+        {/*    control={control}*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <TextField*/}
+        {/*        {...field}*/}
+        {/*        label="공장코드"*/}
+        {/*        variant="outlined"*/}
+        {/*        size="small"*/}
+        {/*        fullWidth*/}
+        {/*        placeholder="공장코드를 입력하세요"*/}
+        {/*      />*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*</Grid>*/}
         <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="lineId"
@@ -609,8 +592,9 @@ const LineManagement = (props) => {
               columns={lineColumns}
               buttons={lineGridButtons}
               height={590}
-              onRowClick={handleLineSelect}
               gridProps={{
+                checkboxSelection: true,
+                onSelectionModelChange: onSelectionModelChange,
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}

@@ -29,7 +29,7 @@ import {graphFetch} from "../../api/fetchConfig";
 import {deleteEquipment, getEquipments, saveEquipment} from "../../api/standardInfo/equipmentApi";
 import {getGridFactory} from "../../api/standardInfo/factoryApi";
 import {getLineOptions} from "../../api/standardInfo/lineApi";
-import {fetchGridCodesByCodeClassId} from "../../utils/grid/useGridRow";
+import {fetchGridCodesByCodeClassId, useSelectionModel} from "../../utils/grid/useGridRow";
 
 const EquipmentManagement = (props) => {
   // 현재 테마 가져오기
@@ -54,7 +54,6 @@ const EquipmentManagement = (props) => {
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [equipmentList, setEquipmentList] = useState([]);
-  const [selectedEquipment, setSelectedEquipment] = useState(null);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [addRows, setAddRows] = useState([]);
   const [updatedRows, setUpdatedRows] = useState([]);
@@ -65,6 +64,12 @@ const EquipmentManagement = (props) => {
   const [lineOptions, setLineOptions] = useState([]);
   const [equipmentTypeOptions, setEquipmentTypeOptions] = useState([]);
   const [equipmentStatusOptions, setEquipmentStatusOptions] = useState([]);
+
+  const {
+    selectionModel,            // 선택된 ID 배열
+    onSelectionModelChange,    // DataGrid에 넘길 핸들러
+    removeSelectedRows
+  } = useSelectionModel([], setAddRows, setUpdatedRows, setEquipmentList);
 
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -281,12 +286,6 @@ const EquipmentManagement = (props) => {
     });
   };
 
-  // 설비 선택 핸들러
-  const handleEquipmentSelect = (params) => {
-    const equipment = equipmentList.find(e => e.id === params.id);
-    setSelectedEquipment(equipment);
-  };
-
   // 저장 버튼 클릭 핸들러
   const handleSave = () => {
     const addRowQty = addRows.length;
@@ -353,7 +352,7 @@ const EquipmentManagement = (props) => {
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (!selectedEquipment) {
+    if (selectionModel.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: '알림',
@@ -361,19 +360,6 @@ const EquipmentManagement = (props) => {
         confirmButtonText: '확인'
       });
       return;
-    }
-
-    const isDeleteAddRows = addRows.find(f => f.id === selectedEquipment.id)
-    const isDeleteUpdateRows = updatedRows.find(f => f.id === selectedEquipment.id)
-
-    if(isDeleteAddRows) {
-      const updateAddList = addRows.filter(f => f.id !== selectedEquipment.id);
-      setAddRows(updateAddList);
-    }
-
-    if(isDeleteUpdateRows) {
-      const updatedRowsLit = updatedRows.filter(f => f.id !== selectedEquipment.id);
-      setUpdatedRows(updatedRowsLit)
     }
 
     Swal.fire({
@@ -390,7 +376,7 @@ const EquipmentManagement = (props) => {
         // 백엔드 삭제 요청 (GraphQL)
 
         deleteEquipment(
-            {equipmentId: selectedEquipment.equipmentId}
+            {equipmentIds: selectionModel}
         ).then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -401,9 +387,7 @@ const EquipmentManagement = (props) => {
                 });
               } else {
                 // 삭제 성공 시, 로컬 상태 업데이트
-                const updatedList = equipmentList.filter(f => f.id !== selectedEquipment.id);
-                setEquipmentList(updatedList);
-                setSelectedEquipment(null);
+                removeSelectedRows(selectionModel);
                 Swal.fire({
                   icon: 'success',
                   title: '성공',
@@ -447,7 +431,6 @@ const EquipmentManagement = (props) => {
     };
     
     setEquipmentList([newEquipment, ...equipmentList]);
-    setSelectedEquipment(newEquipment);
   };
 
   // 설비 목록 그리드 버튼
@@ -598,6 +581,77 @@ const EquipmentManagement = (props) => {
       >
         <Grid item xs={12} sm={6} md={3}>
           <Controller
+              name="equipmentId"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="설비 ID"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="설비ID를 입력하세요"
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="equipmentName"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="설비 명"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="설비명을 입력하세요"
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="equipmentSn"
+              control={control}
+              render={({ field }) => (
+                  <TextField
+                      {...field}
+                      label="설비 S/N"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      placeholder="설비 S/N을 입력하세요"
+                  />
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
+              name="equipmentType"
+              control={control}
+              render={({ field }) => (
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel id="equipmentType-label">설비 유형</InputLabel>
+                    <Select
+                        {...field}
+                        labelId="equipmentType-label"
+                        label="설비 유형"
+                    >
+                      <MenuItem value="">전체</MenuItem>
+                      {equipmentTypeOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+              )}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Controller
             name="factoryId"
             control={control}
             render={({ field }) => (
@@ -660,77 +714,6 @@ const EquipmentManagement = (props) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비 ID"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비ID를 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentName"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비 명"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비명을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentSn"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="설비 S/N"
-                variant="outlined"
-                size="small"
-                fullWidth
-                placeholder="설비 S/N을 입력하세요"
-              />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Controller
-            name="equipmentType"
-            control={control}
-            render={({ field }) => (
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel id="equipmentType-label">설비 유형</InputLabel>
-                <Select
-                  {...field}
-                  labelId="equipmentType-label"
-                  label="설비 유형"
-                >
-                  <MenuItem value="">전체</MenuItem>
-                  {equipmentTypeOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-          />
-        </Grid>
         {/*<Grid item xs={12} sm={6} md={3}>*/}
         {/*  <Controller*/}
         {/*    name="flagActive"*/}
@@ -764,8 +747,9 @@ const EquipmentManagement = (props) => {
               columns={equipmentColumns}
               buttons={equipmentGridButtons}
               height={590}
-              onRowClick={handleEquipmentSelect}
               gridProps={{
+                checkboxSelection: true,
+                onSelectionModelChange: onSelectionModelChange,
                 editMode: 'cell',
                 onProcessUpdate: handleProcessRowUpdate
               }}

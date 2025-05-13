@@ -122,3 +122,38 @@ export function fetchDefaultCodesByCodeClassId(codeClassId, setOptions) {
     .catch((err) => console.error(err));
 }
 
+/**
+ * DataGrid의 다중 행 선택 모델을 관리하는 커스텀 훅
+ *
+ * @param {string[]} initialModel 초기 선택 ID 배열 (기본: 빈 배열)
+ * @param rowSetters
+ * @returns {{
+ *   selectionModel: string[],
+ *   onSelectionModelChange: (newModel: string[]) => void,
+ *   clearSelection: () => void
+ *   removeSelectedRows: () => void
+ * }}
+ */
+export function useSelectionModel(
+    initialModel = [],
+    ...rowSetters // setAddCodeRows, setUpdatedCodeRows, setCodes
+) {
+    const [selectionModel, setSelectionModel] = useState(initialModel);
+
+    const onSelectionModelChange = useCallback(newModel => {
+        setSelectionModel(newModel);
+    }, []);
+
+    // 훅 안에서 일반 콜백 함수로 선언
+    const removeSelectedRows = useCallback((ids) => {
+        rowSetters.forEach(setFn =>
+            setFn(prev => prev.filter(row => !ids.includes(row.id)))
+        );
+    }, [rowSetters]);
+
+    return {
+        selectionModel,
+        onSelectionModelChange,
+        removeSelectedRows
+    };
+}

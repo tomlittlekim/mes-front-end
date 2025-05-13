@@ -34,8 +34,8 @@ const saveLineMutation = `
   `;
 
 const deleteLineMutation = `
-      mutation DeleteLine($lineId: String!) {
-        deleteLine(lineId: $lineId)
+      mutation DeleteLine($lineIds: [String!]!) {
+        deleteLine(lineIds: $lineIds)
       }
     `;
 

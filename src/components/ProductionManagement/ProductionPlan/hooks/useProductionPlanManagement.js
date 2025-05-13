@@ -209,7 +209,7 @@ export const useProductionPlanManagement = (tabId) => {
             vendorId: "",
             vendorName: "",
             ceoName: "",
-            businessType: ""
+            businessRegNo: ""
           }
         }
       });

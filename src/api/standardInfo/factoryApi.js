@@ -36,8 +36,8 @@ const saveFactoryMutation = `
   `;
 
 const deleteFactoryMutation = `
-      mutation DeleteFactory($factoryId: String!) {
-        deleteFactory(factoryId: $factoryId)
+      mutation DeleteFactory($factoryIds: [String!]!) {
+        deleteFactory(factoryIds: $factoryIds)
       }
     `;
 

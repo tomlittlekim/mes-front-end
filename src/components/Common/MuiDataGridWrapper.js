@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import { koKR } from '@mui/x-data-grid/locales'
 
 // 커스텀 툴바 컴포넌트 정의
 const CustomToolbar = () => {
@@ -271,6 +272,7 @@ const MuiDataGridWrapper = ({
           data-tab-id={tabId}
         >
           <DataGrid
+            localeText={koKR.components.MuiDataGrid.defaultProps.localeText}
             columns={centeredColumns}
             rows={rows || []}
             pageSizeOptions={[25, 50, 100]}
