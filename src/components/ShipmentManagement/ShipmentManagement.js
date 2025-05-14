@@ -331,8 +331,38 @@ const ShipmentManagement = () => {
       required: true,
       renderCell: (params) => renderRequiredCell(params, 'cumulativeShipmentQuantity'),
       preProcessEditCellProps: (params) => {
+        // 기존 row인 경우 (id가 양수)
+        if (params.row.id > 0) {
+          // 기존 값보다 작은 수로 수정하는 경우는 허용
+          if (params.props.value <= params.row.cumulativeShipmentQuantity) {
+            return { ...params.props, error: false };
+          }
+        }
+        // 신규 row이거나 기존 값보다 큰 수로 수정하는 경우
         const hasError = params.props.value > params.row.stockQuantity;
+        if (hasError) {
+          Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
+        }
         return { ...params.props, error: hasError };
+      },
+      onCellEditCommit: (params) => {
+        // 기존 row인 경우 (id가 양수)
+        if (params.row.id > 0) {
+          // 기존 값보다 작은 수로 수정하는 경우는 허용
+          if (params.value <= params.row.cumulativeShipmentQuantity) {
+            return true;
+          }
+        }
+        // 신규 row이거나 기존 값보다 큰 수로 수정하는 경우
+        if (params.value > params.row.stockQuantity) {
+          Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
+          return false;
+        }
+        if (params.value > params.row.unshippedQuantity) {
+          Message.showWarning('금회출하수량은 미출하수량을 초과할 수 없습니다.');
+          return false;
+        }
+        return true;
       }
     },
     { 
@@ -500,6 +530,25 @@ const ShipmentManagement = () => {
 
       // 금회출하수량 검증
       if (newRow.cumulativeShipmentQuantity) {
+        // 기존 row인 경우 (id가 양수)
+        if (newRow.id > 0) {
+          // 기존 값보다 작은 수로 수정하는 경우는 허용
+          if (newRow.cumulativeShipmentQuantity <= oldRow.cumulativeShipmentQuantity) {
+            // 수정된 row 추적
+            setModifiedRows(prev => new Set([...prev, updatedRow.id]));
+            
+            // detailRows 상태 업데이트
+            setDetailRows(prevRows => 
+              prevRows.map(row => 
+                row.id === updatedRow.id ? updatedRow : row
+              )
+            );
+
+            return updatedRow;
+          }
+        }
+
+        // 신규 row이거나 기존 값보다 큰 수로 수정하는 경우
         if (newRow.cumulativeShipmentQuantity > newRow.stockQuantity) {
           Message.showWarning('금회출하수량은 재고수량을 초과할 수 없습니다.');
           return oldRow;
