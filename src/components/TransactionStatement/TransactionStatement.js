@@ -239,14 +239,15 @@ const TransactionStatement = () => {
       field: 'transactionStatementId', 
       headerName: '명세서ID', 
       width: 150,
-      editable: false
+      editable: false,
+      renderCell: (params) => params.value || '자동입력'
     },
     { 
       field: 'transactionStatementDate', 
       headerName: '명세서일자', 
       width: 150,
       editable: false,
-      renderCell: (params) => params?.value ? formatDate(params.value) : 'LocalDate 날짜 선택'
+      renderCell: (params) => params?.value ? formatDate(params.value) : '자동입력'
     },
     { 
       field: 'systemMaterialId', 
@@ -337,11 +338,6 @@ const TransactionStatement = () => {
       return;
     }
 
-    if (selectedHeader.flagIssuance) {
-      Message.showWarning('이미 발행된 거래명세서는 삭제할 수 없습니다.');
-      return;
-    }
-
     Message.showDeleteConfirm(async () => {
       try {
         setLoading(true);
@@ -396,8 +392,6 @@ const TransactionStatement = () => {
       const updatedHeader = headers?.find(h => h.id === selectedHeader.id);
       setSelectedHeader(updatedHeader || null);
       setDetailRows(details || []);
-      setSelectedDetails([]);
-      
     } catch (error) {
       Message.showError(error);
     } finally {
@@ -426,7 +420,7 @@ const TransactionStatement = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <DatePicker
-              label="거래명세서일 From"
+              label="주문일자 From"
               value={parseDate(searchParams.fromDate)}
               onChange={(newValue) => handleSearch({ ...searchParams, fromDate: formatDate(newValue) })}
               slotProps={{
@@ -439,7 +433,7 @@ const TransactionStatement = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <DatePicker
-              label="거래명세서일 To"
+              label="주문일자 To"
               value={parseDate(searchParams.toDate)}
               onChange={(newValue) => handleSearch({ ...searchParams, toDate: formatDate(newValue) })}
               slotProps={{
@@ -492,7 +486,7 @@ const TransactionStatement = () => {
               <Button
                 startIcon={<DeleteIcon />}
                 onClick={handleDelete}
-                disabled={!selectedHeader || selectedHeader.flagIssuance}
+                disabled={!selectedHeader}
                 color="error"
               >
                 삭제

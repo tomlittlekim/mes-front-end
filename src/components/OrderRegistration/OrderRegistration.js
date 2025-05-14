@@ -776,7 +776,7 @@ const OrderRegistration = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <DatePicker
-              label="From"
+              label="주문일자 From"
               value={parseDate(searchParams.fromDate)}
               onChange={(newValue) => handleSearch({ ...searchParams, fromDate: formatDate(newValue) })}
               slotProps={{
@@ -789,7 +789,7 @@ const OrderRegistration = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <DatePicker
-              label="To"
+              label="주문일자 To"
               value={parseDate(searchParams.toDate)}
               onChange={(newValue) => handleSearch({ ...searchParams, toDate: formatDate(newValue) })}
               slotProps={{

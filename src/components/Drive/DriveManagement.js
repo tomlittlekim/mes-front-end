@@ -371,7 +371,7 @@ const DriveManagement = () => {
         }}>
           <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
             <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 500 }}>
-              파일 관리
+              문서대장
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button
@@ -411,25 +411,19 @@ const DriveManagement = () => {
 
         <Box sx={{ flex: 1, width: '100%' }}>
           <EnhancedDataGridWrapper
+            tabId="document-management"
             rows={files}
             columns={columns}
             loading={loading}
+            height={900}
             hideToolbar
             gridProps={{
               getRowId: (row) => row.id,
-              disableSelectionOnClick: true,
-              autoPageSize: true,
-              sortingMode: 'server',
-              rowHeight: 40,
-              headerHeight: 40,
+              disableSelectionOnClick: false,
+              autoPageSize: false,
               processRowUpdate: processRowUpdate,
               onProcessRowUpdateError: handleProcessRowUpdateError,
               experimentalFeatures: { newEditingApi: true },
-              initialState: {
-                sorting: {
-                  sortModel: [{ field: 'name', sort: 'asc' }],
-                },
-              }
             }}
             customStyle={{
               border: 'none',
