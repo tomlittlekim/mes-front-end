@@ -1393,7 +1393,7 @@ const ReceivingManagement = (props) => {
               width: '100%',
             }}
           >
-            <Typography>
+            <Typography variant="body2">
               {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
             </Typography>
           </Box>

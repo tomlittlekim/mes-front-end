@@ -890,12 +890,12 @@ const OutboundManagement = (props) => {
               width: '100%',
             }}
           >
-            <Typography>
+            <Typography variant="body2">
               {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
             </Typography>
           </Box>
         );
-      },
+      }
     },
     { field: 'unitPrice', headerName: '단위 금액', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true },
     { field: 'unitVat', headerName: '부가세', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true },
