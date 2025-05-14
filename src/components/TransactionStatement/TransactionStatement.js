@@ -239,14 +239,15 @@ const TransactionStatement = () => {
       field: 'transactionStatementId', 
       headerName: '명세서ID', 
       width: 150,
-      editable: false
+      editable: false,
+      renderCell: (params) => params.value || '자동입력'
     },
     { 
       field: 'transactionStatementDate', 
       headerName: '명세서일자', 
       width: 150,
       editable: false,
-      renderCell: (params) => params?.value ? formatDate(params.value) : 'LocalDate 날짜 선택'
+      renderCell: (params) => params?.value ? formatDate(params.value) : '자동입력'
     },
     { 
       field: 'systemMaterialId', 
@@ -391,8 +392,6 @@ const TransactionStatement = () => {
       const updatedHeader = headers?.find(h => h.id === selectedHeader.id);
       setSelectedHeader(updatedHeader || null);
       setDetailRows(details || []);
-      setSelectedDetails([]);
-      
     } catch (error) {
       Message.showError(error);
     } finally {
