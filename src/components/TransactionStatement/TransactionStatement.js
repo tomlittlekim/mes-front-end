@@ -426,7 +426,7 @@ const TransactionStatement = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <DatePicker
-              label="거래명세서일 From"
+              label="주문일자 From"
               value={parseDate(searchParams.fromDate)}
               onChange={(newValue) => handleSearch({ ...searchParams, fromDate: formatDate(newValue) })}
               slotProps={{
@@ -439,7 +439,7 @@ const TransactionStatement = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <DatePicker
-              label="거래명세서일 To"
+              label="주문일자 To"
               value={parseDate(searchParams.toDate)}
               onChange={(newValue) => handleSearch({ ...searchParams, toDate: formatDate(newValue) })}
               slotProps={{
