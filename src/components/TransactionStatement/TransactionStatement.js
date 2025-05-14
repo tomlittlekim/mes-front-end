@@ -337,11 +337,6 @@ const TransactionStatement = () => {
       return;
     }
 
-    if (selectedHeader.flagIssuance) {
-      Message.showWarning('이미 발행된 거래명세서는 삭제할 수 없습니다.');
-      return;
-    }
-
     Message.showDeleteConfirm(async () => {
       try {
         setLoading(true);
@@ -492,7 +487,7 @@ const TransactionStatement = () => {
               <Button
                 startIcon={<DeleteIcon />}
                 onClick={handleDelete}
-                disabled={!selectedHeader || selectedHeader.flagIssuance}
+                disabled={!selectedHeader}
                 color="error"
               >
                 삭제
