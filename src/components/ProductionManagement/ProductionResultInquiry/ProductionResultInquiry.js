@@ -10,6 +10,23 @@ import SearchForm from './SearchForm';
 import ProductionResultList from './components/ProductionResultList';
 import { useProductionResultInquiry } from './hooks/useProductionResultInquiry';
 import { useForm } from 'react-hook-form';
+import { bottomInfoMessages, helpModalMessages } from './constants';
+
+// 폼 기본값 상수 정의
+const FORM_DEFAULT_VALUES = {
+  prodResultId: '',
+  workOrderId: '',
+  productId: '',
+  equipmentId: '',
+  startDateRange: {
+    startDate: null,
+    endDate: null
+  },
+  endDateRange: {
+    startDate: null,
+    endDate: null
+  }
+};
 
 /**
  * 생산실적조회 컴포넌트
@@ -29,56 +46,15 @@ const ProductionResultInquiry = (props) => {
     control,
     handleSubmit,
     reset,
-    setValue,
     watch,
     getValues,
   } = useForm({
-    defaultValues: {
-      prodResultId: '',
-      workOrderId: '',
-      productId: '',
-      equipmentId: '',
-      startDateRange: {
-        startDate: null,
-        endDate: null
-      },
-      endDateRange: {
-        startDate: null,
-        endDate: null
-      }
-    }
+    defaultValues: FORM_DEFAULT_VALUES
   });
-
-  // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = (fieldName, startDate, endDate) => {
-    setValue(fieldName, { startDate, endDate });
-  };
-
-  // 이전 버전과의 호환성을 위한 핸들러
-  const handleStartDateRangeChange = (startDate, endDate) => {
-    handleDateRangeChange('startDateRange', startDate, endDate);
-  };
-
-  const handleEndDateRangeChange = (startDate, endDate) => {
-    handleDateRangeChange('endDateRange', startDate, endDate);
-  };
 
   // 초기화 핸들러
   const handleReset = () => {
-    reset({
-      prodResultId: '',
-      workOrderId: '',
-      productId: '',
-      equipmentId: '',
-      startDateRange: {
-        startDate: null,
-        endDate: null
-      },
-      endDateRange: {
-        startDate: null,
-        endDate: null
-      }
-    });
+    reset(FORM_DEFAULT_VALUES);
   };
 
   // 커스텀 훅 사용
@@ -111,17 +87,12 @@ const ProductionResultInquiry = (props) => {
   };
 
   return (
-      <Box sx={{ p: 0, minHeight: '100vh' }}>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          mb: 2,
-          borderBottom: `1px solid ${getBorderColor()}`,
-          pb: 1
-        }}>
+      <Box className="production-result-inquiry-container" sx={{ p: 0 /* sx에서 p:0 유지 또는 css로 이동 결정 필요 */ }}>
+        <Box className="page-header" sx={{ borderBottom: `1px solid ${getBorderColor()}` }}>
           <Typography
               variant="h5"
               component="h2"
+              className="page-title"
               sx={{
                 fontWeight: 600,
                 color: getTextColor()
@@ -131,8 +102,8 @@ const ProductionResultInquiry = (props) => {
           </Typography>
           <IconButton
               onClick={() => setIsHelpModalOpen(true)}
+              className="help-icon-button"
               sx={{
-                ml: 1,
                 color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
                 '&:hover': {
                   backgroundColor: isDarkMode
@@ -149,7 +120,7 @@ const ProductionResultInquiry = (props) => {
         {errorMessage && (
             <Alert
                 severity="error"
-                sx={{ mb: 2 }}
+                className="error-alert"
                 action={
                   <Button
                       color="inherit"
@@ -174,16 +145,12 @@ const ProductionResultInquiry = (props) => {
               control,
               equipmentOptions,
               productOptions,
-              handleDateRangeChange,
-              handleStartDateRangeChange,
-              handleEndDateRangeChange,
-              onSearch: handleSubmit(onSearch)
           })}
         </SearchCondition>
 
         {/* 로딩 표시 */}
         {isLoading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <Box className="loading-indicator-container">
               <CircularProgress />
             </Box>
         )}
@@ -206,21 +173,16 @@ const ProductionResultInquiry = (props) => {
         )}
 
         {/* 하단 정보 영역 */}
-        <Box mt={2} p={2} sx={{
+        <Box className="info-box" mt={2} p={2} sx={{ /* mt, p는 className으로 옮길 수 있으나, Box 특성상 자주 사용되므로 sx에 남겨둘 수도 있음 */
           bgcolor: getBgColor(),
-          borderRadius: 1,
           border: `1px solid ${getBorderColor()}`
         }}>
           <Stack spacing={1}>
-            <Typography variant="body2" color={getTextColor()}>
-              • 생산실적조회 화면에서는 완료된 작업지시에 대한 생산실적을 조회할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 확인하여 생산이력을 분석할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 출력 및 엑셀 내보내기 기능을 통해 생산실적 데이터를 활용할 수 있습니다.
-            </Typography>
+            {bottomInfoMessages.map((message, index) => (
+              <Typography key={index} variant="body2" color={getTextColor()}>
+                {message}
+              </Typography>
+            ))}
           </Stack>
         </Box>
 
@@ -228,20 +190,13 @@ const ProductionResultInquiry = (props) => {
         <HelpModal
             open={isHelpModalOpen}
             onClose={() => setIsHelpModalOpen(false)}
-            title="생산실적조회 도움말"
+            title={helpModalMessages.title}
         >
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 생산실적조회에서는 완료된 생산 작업의 실적 정보를 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 상단의 검색조건을 사용하여 특정 기간, 제품, 작업지시 등의 생산실적을 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 그리드의 컬럼을 클릭하여 정렬하거나, 필터 기능을 사용하여 데이터를 필터링할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 출력 및 엑셀 내보내기 기능을 통해 생산실적 데이터를 활용할 수 있습니다.
-          </Typography>
+          {helpModalMessages.paragraphs.map((paragraph, index) => (
+            <Typography key={index} variant="body2" color={getTextColor()} paragraph>
+              {paragraph}
+            </Typography>
+          ))}
         </HelpModal>
       </Box>
   );
