@@ -112,6 +112,13 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
         { id: 'sy-menu', name: '메뉴관리' },
         { id: 'sy-drive', name: '문서대장' }
       ]
+    },
+    {
+      id: '3d-test',
+      name: '3D Test',
+      icon: '🧊',
+      isActive: false,
+      subItems: []
     }
   ]);
 
