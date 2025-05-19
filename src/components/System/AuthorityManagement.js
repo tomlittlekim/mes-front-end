@@ -962,6 +962,11 @@ const AuthorityManagement = (props) => {
                     }
                   ]}
                   tabId={props.id + "-menu-roles"}
+                  gridProps={{
+                    getRowClassName: (params) => {
+                      return params.row.flagCategory ? 'category-row' : '';
+                    }
+                  }}
                 />
             </Grid>
           )}

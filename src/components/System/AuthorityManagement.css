@@ -99,4 +99,8 @@
     padding: 2px 4px;
     font-size: 0.75rem;
   }
+}
+
+.category-row {
+  background-color: rgba(135, 206, 235, 0.2) !important;
 } 
