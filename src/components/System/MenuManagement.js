@@ -81,16 +81,7 @@ const MenuManagement = (props) => {
     menuName: null,
     flagSubscribe: null,
     sequence: null,
-    flagActive: null,
-    // 권한 설정 (신규 생성시에만 사용)
-    isOpen: null,
-    isDelete: null,
-    isInsert: null,
-    isAdd: null,
-    isPopup: null,
-    isPrint: null,
-    isSelect: null,
-    isUpdate: null
+    flagActive: null
   });
 
   // 상세 정보 변경 핸들러
@@ -140,15 +131,7 @@ const MenuManagement = (props) => {
           menuName: null,
           flagSubscribe: null,
           sequence: null,
-          flagActive: null,
-          isOpen: null,
-          isDelete: null,
-          isInsert: null,
-          isAdd: null,
-          isPopup: null,
-          isPrint: null,
-          isSelect: null,
-          isUpdate: null
+          flagActive: null
         });
       }
       setIsEditMode(false);
@@ -175,15 +158,7 @@ const MenuManagement = (props) => {
         menuName: null,
         flagSubscribe: null,
         sequence: null,
-        flagActive: null,
-        isOpen: null,
-        isDelete: null,
-        isInsert: null,
-        isAdd: null,
-        isPopup: null,
-        isPrint: null,
-        isSelect: null,
-        isUpdate: null
+        flagActive: null
       });
     }
     setIsEditMode(false);
@@ -217,16 +192,6 @@ const MenuManagement = (props) => {
       field: 'sequence', 
       headerName: '정렬 순서', 
       flex: 0.7 
-    },
-    {
-      field: 'flagActive',
-      headerName: '상태',
-      flex: 0.7,
-      renderCell: (params) => (
-        <span className={`status-badge ${params.value ? 'active' : 'inactive'}`}>
-          {params.value ? '활성' : '비활성'}
-        </span>
-      )
     }
   ];
 
@@ -265,15 +230,6 @@ const MenuManagement = (props) => {
         flagSubscribe: menu.flagSubscribe,
         sequence: menu.sequence || null,
         flagActive: menu.flagActive || null,
-        // 권한 설정은 초기화
-        isOpen: null,
-        isDelete: null,
-        isInsert: null,
-        isAdd: null,
-        isPopup: null,
-        isPrint: null,
-        isSelect: null,
-        isUpdate: null
       });
     }
   };
@@ -305,15 +261,6 @@ const MenuManagement = (props) => {
       flagSubscribe: null,
       sequence: null,
       flagActive: null,
-      // 권한 설정 초기화
-      isOpen: null,
-      isDelete: null,
-      isInsert: null,
-      isAdd: null,
-      isPopup: null,
-      isPrint: null,
-      isSelect: null,
-      isUpdate: null
     });
     setSelectedMenu(null);
     setIsEditMode(true);
@@ -361,15 +308,7 @@ const MenuManagement = (props) => {
               menuName: null,
               flagSubscribe: null,
               sequence: null,
-              flagActive: null,
-              isOpen: null,
-              isDelete: null,
-              isInsert: null,
-              isAdd: null,
-              isPopup: null,
-              isPrint: null,
-              isSelect: null,
-              isUpdate: null
+              flagActive: null
             });
             
             // 전체 메뉴 목록 재조회

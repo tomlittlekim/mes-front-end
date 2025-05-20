@@ -304,8 +304,9 @@ const AuthorityManagement = (props) => {
           ...role,
           id: `${role.roleId}_${role.menuId}_${index}`
         }));
-        setMenuRoleList(menuRoles);
-        setOriginalMenuRoleList(JSON.parse(JSON.stringify(menuRoles)));
+        const sortedMenuRoles = sortMenuRoleList(menuRoles);
+        setMenuRoleList(sortedMenuRoles);
+        setOriginalMenuRoleList(JSON.parse(JSON.stringify(sortedMenuRoles)));
         setIsMenuRoleModified(false);
       } catch (error) {
         console.error('메뉴 권한 조회 중 오류 발생:', error);
@@ -434,6 +435,20 @@ const AuthorityManagement = (props) => {
     }
   };
 
+  // 변경된 row만 추출하는 함수 추가
+  function getChangedRows(original, current) {
+    return current.filter(curRow => {
+      const orgRow = original.find(org => org.id === curRow.id);
+      // 신규 row(원본에 없음) 또는 값이 달라진 경우
+      if (!orgRow) return true;
+      // 비교할 필드만 체크 (id, menuId, roleId 등은 제외)
+      const fields = [
+        'isOpen', 'isSelect', 'isInsert', 'isUpdate', 'isDelete', 'isAdd', 'isPopup', 'isPrint'
+      ];
+      return fields.some(field => curRow[field] !== orgRow[field]);
+    });
+  }
+
   // 메뉴 권한 변경 핸들러
   const handleMenuRoleChange = (menuId, field, value) => {
     setMenuRoleList(prev => {
@@ -455,8 +470,19 @@ const AuthorityManagement = (props) => {
   // 메뉴 권한 저장 핸들러
   const handleMenuRoleSave = async () => {
     try {
+      // 변경된 row만 추출
+      const changedRows = getChangedRows(originalMenuRoleList, menuRoleList);
+      if (changedRows.length === 0) {
+        await Swal.fire({
+          icon: 'info',
+          title: '알림',
+          text: '변경된 내용이 없습니다.',
+          confirmButtonText: '확인'
+        });
+        return;
+      }
       // id 필드 제거하고 API 요청
-      const requestData = menuRoleList.map(({ id, ...rest }) => rest);
+      const requestData = changedRows.map(({ id, ...rest }) => rest);
       const response = await upsertMenuRole(requestData);
 
       await Swal.fire({
@@ -470,10 +496,11 @@ const AuthorityManagement = (props) => {
       const updatedResponse = await getMenuRoleGroup(selectedRole.roleId);
       const updatedMenuRoles = updatedResponse.getMenuRoleGroup.map((role, index) => ({
         ...role,
-        id: `${role.roleId}_${role.menuId}_${index}` // roleId와 menuId를 조합하여 고유한 id 생성
+        id: `${role.roleId}_${role.menuId}_${index}`
       }));
-      setMenuRoleList(updatedMenuRoles);
-      setOriginalMenuRoleList(JSON.parse(JSON.stringify(updatedMenuRoles)));
+      const sortedMenuRoles = sortMenuRoleList(updatedMenuRoles);
+      setMenuRoleList(sortedMenuRoles);
+      setOriginalMenuRoleList(JSON.parse(JSON.stringify(sortedMenuRoles)));
       setIsMenuRoleModified(false);
     } catch (error) {
       console.error('메뉴 권한 저장 중 오류 발생:', error);
@@ -486,16 +513,116 @@ const AuthorityManagement = (props) => {
     }
   };
 
+  // 메뉴 권한 목록 정렬 함수 추가
+  function sortMenuRoleList(list) {
+    const sorted = [];
+    const categoryRows = list.filter(row => row.flagCategory);
+    categoryRows.forEach(category => {
+      sorted.push(category);
+      const children = list.filter(row => row.upMenuId === category.menuId && !row.flagCategory);
+      sorted.push(...children);
+    });
+    // 카테고리에 속하지 않은 메뉴도 추가
+    const uncategorized = list.filter(row => !row.flagCategory && !categoryRows.some(cat => row.upMenuId === cat.menuId));
+    sorted.push(...uncategorized);
+    return sorted;
+  }
+
+  // handleCategorySelectAll 함수 추가
+  const handleCategorySelectAll = (categoryMenuId, isAllChecked) => {
+    setMenuRoleList(prev =>
+      prev.map(row => {
+        if (row.upMenuId === categoryMenuId && !row.flagCategory) {
+          // 모두 체크되어 있으면 해제, 아니면 모두 체크
+          return {
+            ...row,
+            isOpen: !isAllChecked,
+            isSelect: !isAllChecked,
+            isInsert: !isAllChecked,
+            isUpdate: !isAllChecked,
+            isDelete: !isAllChecked,
+            isAdd: !isAllChecked,
+            isPopup: !isAllChecked,
+            isPrint: !isAllChecked
+          };
+        }
+        return row;
+      })
+    );
+    setIsMenuRoleModified(true);
+  };
+
   // 메뉴 권한 컬럼 정의
   const menuRoleColumns = [
     {
       field: 'menuId',
       headerName: '메뉴명',
-      flex: 1,
+      flex: 1.2,
       renderCell: (params) => {
-        if (!params.row.menuId) return '-';
-        const dept = menuOptions.find(m => m.menuId === params.row.menuId);
-        return dept.menuName || '-';
+        const menu = menuOptions.find(m => m.menuId === params.row.menuId);
+
+        // 카테고리 하위 메뉴 체크 상태 확인
+        let isAllChecked = false;
+        if (params.row.flagCategory) {
+          const children = menuRoleList.filter(
+            row => row.upMenuId === params.row.menuId && !row.flagCategory
+          );
+          isAllChecked = children.length > 0 && children.every(
+            row =>
+              row.isOpen &&
+              row.isSelect &&
+              row.isInsert &&
+              row.isUpdate &&
+              row.isDelete &&
+              row.isAdd &&
+              row.isPopup &&
+              row.isPrint
+          );
+        }
+
+        if (params.row.flagCategory) {
+          return (
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              pr: 1
+            }}>
+              <Typography sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {menu?.menuName || '-'}
+              </Typography>
+              <Button
+                size='small'
+                variant='outlined'
+                sx={{
+                  minWidth: 0,
+                  px: 1.2,
+                  py: 0.1,
+                  height: 26,
+                  borderRadius: '4px',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  ml: 2,
+                  backgroundColor: isAllChecked ? '#55585e' : '#fff',
+                  borderColor: '#55585e',
+                  color: isAllChecked ? '#fff' : '#55585e',
+                  boxShadow: 'none',
+                  transition: 'all 0.15s',
+                  '&:hover': {
+                    backgroundColor: isAllChecked ? '#333' : '#55585e',
+                    color: '#fff',
+                    borderColor: '#55585e'
+                  }
+                }}
+                onClick={() => handleCategorySelectAll(params.row.menuId, isAllChecked)}
+              >
+                전체선택
+              </Button>
+            </Box>
+          );
+        }
+        return <Typography>{menu?.menuName || '-'} </Typography>;
       }
     },
     {
@@ -503,11 +630,13 @@ const AuthorityManagement = (props) => {
       headerName: '화면',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isOpen || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isOpen', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isOpen || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isOpen', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -515,11 +644,13 @@ const AuthorityManagement = (props) => {
       headerName: '조회',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isSelect || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isSelect', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isSelect || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isSelect', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -527,11 +658,13 @@ const AuthorityManagement = (props) => {
       headerName: '입력',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isInsert || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isInsert', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isInsert || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isInsert', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -539,11 +672,13 @@ const AuthorityManagement = (props) => {
       headerName: '수정',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isUpdate || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isUpdate', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isUpdate || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isUpdate', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -551,11 +686,13 @@ const AuthorityManagement = (props) => {
       headerName: '삭제',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isDelete || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isDelete', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isDelete || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isDelete', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -563,11 +700,13 @@ const AuthorityManagement = (props) => {
       headerName: '추가',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isAdd || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isAdd', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isAdd || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isAdd', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -575,11 +714,13 @@ const AuthorityManagement = (props) => {
       headerName: '팝업',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isPopup || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isPopup', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isPopup || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isPopup', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     },
     {
@@ -587,11 +728,13 @@ const AuthorityManagement = (props) => {
       headerName: '출력',
       flex: 0.5,
       renderCell: (params) => (
-        <Checkbox
-          checked={params.row.isPrint || false}
-          onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isPrint', e.target.checked)}
-          disabled={!selectedRole}
-        />
+        params.row.flagCategory ? '' : (
+          <Checkbox
+            checked={params.row.isPrint || false}
+            onChange={(e) => handleMenuRoleChange(params.row.menuId, 'isPrint', e.target.checked)}
+            disabled={!selectedRole}
+          />
+        )
       )
     }
   ];
@@ -962,6 +1105,11 @@ const AuthorityManagement = (props) => {
                     }
                   ]}
                   tabId={props.id + "-menu-roles"}
+                  gridProps={{
+                    getRowClassName: (params) => {
+                      return params.row.flagCategory ? 'category-row' : '';
+                    }
+                  }}
                 />
             </Grid>
           )}

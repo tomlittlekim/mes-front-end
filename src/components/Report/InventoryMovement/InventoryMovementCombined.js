@@ -267,9 +267,9 @@ const InventoryMovementChart = ({ data, highlightedMaterial, onBarMouseOver, onB
   // 데이터가 없는 경우 체크
   if (!data || data.length === 0) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
         alignItems: 'center',
         height: '100%',
         color: axisColor
@@ -279,12 +279,15 @@ const InventoryMovementChart = ({ data, highlightedMaterial, onBarMouseOver, onB
     );
   }
 
+  // 동적 차트 너비 계산
+  const itemWidth = 80; // 각 X축 항목이 차지할 대략적인 너비 (px). 이 값을 조절하여 한 화면에 보이는 항목 수를 변경할 수 있습니다.
+  const calculatedMinWidthForScroll = data.length * itemWidth;
+
   // 바 렌더링 커스터마이징 - 하이라이트 적용
   const getBarProps = (entry, dataKey) => {
     if (highlightedMaterial && entry.name === highlightedMaterial) {
       return {
         fill: dataKey === '입고량' ? inColor : dataKey === '출고량' ? outColor : stockColor,
-        // 하얀색 테두리와 그림자 효과 제거
         fillOpacity: 1
       };
     }
@@ -297,32 +300,31 @@ const InventoryMovementChart = ({ data, highlightedMaterial, onBarMouseOver, onB
   // 커스텀 툴팁 포맷팅
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      // 툴팁이 활성화될 때 해당 자재명으로 마우스오버 이벤트 호출
       if (onBarMouseOver && label) {
         onBarMouseOver(label);
       }
       
       return (
-        <div style={{ 
-          backgroundColor: isDarkMode ? '#2D3748' : '#FFFFFF', 
-          padding: '10px', 
+        <div style={{
+          backgroundColor: isDarkMode ? '#2D3748' : '#FFFFFF',
+          padding: '10px',
           border: '1px solid',
           borderColor: isDarkMode ? '#4A5568' : '#E2E8F0',
           borderRadius: '4px',
           fontSize: '12px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          <p style={{ 
-            color: isDarkMode ? '#FFFFFF' : '#2D3748', 
-            fontWeight: 'bold', 
+          <p style={{
+            color: isDarkMode ? '#FFFFFF' : '#2D3748',
+            fontWeight: 'bold',
             margin: '0 0 5px 0',
             borderBottom: '1px solid',
             borderColor: isDarkMode ? '#4A5568' : '#E2E8F0',
             paddingBottom: '3px'
           }}>{label}</p>
           {payload.map((entry, index) => (
-            <p key={`tooltip-${index}`} style={{ 
-              color: entry.dataKey === '입고량' ? inColor : entry.dataKey === '출고량' ? outColor : stockColor, 
+            <p key={`tooltip-${index}`} style={{
+              color: entry.dataKey === '입고량' ? inColor : entry.dataKey === '출고량' ? outColor : stockColor,
               margin: '3px 0',
               fontWeight: 'bold'
             }}>
@@ -333,7 +335,6 @@ const InventoryMovementChart = ({ data, highlightedMaterial, onBarMouseOver, onB
       );
     }
     
-    // 툴팁이 비활성화될 때 마우스아웃 이벤트 호출
     if (!active && onBarMouseOut) {
       onBarMouseOut();
     }
@@ -342,96 +343,106 @@ const InventoryMovementChart = ({ data, highlightedMaterial, onBarMouseOver, onB
   };
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart
-        data={data}
-        margin={{ top: 10, right: 30, left: 20, bottom: 30 }}
-        barGap={0}
-        barCategoryGap={30}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? theme.palette.grey[700] : theme.palette.grey[300]} />
-        <XAxis 
-          dataKey="name" 
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          height={50}
-          interval={0}
-          tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
-        />
-        <YAxis 
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
-          width={50}
-        >
-          <Label 
-            value="수량" 
-            angle={-90} 
-            position="insideLeft" 
-            fill={axisColor} 
-            fontSize={12} 
-            dx={-10}
-          />
-        </YAxis>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend 
-          wrapperStyle={{ 
-            fontSize: '12px', 
-            paddingTop: '5px',
-            bottom: 0
-          }} 
-          iconType="square"
-        />
-        <Bar 
-          dataKey="입고량" 
-          name="입고량" 
-          barSize={20}
-          fill={inColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-in-${index}`} 
-              {...getBarProps(entry, '입고량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+    // 1. 외부 Box: 스크롤 컨테이너 역할. 부모로부터 높이를 100% 받음.
+    <Box sx={{ width: '100%', height: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+      {/* 
+        Inner Box: 
+        - Tries to be 100% of the scrollable parent's width.
+        - But will not be smaller than calculatedMinWidthForScroll, ensuring all content is potentially visible via scroll.
+      */}
+      <Box sx={{ width: '100%', minWidth: `${calculatedMinWidthForScroll}px`, height: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%"> {/* Fills the inner Box */}
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 30, left: 20, bottom: 40 }} // X축 레이블 공간 확보를 위해 bottom margin 증가
+            barGap={0} // 같은 카테고리 내 바 사이 간격
+            barCategoryGap="30%" // X축 카테고리 그룹 사이 간격 (항목 밀집도 조절)
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? theme.palette.grey[700] : theme.palette.grey[300]} />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: axisColor, fontSize: 11 }}
+              tickLine={{ stroke: axisColor }}
+              height={60} // X축 높이 증가 (레이블이 길거나 여러 줄일 경우 대비)
+              interval={0} // 모든 틱(레이블) 표시
+              tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value} // 긴 레이블 자르기
             />
-          ))}
-        </Bar>
-        <Bar 
-          dataKey="출고량" 
-          name="출고량" 
-          barSize={20}
-          fill={outColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-out-${index}`} 
-              {...getBarProps(entry, '출고량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+            <YAxis
+              tick={{ fill: axisColor, fontSize: 11 }}
+              tickLine={{ stroke: axisColor }}
+              tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
+              width={50}
+            >
+              <Label
+                value="수량"
+                angle={-90}
+                position="insideLeft"
+                fill={axisColor}
+                fontSize={12}
+                dx={-10}
+              />
+            </YAxis>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{
+                fontSize: '12px',
+                paddingTop: '5px', // 레전드와 차트 사이 간격
+                bottom: 0 // 레전드를 차트 하단에 위치
+              }}
+              iconType="square"
             />
-          ))}
-        </Bar>
-        <Bar 
-          dataKey="현재재고량" 
-          name="현재재고량" 
-          barSize={20}
-          fill={stockColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-stock-${index}`} 
-              {...getBarProps(entry, '현재재고량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+            <Bar
+              dataKey="입고량"
+              name="입고량"
+              barSize={20} // 바의 두께
+              fill={inColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-in-${index}`}
+                  {...getBarProps(entry, '입고량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar
+              dataKey="출고량"
+              name="출고량"
+              barSize={20}
+              fill={outColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-out-${index}`}
+                  {...getBarProps(entry, '출고량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar
+              dataKey="현재재고량"
+              name="현재재고량"
+              barSize={20}
+              fill={stockColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-stock-${index}`}
+                  {...getBarProps(entry, '현재재고량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Box>
+    </Box>
   );
 };
 
