@@ -7,6 +7,7 @@ const menuRoleGroupQuery = `
             id
             roleId
             menuId
+            upMenuId
             isOpen
             isDelete
             isInsert
@@ -15,6 +16,7 @@ const menuRoleGroupQuery = `
             isPrint
             isSelect
             isUpdate
+            flagCategory
         }
     }
 `;
@@ -26,6 +28,7 @@ const menuRoleQuery = `
             id
             roleId
             menuId
+            upMenuId
             isOpen
             isDelete
             isInsert
@@ -34,6 +37,7 @@ const menuRoleQuery = `
             isPrint
             isSelect
             isUpdate
+            flagCategory
         }
     }
 `;

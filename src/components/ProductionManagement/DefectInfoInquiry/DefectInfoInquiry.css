@@ -19,3 +19,44 @@
         border-bottom: 1px solid rgba(0, 0, 0, 0.12) !important;
     }
 } 
+
+/* DefectInfoInquiry.js specific styles */
+.defect-info-inquiry-container {
+  min-height: 100vh;
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px; /* theme.spacing(2) */
+  padding-bottom: 8px; /* theme.spacing(1) */
+  /* border-bottom 은 getBorderColor() 함수 결과에 따라 동적으로 설정되므로 JS에서 sx로 처리 */
+}
+
+.page-title {
+  font-weight: 600;
+  /* color 는 getTextColor() 함수 결과에 따라 동적으로 설정되므로 JS에서 sx로 처리 */
+  /* fontWeight도 sx에서 명시하여 우선순위 확보 */
+}
+
+.help-icon-button {
+  margin-left: 8px; /* theme.spacing(1) */
+  /* color 및 &:hover backgroundColor 는 테마 및 다크모드에 따라 동적으로 설정되므로 JS에서 sx로 처리 */
+}
+
+.error-alert {
+  margin-bottom: 16px; /* theme.spacing(2) */
+}
+
+.loading-indicator-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px; /* theme.spacing(4) */
+  margin-bottom: 32px; /* theme.spacing(4) */
+}
+
+.info-box {
+  border-radius: 8px; /* theme.shape.borderRadius (기본 4px의 배수) */
+  /* bgcolor 와 border 는 각각 getBgColor(), getBorderColor() 함수 결과에 따라 동적 설정되므로 JS에서 sx로 처리 */
+} 

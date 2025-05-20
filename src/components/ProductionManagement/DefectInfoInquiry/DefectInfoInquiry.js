@@ -10,6 +10,19 @@ import SearchForm from './SearchForm';
 import DefectInfoList from './components/DefectInfoList';
 import { useDefectInfoInquiry } from './hooks/useDefectInfoInquiry';
 import { useForm } from 'react-hook-form';
+import { bottomInfoMessages, helpModalMessages } from './constants';
+
+// 폼 기본값 상수 정의
+const FORM_DEFAULT_VALUES = {
+  defectId: '',
+  prodResultId: '',
+  productId: '',
+  equipmentId: '',
+  dateRange: {
+    startDate: null,
+    endDate: null
+  }
+};
 
 /**
  * 불량조회 컴포넌트
@@ -29,39 +42,15 @@ const DefectInfoInquiry = (props) => {
     control,
     handleSubmit,
     reset,
-    setValue,
     watch,
     getValues,
   } = useForm({
-    defaultValues: {
-      defectId: '',
-      prodResultId: '',
-      productId: '',
-      equipmentId: '',
-      dateRange: {
-        startDate: null,
-        endDate: null
-      }
-    }
+    defaultValues: FORM_DEFAULT_VALUES
   });
-
-  // 날짜 범위 변경 핸들러
-  const handleDateRangeChange = (fieldName, startDate, endDate) => {
-    setValue(fieldName, { startDate, endDate });
-  };
 
   // 초기화 핸들러
   const handleReset = () => {
-    reset({
-      defectId: '',
-      prodResultId: '',
-      productId: '',
-      equipmentId: '',
-      dateRange: {
-        startDate: null,
-        endDate: null
-      }
-    });
+    reset(FORM_DEFAULT_VALUES);
   };
 
   // 커스텀 훅 사용
@@ -94,17 +83,12 @@ const DefectInfoInquiry = (props) => {
   };
 
   return (
-      <Box sx={{ p: 0, minHeight: '100vh' }}>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          mb: 2,
-          borderBottom: `1px solid ${getBorderColor()}`,
-          pb: 1
-        }}>
+      <Box className="defect-info-inquiry-container" sx={{ p: 0 }}>
+        <Box className="page-header" sx={{ borderBottom: `1px solid ${getBorderColor()}` }}>
           <Typography
               variant="h5"
               component="h2"
+              className="page-title"
               sx={{
                 fontWeight: 600,
                 color: getTextColor()
@@ -114,8 +98,8 @@ const DefectInfoInquiry = (props) => {
           </Typography>
           <IconButton
               onClick={() => setIsHelpModalOpen(true)}
+              className="help-icon-button"
               sx={{
-                ml: 1,
                 color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
                 '&:hover': {
                   backgroundColor: isDarkMode
@@ -132,7 +116,7 @@ const DefectInfoInquiry = (props) => {
         {errorMessage && (
             <Alert
                 severity="error"
-                sx={{ mb: 2 }}
+                className="error-alert"
                 action={
                   <Button
                       color="inherit"
@@ -157,14 +141,12 @@ const DefectInfoInquiry = (props) => {
               control,
               equipmentOptions,
               productOptions,
-              handleDateRangeChange,
-              onSearch: handleSubmit(onSearch)
           })}
         </SearchCondition>
 
         {/* 로딩 표시 */}
         {isLoading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <Box className="loading-indicator-container">
               <CircularProgress />
             </Box>
         )}
@@ -187,21 +169,16 @@ const DefectInfoInquiry = (props) => {
         )}
 
         {/* 하단 정보 영역 */}
-        <Box mt={2} p={2} sx={{
+        <Box className="info-box" mt={2} p={2} sx={{
           bgcolor: getBgColor(),
-          borderRadius: 1,
           border: `1px solid ${getBorderColor()}`
         }}>
           <Stack spacing={1}>
-            <Typography variant="body2" color={getTextColor()}>
-              • 불량조회 화면에서는 생산과정에서 발생한 불량 정보를 조회할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 불량 유형, 원인, 수량 등의 정보를 확인하여 품질 관리에 활용할 수 있습니다.
-            </Typography>
-            <Typography variant="body2" color={getTextColor()}>
-              • 출력 및 엑셀 내보내기 기능을 통해 불량 데이터를 활용할 수 있습니다.
-            </Typography>
+            {bottomInfoMessages.map((message, index) => (
+              <Typography key={index} variant="body2" color={getTextColor()}>
+                {message}
+              </Typography>
+            ))}
           </Stack>
         </Box>
 
@@ -209,20 +186,13 @@ const DefectInfoInquiry = (props) => {
         <HelpModal
             open={isHelpModalOpen}
             onClose={() => setIsHelpModalOpen(false)}
-            title="불량조회 도움말"
+            title={helpModalMessages.title}
         >
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 불량조회에서는 생산 과정에서 발생한 불량 정보를 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 상단의 검색조건을 사용하여 특정 기간, 제품, 작업지시 등의 불량 정보를 조회할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 그리드의 컬럼을 클릭하여 정렬하거나, 필터 기능을 사용하여 데이터를 필터링할 수 있습니다.
-          </Typography>
-          <Typography variant="body2" color={getTextColor()} paragraph>
-            • 출력 및 엑셀 내보내기 기능을 통해 불량 데이터를 활용할 수 있습니다.
-          </Typography>
+          {helpModalMessages.paragraphs.map((paragraph, index) => (
+            <Typography key={index} variant="body2" color={getTextColor()} paragraph>
+              {paragraph}
+            </Typography>
+          ))}
         </HelpModal>
       </Box>
   );
