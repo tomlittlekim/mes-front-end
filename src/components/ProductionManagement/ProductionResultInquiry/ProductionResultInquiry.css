@@ -46,3 +46,50 @@
 .dark-mode .defect-highlight {
   color: #e57373;
 }
+
+/* ProductionResultInquiry.js specific styles */
+.production-result-inquiry-container {
+  min-height: 100vh;
+  /* p: 0; Box 컴포넌트의 padding 관련 sx prop (p, pt, pb, pl, pr, px, py) 은 
+     0일 경우 CSS에서 margin/padding: 0으로 쉽게 대체 가능하나, 
+     테마의 스페이싱 단위를 사용하는 경우 (예: p: 2)는 CSS에서 직접 관리하기보다 
+     MUI 테마 스페이싱 값 (theme.spacing(2))을 사용하는 것이 일관성에 좋으므로, 
+     이런 경우는 sx에 남겨두는 것이 나을 수 있습니다. 여기서는 p:0 이므로 css로 옮겨도 무방합니다. */
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px; /* theme.spacing(2)에 해당할 수 있는 값, CSS에서는 px 등으로 고정값 사용 */
+  padding-bottom: 8px; /* theme.spacing(1)에 해당할 수 있는 값 */
+  /* border-bottom 은 getBorderColor() 함수 결과에 따라 동적으로 설정되므로 JS에서 sx로 처리 */
+}
+
+.page-title {
+  font-weight: 600;
+  /* color 는 getTextColor() 함수 결과에 따라 동적으로 설정되므로 JS에서 sx로 처리 */
+}
+
+.help-icon-button {
+  margin-left: 8px; /* theme.spacing(1)에 해당할 수 있는 값 */
+  /* color 및 &:hover backgroundColor 는 테마 및 다크모드에 따라 동적으로 설정되므로 JS에서 sx로 처리 */
+}
+
+.error-alert {
+  margin-bottom: 16px; /* theme.spacing(2) */
+}
+
+.loading-indicator-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px; /* theme.spacing(4) */
+  margin-bottom: 32px; /* theme.spacing(4) */
+}
+
+.info-box {
+  border-radius: 8px; /* theme.shape.borderRadius 에 해당할 수 있는 값 (기본 4px의 배수) */
+  /* bgcolor 와 border 는 각각 getBgColor(), getBorderColor() 함수 결과에 따라 동적 설정되므로 JS에서 sx로 처리 */
+  /* mt, p는 Box의 spacing shorthand이므로 sx에 남기거나, 구체적인 css padding/margin으로 변환 */
+  /* 예를 들어 mt={2} p={2} 는 margin-top: 16px; padding: 16px; 와 유사 (theme.spacing(2)) */
+}
