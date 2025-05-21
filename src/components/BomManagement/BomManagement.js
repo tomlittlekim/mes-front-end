@@ -3,7 +3,7 @@ import './BomManagement.css';
 import {
     Grid,
     Box,
-    useTheme,
+    useTheme, Button,
 } from '@mui/material';
 import {DOMAINS, useDomain} from '../../contexts/DomainContext';
 import {useGraphQL} from '../../apollo/useGraphQL';
@@ -18,6 +18,7 @@ import BomDetail, { MaterialSelectModal } from './components/BomDetail';
 import {useBomData} from './hooks/useBomData';
 import {useBomDetailData} from './hooks/useBomDetailData';
 import { useBomModal } from './hooks/useBomModalData';
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 /**
  * BOM 관리 컴포넌트
@@ -64,7 +65,8 @@ const BomManagement = () => {
         loadDetailData,
         handleDetailSave,
         handleDetailDelete,
-        generateId
+        generateId,
+        materialCategoryOptions
     } = useBomDetailData(executeQuery, executeMutation, selectedBom);
 
     // 상세 데이터 로드 함수 등록
@@ -100,7 +102,8 @@ const BomManagement = () => {
         handleModalSubmit,
         handleOpenRegisterModal,
         handleOpenEditModal,
-        handleCloseModal
+        handleCloseModal,
+        handleRefreshMaterialOptions
     } = useBomModal({
         bomData: {
             selectedBom
@@ -108,7 +111,8 @@ const BomManagement = () => {
         getMaterialOptions,
         getMaterialDetails,
         getMaterialsByType,
-        handleBomSave
+        handleBomSave,
+        executeQuery
     });
 
     // BOM 선택 및 상세 데이터 로드
@@ -193,6 +197,7 @@ const BomManagement = () => {
                         setBomDetailList={setBomDetailList}
                         handleOpenMaterialSelectModal={handleOpenMaterialSelectModal}
                         apiRef={apiRef}
+                        materialCategoryOptions={materialCategoryOptions}
                     />
                 </Grid>
             )}
@@ -215,7 +220,16 @@ const BomManagement = () => {
                 values={modalConfig.values}
                 onChange={handleModalFieldChange}
                 onSubmit={handleModalSubmit}
-            />
+            >
+                <Button
+                    startIcon={<RefreshIcon />}
+                    onClick={handleRefreshMaterialOptions}
+                    size="small"
+                    sx={{ mb: 2 }}
+                >
+                    자재 목록 새로고침
+                </Button>
+            </BomModal>
 
             <MaterialSelectModal
                 open={materialSelectModalOpen}
