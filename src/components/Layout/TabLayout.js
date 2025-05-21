@@ -39,7 +39,7 @@ import IntegratedMonitoringPage from "../../pages/Monitoring/IntegratedMonitorin
 import KPIMonitoringPage from "../../pages/Monitoring/KPIMonitoringPage";
 
 // 3D 모델 뷰어 컴포넌트 import (경로 확인 필요!)
-import ModelViewer from '../ThreeJS/ModelViewer';
+import ModelViewerWithIotPanel from '../ThreeJS/ModelViewerWithIotPanel';
 
 // 각 페이지가 유효한 컴포넌트인지 확인
 // React 19에서는 memo 함수에 전달되는 인자가 컴포넌트인지 더 엄격하게 검사합니다.
@@ -80,8 +80,8 @@ const MemoizedKPIMonitoring = typeof KPIMonitoringPage === 'function' ? memo(KPI
 const MemoizedDriveManagement = typeof DriveManagementPage === 'function' ? memo(DriveManagementPage) : DriveManagementPage;
 const MemoizedTransactionStatement = typeof TransactionStatementPage === 'function' ? memo(TransactionStatementPage) : TransactionStatementPage;
 
-// ModelViewer도 memo로 감싸기
-const MemoizedModelViewer = typeof ModelViewer === 'function' ? memo(ModelViewer) : ModelViewer;
+// ModelViewerWithIotPanel도 memo로 감싸기
+const MemoizedModelViewerWithIotPanel = typeof ModelViewerWithIotPanel === 'function' ? memo(ModelViewerWithIotPanel) : ModelViewerWithIotPanel;
 
 // 각 탭 ID에 따라 적절한 컴포넌트를 생성하는 함수
 const getTabComponent = (tabId) => {
@@ -161,7 +161,7 @@ const getTabComponent = (tabId) => {
       return <MemoizedDriveManagement tabId={tabId} />;
     // 3D Test 탭 케이스 추가
     case '3d-test':
-      return <MemoizedModelViewer tabId={tabId} />;
+      return <MemoizedModelViewerWithIotPanel tabId={tabId} />;
     // 다른 메뉴 항목들을 추가할 수 있습니다
     default:
       console.warn(`No component found for tab ID: ${tabId}`);
