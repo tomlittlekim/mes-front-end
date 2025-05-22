@@ -30,31 +30,48 @@ const ModelViewer = ({ tabId }) => {
         }
       }
     `;
-    graphFetch(query).then((data) => {
-      if (!data.errors) {
-        const result = data.getPowerData;
-        const deviceIds = new Set();
-        if (result && result.length > 0) {
-          const newDataPoint = {};
-          newDataPoint.timeLabel = result[0].timeLabel.replace("T"," ").replace("Z"," ");
-          result.forEach(item => {
-            deviceIds.add(item.deviceId);
-            const raw = parseFloat(item.power);
-            newDataPoint[item.deviceId] = Number(raw.toFixed(2));
-          });
-          setData(prev => {
-            const updated = [...prev, newDataPoint];
-            if(updated.length > 60){ updated.shift(); }
-            return updated;
-          });
-          const availableColors = ["blue", "deeppink", "green", "orange", "purple", "red"];
-          const newLines = Array.from(deviceIds).map((deviceId, idx) => ({
-            key: deviceId,
-            color: availableColors[idx % availableColors.length]
-          }));
-          setLines(newLines);
-        }
+    graphFetch(query).then((apiResponse) => {
+      // 1. API 응답 자체가 없는 경우 처리
+      if (!apiResponse) {
+        console.error('IOT 데이터 fetch 실패: 응답 데이터가 없습니다.');
+        return;
       }
+      // 2. API 응답 내에 errors 필드가 있는지 확인
+      if (apiResponse.errors) {
+        console.error('IOT 데이터 fetch 실패 (GraphQL 오류):', apiResponse.errors);
+        return;
+      }
+
+      // 3. 오류가 없다면 getPowerData 접근
+      const result = apiResponse.getPowerData;
+
+      if (result && result.length > 0) {
+        const deviceIds = new Set();
+        const newDataPoint = {};
+        newDataPoint.timeLabel = result[0].timeLabel.replace("T"," ").replace("Z"," ");
+        result.forEach(item => {
+          deviceIds.add(item.deviceId);
+          const raw = parseFloat(item.power);
+          newDataPoint[item.deviceId] = Number(raw.toFixed(2));
+        });
+        setData(prev => {
+          const updated = [...prev, newDataPoint];
+          if(updated.length > 60){ updated.shift(); }
+          return updated;
+        });
+        const availableColors = ["blue", "deeppink", "green", "orange", "purple", "red"];
+        const newLines = Array.from(deviceIds).map((deviceId, idx) => ({
+          key: deviceId,
+          color: availableColors[idx % availableColors.length]
+        }));
+        setLines(newLines);
+      } else {
+        // getPowerData는 존재하지만, 데이터가 비어있는 경우 (오류는 아님)
+        console.warn('IOT 데이터는 수신했으나, getPowerData 결과가 비어있거나 null입니다:', result);
+      }
+    }).catch(error => {
+      // graphFetch 자체의 실패 또는 네트워크 오류 등
+      console.error('graphFetch 실행 중 오류 발생:', error);
     });
   };
 
