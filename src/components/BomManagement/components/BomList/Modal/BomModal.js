@@ -36,7 +36,7 @@ export const getBomModalFields = (getMaterialOptions, getMaterialDetails) => [
     {id: 'userMaterialId', label: '제품ID', type: 'text', required: true, lock: true},
     {id: 'materialStandard', label: '규격', type: 'text', lock: true},
     {id: 'unit', label: '단위', type: 'text', required: true, lock: true},
-    {id: 'bomName', label: 'BOM 명', type: 'text', required: true},
+    // {id: 'bomName', label: 'BOM 명', type: 'text', required: true},
     {id: 'remark', label: '비고', type: 'textarea', rows: 6}
 ];
 

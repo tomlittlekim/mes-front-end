@@ -37,63 +37,63 @@ const PopupChart = ({ open, onClose }) => {
 
     const handleSearch = useCallback(() => {
         const query = `
-          query getPopupPowerData($filter: PowerHourFilter) {
+          query getPopupPowerData($filter: KpiFilter) {
             getPopupPowerData(filter: $filter) {
               timeLabel
-              deviceId
-              power
+              label
+              value
             }
           }
         `;
 
-    graphFetch(
-        query,
-        {
-            filter: {
-                "date" : format(date, 'yyyy-MM-dd'),
-                "range" : range
+        graphFetch(
+            query,
+            {
+                filter: {
+                    "date" : format(date, 'yyyy-MM-dd'),
+                    "range" : range
+                }
             }
-        }
-    ).then((data) => {
-        if (data.errors) {
-        } else {
-            const result = data.getPopupPowerData;
-            const deviceIds = new Set();
-            const isHourBased = range === "day"; // 또는 "hour", 또는 필터에서 구분
+        ).then((data) => {
+            if (data.errors) {
+            } else {
+                const result = data.getPopupPowerData;
+                const deviceIds = new Set();
+                const isHourBased = range === "day"; // 또는 "hour", 또는 필터에서 구분
 
-            // 1. 시간별로 그룹핑
-            const grouped = {};
+                // 1. 시간별로 그룹핑
+                const grouped = {};
 
-            result.forEach(item => {
-                const { timeLabel, deviceId, power } = item;
+                result.forEach(item => {
+                    const { timeLabel, label, value } = item;
 
-                if (!grouped[timeLabel]) {
-                    grouped[timeLabel] = { timeLabel };
-                }
-                grouped[timeLabel][deviceId] = Number(parseFloat(power).toFixed(2));
-                deviceIds.add(item.deviceId);
-            });
+                    if (!grouped[timeLabel]) {
+                        grouped[timeLabel] = { timeLabel };
+                    }
+                    grouped[timeLabel][label] = Number(parseFloat(value).toFixed(2));
+                    deviceIds.add(item.label);
+                });
 
-            const sorted = Object.values(grouped).sort((a, b) => {
-                if (isHourBased) {
-                    return Number(a.timeLabel) - Number(b.timeLabel);
-                } else {
-                    return new Date(a.timeLabel) - new Date(b.timeLabel);
-                }
-            });
-            setData(sorted);
+                const sorted = Object.values(grouped).sort((a, b) => {
+                    if (isHourBased) {
+                        return Number(a.timeLabel) - Number(b.timeLabel);
+                    } else {
+                        return new Date(a.timeLabel) - new Date(b.timeLabel);
+                    }
+                });
+                setData(sorted);
 
-            const availableColors = ["blue", "deeppink", "green", "orange", "purple", "red"];
-            // lines 상태 업데이트: deviceIds 집합으로부터 배열 생성
-            const newLines = Array.from(deviceIds).map((deviceId, idx) => ({
-                key: deviceId,
-                color: availableColors[idx % availableColors.length]
-            }));
-            setLines(newLines);
-        }
-    }).catch((err) => {
+                const availableColors = ["blue", "deeppink", "green", "orange", "purple", "red"];
+                // lines 상태 업데이트: deviceIds 집합으로부터 배열 생성
+                const newLines = Array.from(deviceIds).map((deviceId, idx) => ({
+                    key: deviceId,
+                    color: availableColors[idx % availableColors.length]
+                }));
+                setLines(newLines);
+            }
+        }).catch((err) => {
+        });
     });
-});
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">

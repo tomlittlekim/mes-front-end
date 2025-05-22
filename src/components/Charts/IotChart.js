@@ -1,4 +1,3 @@
-// components/IOTChart.jsx
 import LineChartBase from './LineChartBase';
 import ChartCard from "./ChartCard";
 import {useEffect, useState} from "react";
@@ -18,8 +17,8 @@ const IOTChart = () => {
               query getPowerData {
                 getPowerData {
                   timeLabel
-                  deviceId
-                  power
+                  label
+                  value
                 }
               }
             `;
@@ -40,10 +39,10 @@ const IOTChart = () => {
                         newDataPoint.timeLabel = result[0].timeLabel.replace("T"," ").replace("Z"," ");
                         // 각 센서(deviceId)의 power 값을 해당 키로 저장
                         result.forEach(item => {
-                            deviceIds.add(item.deviceId);
-                            const raw = parseFloat(item.power);
+                            deviceIds.add(item.label);
+                            const raw = parseFloat(item.value);
                             // 소수점 2자리 반올림; Math.round()를 사용하면 숫자로 반환됩니다.
-                            newDataPoint[item.deviceId] = Number(raw.toFixed(2));
+                            newDataPoint[item.label] = Number(raw.toFixed(2));
                         });
 
                         setData( prev =>{
@@ -76,27 +75,27 @@ const IOTChart = () => {
     };
 
     return (
-    <ChartCard title="IOT 전력량"
-               subtitle={
-                   <>
-                       설비 전력 실시간 모니터링 데이터입니다.{' '}
-                       <span style={{ color: 'red', fontWeight: 'bold' }}>더블클릭시 상세보기</span>
-                   </>
-               }
-    >
-        <div onDoubleClick={handleDoubleClick}>
-            <LineChartBase data={data}
-                           lines={lines}
-                           xAxisLabel="시간(30s)"
-                           yAxisLabel="전력 (W)"
-            />
-        </div>
+        <ChartCard title="IOT 전력량"
+                   subtitle={
+                       <>
+                           설비 전력 실시간 모니터링 데이터입니다.{' '}
+                           <span style={{ color: 'red', fontWeight: 'bold' }}>더블클릭시 상세보기</span>
+                       </>
+                   }
+        >
+            <div onDoubleClick={handleDoubleClick}>
+                <LineChartBase data={data}
+                               lines={lines}
+                               xAxisLabel="시간(30s)"
+                               yAxisLabel="전력 (W)"
+                />
+            </div>
 
-        <PopupChart
-            open={popupOpen}
-            onClose={() => setPopupOpen(false)}
-        />
-    </ChartCard>
+            <PopupChart
+                open={popupOpen}
+                onClose={() => setPopupOpen(false)}
+            />
+        </ChartCard>
     );
 };
 

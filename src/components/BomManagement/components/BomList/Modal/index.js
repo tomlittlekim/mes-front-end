@@ -16,7 +16,8 @@ const BomModal = ({
     fields,
     values,
     onChange,
-    onSubmit
+    onSubmit,
+    children
 }) => {
     return (
         <CustomModal
@@ -29,7 +30,9 @@ const BomModal = ({
             values={values}
             onChange={onChange}
             onSubmit={onSubmit}
-        />
+        >
+            {children}
+        </CustomModal>
     );
 };
 

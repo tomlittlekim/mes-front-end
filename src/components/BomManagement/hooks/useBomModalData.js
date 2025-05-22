@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { getBomModalFields } from '../components/BomList/Modal/BomModal';
+import {useMaterialData} from "../../MaterialManagement/hooks/useMaterialData";
 
 /**
  * BOM 모달 상태 및 핸들러 제공 훅
@@ -17,7 +18,8 @@ export const useBomModal = ({
                                 getMaterialOptions,
                                 getMaterialDetails,
                                 getMaterialsByType,
-                                handleBomSave
+                                handleBomSave,
+                                executeQuery
                             }) => {
     // BOM 모달 필드 가져오기
     const BOM_MODAL_FIELDS = getBomModalFields(getMaterialOptions, getMaterialDetails);
@@ -31,6 +33,9 @@ export const useBomModal = ({
         values: {},
         fields: BOM_MODAL_FIELDS
     });
+
+    // Material 데이터 훅
+    const { materials, loadBOMMaterials } = useMaterialData(executeQuery);
 
     // 모달 필드 변경 핸들러
     const handleModalFieldChange = async (fieldId, value) => {
@@ -154,12 +159,45 @@ export const useBomModal = ({
         });
     };
 
+    // 옵션 새로고침 로직
+    const handleRefreshMaterialOptions = async () => {
+        const materialType = modalConfig.values.materialType;
+        if (!materialType) return;
+
+        const latestMaterials = await loadBOMMaterials(materialType);
+
+        const options = latestMaterials.map(item => ({
+            value: item.systemMaterialId,
+            label: item.materialName
+        }));
+
+        setModalConfig(prev => {
+            const newFields = prev.fields.map(f => {
+                if (f.id === 'systemMaterialId') {
+                    return {
+                        ...f,
+                        options: [...options],
+                        disabled: false
+                    };
+                }
+                return { ...f };
+            });
+            return {
+                ...prev,
+                fields: newFields
+            };
+        });
+    };
+
+
     return {
+        materials,
         modalConfig,
         handleModalFieldChange,
         handleModalSubmit,
         handleOpenRegisterModal,
         handleOpenEditModal,
-        handleCloseModal
+        handleCloseModal,
+        handleRefreshMaterialOptions
     };
 };
