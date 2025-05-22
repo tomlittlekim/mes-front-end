@@ -329,6 +329,18 @@ export const useProductionResultOperations = (
             Message.showWarning('창고는 필수 입력 항목입니다.');
             return Promise.resolve();
           }
+          
+          // 생산시작일시 필수 입력 검사 추가
+          if (!currentRow.prodStartTime) {
+            Message.showWarning('생산시작일시는 필수 입력 항목입니다.');
+            return Promise.resolve();
+          }
+          
+          // 생산종료일시 필수 입력 검사 추가
+          if (!currentRow.prodEndTime) {
+            Message.showWarning('생산종료일시는 필수 입력 항목입니다.');
+            return Promise.resolve();
+          }
 
           // 음수 검사
           if (currentRow.goodQty < 0 || currentRow.defectQty < 0) {
@@ -497,6 +509,18 @@ export const useProductionResultOperations = (
     // 창고 필수 체크 추가
     if (!newIndependentResult.warehouseId) {
       Message.showWarning('창고는 필수 입력 항목입니다.');
+      return;
+    }
+    
+    // 생산시작일시 필수 체크 추가
+    if (!newIndependentResult.prodStartTime) {
+      Message.showWarning('생산시작일시는 필수 입력 항목입니다.');
+      return;
+    }
+    
+    // 생산종료일시 필수 체크 추가
+    if (!newIndependentResult.prodEndTime) {
+      Message.showWarning('생산종료일시는 필수 입력 항목입니다.');
       return;
     }
     

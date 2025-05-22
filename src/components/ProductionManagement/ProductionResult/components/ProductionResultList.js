@@ -141,7 +141,7 @@ const ProductionResultList = ({
     // 생산시작일시 필드 (신규 등록시 수정 가능)
     {
       field: 'prodStartTime',
-      headerName: '생산시작일시',
+      headerName: '생산시작일시*',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -187,7 +187,7 @@ const ProductionResultList = ({
     // 생산종료일시 필드 (신규 등록시 수정 가능)
     {
       field: 'prodEndTime',
-      headerName: '생산종료일시',
+      headerName: '생산종료일시*',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -443,15 +443,31 @@ const ProductionResultList = ({
     // 행 업데이트 처리
     processRowUpdate: (newRow, oldRow) => {
       try {
-        // 날짜 필드가 Date 객체인 경우 ISO 문자열로 변환
+        // 현지 시간을 유지하면서 날짜를 문자열로 변환하는 함수
+        const formatLocalDate = (date) => {
+          if (!date) return null;
+          const d = date instanceof Date ? date : new Date(date);
+          if (isNaN(d.getTime())) return null;
+          
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          const seconds = String(d.getSeconds()).padStart(2, '0');
+          
+          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+        };
+        
+        // 날짜 필드가 Date 객체인 경우 로컬 시간 문자열로 변환
         const updatedRow = {
           ...newRow,
-          // Date 객체를 ISO 문자열로 변환 (백엔드 저장을 위해)
+          // Date 객체를 로컬 시간 문자열로 변환 (백엔드 저장을 위해)
           prodStartTime: newRow.prodStartTime instanceof Date ? 
-                        newRow.prodStartTime.toISOString() : 
+                        formatLocalDate(newRow.prodStartTime) : 
                         newRow.prodStartTime,
           prodEndTime: newRow.prodEndTime instanceof Date ? 
-                      newRow.prodEndTime.toISOString() : 
+                      formatLocalDate(newRow.prodEndTime) : 
                       newRow.prodEndTime
         };
         
