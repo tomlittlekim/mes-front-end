@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import ModelViewer from './ModelViewer';
-import IotChart from '../Charts/IotChart';
+import IotChartFor3d from '../Charts/IotChartFor3d';
 
 const panelWidth = 420;
 const panelMinWidth = 220;
 
 const ModelViewerWithIotPanel = ({ tabId }) => {
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(true);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -40,15 +40,19 @@ const ModelViewerWithIotPanel = ({ tabId }) => {
             onClick={() => setMinimized(m => !m)}
             title={minimized ? '확장' : '최소화'}
           >
-            {minimized ? '▢' : '–'}
+            {minimized ? '+' : '-'}
           </button>
         </div>
         {/* 본문 */}
-        {!minimized && (
-          <div style={{ flex: 1, minHeight: 352, padding: 8, overflow: 'auto' }}>
-            <IotChart />
+        <div style={{ 
+          flex: 1, 
+          minHeight: minimized ? 0 : 352, 
+          padding: 8, 
+          overflow: 'auto',
+          display: minimized ? 'none' : 'block'
+        }}>
+            <IotChartFor3d />
           </div>
-        )}
       </div>
     </div>
   );
