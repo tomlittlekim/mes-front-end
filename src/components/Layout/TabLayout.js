@@ -37,6 +37,7 @@ import DriveManagementPage from '../../pages/DriveManagementPage';
 import TransactionStatementPage from '../../pages/TransactionStatementPage';
 import IntegratedMonitoringPage from "../../pages/Monitoring/IntegratedMonitoringPage";
 import KPIMonitoringPage from "../../pages/Monitoring/KPIMonitoringPage";
+import KPISettingPage from "../../pages/KPISettingPage";
 
 // 3D 모델 뷰어 컴포넌트 import (경로 확인 필요!)
 import ModelViewerWithIotPanel from '../ThreeJS/ModelViewerWithIotPanel';
@@ -77,6 +78,7 @@ const MemoizedInventoryMovement = typeof InventoryMovementPage === 'function' ? 
 const MemoizedDailyProduction = typeof DailyProductionPage === 'function' ? memo(DailyProductionPage) : DailyProductionPage;
 const MemoizedIntegratedMonitoring = typeof IntegratedMonitoringPage === 'function' ? memo(IntegratedMonitoringPage) : IntegratedMonitoringPage;
 const MemoizedKPIMonitoring = typeof KPIMonitoringPage === 'function' ? memo(KPIMonitoringPage) : KPIMonitoringPage;
+const MemoizedKPISetting = typeof KPISettingPage === 'function' ? memo(KPISettingPage) : KPISettingPage;
 const MemoizedDriveManagement = typeof DriveManagementPage === 'function' ? memo(DriveManagementPage) : DriveManagementPage;
 const MemoizedTransactionStatement = typeof TransactionStatementPage === 'function' ? memo(TransactionStatementPage) : TransactionStatementPage;
 
@@ -159,6 +161,8 @@ const getTabComponent = (tabId) => {
       return <MemoizedKPIMonitoring tabId={tabId} />;
     case 'sy-drive':
       return <MemoizedDriveManagement tabId={tabId} />;
+    case 'sy-kpi':
+      return <MemoizedKPISetting tabId={tabId} />;
     // 3D Test 탭 케이스 추가
     case '3d-test':
       return <MemoizedModelViewerWithIotPanel tabId={tabId} />;

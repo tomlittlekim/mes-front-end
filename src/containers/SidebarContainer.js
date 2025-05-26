@@ -110,7 +110,8 @@ const SidebarContainer = ({ activeMenuItem, activeMenuGroup }) => {
         { id: 'sy-user', name: '사용자관리' },
         { id: 'sy-company', name: '회사정보' },
         { id: 'sy-menu', name: '메뉴관리' },
-        { id: 'sy-drive', name: '문서대장' }
+        { id: 'sy-drive', name: '문서대장' },
+        { id: 'sy-kpi', name: 'KPI 지표관리' }
       ]
     },
     {
