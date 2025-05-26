@@ -170,8 +170,6 @@ export const useProductionPlanManagement = (tabId) => {
       const response = await executeQuery({ query: PRODUCT_MATERIALS_QUERY });
 
       if (response?.data?.productMaterials) {
-        console.log("제품 정보 로드 성공:", response.data.productMaterials.length);
-
         // 제품 정보에 표시값 추가
         const enrichedProducts = response.data.productMaterials.map(
             product => enrichProductWithDisplayValues(product)
@@ -222,7 +220,6 @@ export const useProductionPlanManagement = (tabId) => {
       });
 
       if (response?.data?.getVendors) {
-        console.log("고객사 정보 로드 성공:", response.data.getVendors.length);
         setVendors(response.data.getVendors);
         setIsVendorsLoaded(true);
       } else {
@@ -739,15 +736,11 @@ export const useProductionPlanManagement = (tabId) => {
 
     const loadInitialData = async () => {
       try {
-        console.log("초기 데이터 로드 시작...");
-
         // 1. 제품 정보 먼저 로드
         await loadProductMaterials();
-        console.log("제품 정보 로드 완료, 제품 수:", productMaterials.length);
 
         // 2. 고객사 정보 로드
         await loadVendors();
-        console.log("고객사 정보 로드 완료, 고객사 수:", vendors.length);
 
         // 3. 제품 정보 및 고객사 정보 로드 후 생산계획 목록 조회
         if (isMounted) {
