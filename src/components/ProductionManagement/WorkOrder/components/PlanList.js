@@ -179,7 +179,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = 
 
   return (
       <EnhancedDataGridWrapper
-          title="생산계획목록"
+          title="생산계획 목록"
           key={refreshKey}
           rows={planList}
           columns={planColumns}

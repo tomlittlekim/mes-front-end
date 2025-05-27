@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
-import { Typography, FormControl, Select, MenuItem } from '@mui/material';
+import { Typography, FormControl, Select, MenuItem, Stack } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -422,9 +422,27 @@ const WorkOrderList = ({
     }
   }), []);
 
+  // 작업지시 목록 그리드 커스텀 헤더
+  const CustomHeader = () => (
+      <Stack direction="column" spacing={0.5} width="100%">
+        <Typography 
+          variant="subtitle1" 
+          fontWeight="600"
+          sx={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '100%'
+          }}
+        >
+          작업지시 목록 {selectedPlan ? '- ' + selectedPlan.prodPlanId : ''}
+        </Typography>
+      </Stack>
+  );
+
   return (
       <EnhancedDataGridWrapper
-          title={`작업지시목록 ${selectedPlan ? '- ' + selectedPlan.prodPlanId : ''}`}
+          title={<CustomHeader />}
           key={refreshKey + "-workorders"}
           rows={workOrderList}
           columns={workOrderColumns}
