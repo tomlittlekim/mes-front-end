@@ -115,18 +115,6 @@ const ProductionPlanManagement = (props) => {
     }
   };
 
-  // 새로운 행 모드 설정 (조건부로 추가)
-  if (addRows && addRows.length > 0) {
-    gridProps.rowModesModel = {
-      ...addRows.reduce((acc, row) => {
-        if (row && row.id && row.id.toString().startsWith('NEW_')) {
-          acc[row.id] = { mode: 'edit' };
-        }
-        return acc;
-      }, {})
-    };
-  }
-
   // SearchForm 컴포넌트에서 반환하는 검색 요소들
   const searchFormItems = SearchForm({ 
     control, 
@@ -194,6 +182,8 @@ const ProductionPlanManagement = (props) => {
                     gridProps={gridProps}
                     productMaterials={productMaterials} // 명시적으로 전달
                     vendorMap={vendorMap} // 고객사 정보 매핑 객체 전달
+                    addRows={addRows} // 추가된 행 정보 전달
+                    updatedRows={updatedRows} // 수정된 행 정보 전달
                 />
               </Grid>
             </Grid>

@@ -75,7 +75,12 @@ const EnhancedDataGridWrapper = (props) => {
   const handleSelectionModelChange = useCallback((newSelectionModel) => {
     updateSelection(newSelectionModel);
     
-    // 원래 onSelectionModelChange 핸들러가 있다면 호출
+    // 원래 onRowSelectionModelChange 핸들러가 있다면 호출
+    if (gridProps.onRowSelectionModelChange) {
+      gridProps.onRowSelectionModelChange(newSelectionModel);
+    }
+    
+    // 기존 onSelectionModelChange 핸들러도 호출 (하위 호환성)
     if (gridProps.onSelectionModelChange) {
       gridProps.onSelectionModelChange(newSelectionModel);
     }
