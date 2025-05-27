@@ -34,7 +34,7 @@ import {
   WAREHOUSE_OPTIONS,
   START_PRODUCTION_MOBILE,
   UPDATE_PRODUCTION_RESULT_MOBILE,
-  DELETE_PRODUCTION_RESULT
+  DELETE_PRODUCTION_RESULTS
 } from './ProductionResultGraphQL';
 import { SEARCH_CONDITIONS } from './ProductionResultConstants';
 import ProductionResultList from './components/ProductionResultList';
@@ -532,21 +532,22 @@ const MobileProductionResult = () => {
     setDeleteTargetId(null);
   };
 
-  // 생산실적 삭제 핸들러
+  // 생산실적 삭제 핸들러 (다중 삭제 API 사용)
   const handleDeleteProductionResult = async () => {
     if (!deleteTargetId) return;
     
     try {
       setSaving(true);
       
+      // 단일 ID를 배열로 감싸서 다중 삭제 API 호출
       const { data } = await executeMutation({
-        mutation: DELETE_PRODUCTION_RESULT,
+        mutation: DELETE_PRODUCTION_RESULTS,
         variables: {
-          prodResultId: deleteTargetId
+          prodResultIds: [deleteTargetId] // 배열로 감싸서 전송
         }
       });
       
-      if (data.deleteProductionResult) {
+      if (data.deleteProductionResults) {
         setSnackbar({
           open: true,
           message: '생산실적이 삭제되었습니다.',

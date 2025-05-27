@@ -89,6 +89,13 @@ export const DELETE_PRODUCTION_RESULT_MUTATION = gql`
     }
 `;
 
+// 생산실적 다중 삭제 뮤테이션
+export const DELETE_PRODUCTION_RESULTS_MUTATION = gql`
+    mutation DeleteProductionResults($prodResultIds: [String!]!) {
+        deleteProductionResults(prodResultIds: $prodResultIds)
+    }
+`;
+
 // 불량정보 관련 쿼리
 export const DEFECT_INFO_BY_PROD_RESULT_QUERY = gql`
     query getDefectInfosByProdResultId($prodResultId: String!) {
