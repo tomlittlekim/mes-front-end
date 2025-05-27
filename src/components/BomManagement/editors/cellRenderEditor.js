@@ -1,5 +1,5 @@
 import React from 'react';
-import { Chip } from '@mui/material';
+import {Box, Chip} from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
 import { getMaterialTypeColor } from '../utils/styleUtils';
 
@@ -89,7 +89,40 @@ export const materialStatusRenderCell = (params) => {
     );
 };
 
+
+/**
+ * 자재유형 코드를 한글명으로 변환하는 함수
+ * @param {string} code - 자재유형 코드
+ * @param {Array} materialCategoryOptions - 자재유형 옵션 목록
+ * @returns {string} - 한글명
+ */
+export const getMaterialCategoryName = (code, materialCategoryOptions = []) => {
+    if (!code || !materialCategoryOptions.length) return code;
+
+    const category = materialCategoryOptions.find(option => option.value === code);
+    return category ? category.label : code;
+};
+
+/**
+ * 자재유형 셀 렌더링 컴포넌트
+ * @param {Object} params - DataGrid 셀 파라미터
+ * @returns {JSX.Element} - 자재유형 텍스트
+ */
+export const materialCategoryRenderCell = (params) => {
+    const { value, api } = params;
+    const materialCategoryOptions = api.getColumn('materialCategory').valueOptions || [];
+    const categoryName = getMaterialCategoryName(value, materialCategoryOptions);
+
+    return (
+        <Box sx={{ width: '100%', textAlign: 'center' }}>
+            {categoryName}
+        </Box>
+    );
+};
+
+
 export default {
     materialTypeRenderCell,
-    materialStatusRenderCell
+    materialStatusRenderCell,
+    materialCategoryRenderCell
 };

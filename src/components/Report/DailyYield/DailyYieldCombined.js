@@ -269,6 +269,10 @@ const DailyYieldChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMouse
     );
   }
 
+  // 동적 차트 너비 계산
+  const itemWidth = 80; // 각 X축 항목이 차지할 대략적인 너비 (px)
+  const calculatedMinWidthForScroll = data.length * itemWidth;
+
   // 총 생산수량 추가 (양품수량 + 불량수량)
   const chartDataWithTotal = data.map(item => ({
     ...item,
@@ -352,135 +356,141 @@ const DailyYieldChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMouse
   };
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart
-        data={chartDataWithTotal}
-        margin={{ top: 10, right: 30, left: 20, bottom: 30 }}
-        barGap={2}
-        barCategoryGap={30}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? theme.palette.grey[700] : theme.palette.grey[300]} />
-        <XAxis 
-          dataKey="name" 
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          height={50}
-          interval={0}
-          tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
-        />
-        <YAxis 
-          yAxisId="left"
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
-          width={50}
-        >
-          <Label 
-            value="수량" 
-            angle={-90} 
-            position="insideLeft" 
-            fill={axisColor} 
-            fontSize={12} 
-            dx={-10}
-          />
-        </YAxis>
-        <YAxis
-          yAxisId="right"
-          orientation="right"
-          domain={[0, 100]}
-          tickFormatter={(value) => `${value}%`}
-          tick={{ fill: axisColor, fontSize: 11 }}
-          tickLine={{ stroke: axisColor }}
-          width={50}
-        >
-          <Label
-            value="불량률(%)"
-            angle={90}
-            position="insideRight"
-            fill={axisColor}
-            fontSize={12}
-            dx={10}
-          />
-        </YAxis>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend 
-          wrapperStyle={{ 
-            fontSize: '12px', 
-            paddingTop: '5px',
-            bottom: 0
-          }} 
-          iconType="square"
-        />
-        <Bar 
-          dataKey="양품수량" 
-          name="양품수량" 
-          barSize={18}
-          fill={goodQtyColor}
-          yAxisId="left"
-          isAnimationActive={false}
-        >
-          {chartDataWithTotal.map((entry, index) => (
-            <Cell 
-              key={`cell-good-${index}`} 
-              {...getBarProps(entry, '양품수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+    // 1. 외부 Box: 스크롤 컨테이너 역할
+    <Box sx={{ width: '100%', height: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+      {/* 2. 내부 Box: BarChart의 실제 크기를 정의 */}
+      <Box sx={{ width: '100%', minWidth: `${calculatedMinWidthForScroll}px`, height: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartDataWithTotal}
+            margin={{ top: 10, right: 30, left: 20, bottom: 40 }} // bottom margin 증가
+            barGap={2}
+            barCategoryGap="30%" // 카테고리 간 간격 조정
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? theme.palette.grey[700] : theme.palette.grey[300]} />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fill: axisColor, fontSize: 11 }} 
+              tickLine={{ stroke: axisColor }}
+              height={60} // X축 높이 증가
+              interval={0}
+              tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
             />
-          ))}
-        </Bar>
-        <Bar 
-          dataKey="불량수량" 
-          name="불량수량" 
-          barSize={18}
-          fill={defectQtyColor}
-          yAxisId="left"
-          isAnimationActive={false}
-        >
-          {chartDataWithTotal.map((entry, index) => (
-            <Cell 
-              key={`cell-defect-${index}`} 
-              {...getBarProps(entry, '불량수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+            <YAxis 
+              yAxisId="left"
+              tick={{ fill: axisColor, fontSize: 11 }} 
+              tickLine={{ stroke: axisColor }}
+              tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+              width={50}
+            >
+              <Label 
+                value="수량" 
+                angle={-90} 
+                position="insideLeft" 
+                fill={axisColor} 
+                fontSize={12} 
+                dx={-10}
+              />
+            </YAxis>
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              domain={[0, 100]}
+              tickFormatter={(value) => `${value}%`}
+              tick={{ fill: axisColor, fontSize: 11 }}
+              tickLine={{ stroke: axisColor }}
+              width={50}
+            >
+              <Label
+                value="불량률(%)"
+                angle={90}
+                position="insideRight"
+                fill={axisColor}
+                fontSize={12}
+                dx={10}
+              />
+            </YAxis>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              wrapperStyle={{ 
+                fontSize: '12px', 
+                paddingTop: '5px',
+                bottom: 0 // 레전드 하단 위치
+              }} 
+              iconType="square"
             />
-          ))}
-        </Bar>
-        <Bar 
-          dataKey="총 생산수량" 
-          name="총 생산수량" 
-          barSize={18}
-          fill={totalQtyColor}
-          yAxisId="left"
-          isAnimationActive={false}
-        >
-          {chartDataWithTotal.map((entry, index) => (
-            <Cell 
-              key={`cell-total-${index}`} 
-              {...getBarProps(entry, '총 생산수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-        <Bar 
-          dataKey="불량률" 
-          name="불량률" 
-          barSize={18}
-          fill={defectRateColor}
-          yAxisId="right"
-          isAnimationActive={false}
-        >
-          {chartDataWithTotal.map((entry, index) => (
-            <Cell 
-              key={`cell-rate-${index}`} 
-              {...getBarProps(entry, '불량률')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+            <Bar 
+              dataKey="양품수량" 
+              name="양품수량" 
+              barSize={18}
+              fill={goodQtyColor}
+              yAxisId="left"
+              isAnimationActive={false}
+            >
+              {chartDataWithTotal.map((entry, index) => (
+                <Cell 
+                  key={`cell-good-${index}`} 
+                  {...getBarProps(entry, '양품수량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar 
+              dataKey="불량수량" 
+              name="불량수량" 
+              barSize={18}
+              fill={defectQtyColor}
+              yAxisId="left"
+              isAnimationActive={false}
+            >
+              {chartDataWithTotal.map((entry, index) => (
+                <Cell 
+                  key={`cell-defect-${index}`} 
+                  {...getBarProps(entry, '불량수량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar 
+              dataKey="총 생산수량" 
+              name="총 생산수량" 
+              barSize={18}
+              fill={totalQtyColor}
+              yAxisId="left"
+              isAnimationActive={false}
+            >
+              {chartDataWithTotal.map((entry, index) => (
+                <Cell 
+                  key={`cell-total-${index}`} 
+                  {...getBarProps(entry, '총 생산수량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar 
+              dataKey="불량률" 
+              name="불량률" 
+              barSize={18}
+              fill={defectRateColor}
+              yAxisId="right"
+              isAnimationActive={false}
+            >
+              {chartDataWithTotal.map((entry, index) => (
+                <Cell 
+                  key={`cell-rate-${index}`} 
+                  {...getBarProps(entry, '불량률')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Box>
+    </Box>
   );
 };
 

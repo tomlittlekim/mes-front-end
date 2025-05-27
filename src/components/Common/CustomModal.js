@@ -32,7 +32,8 @@ const CustomModal = ({
   buttons = [],
   values = {},
   onChange,
-  onSubmit
+  onSubmit,
+  children
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -146,9 +147,7 @@ const CustomModal = ({
     };
 
     // 관계성 필드의 경우 옵션 동적 로딩
-    const fieldOptions = relation ? 
-      (values[`${id}_options`] || options) : 
-      options;
+    const fieldOptions = field.options || [];
 
     switch (type) {
       case 'text':
@@ -195,9 +194,9 @@ const CustomModal = ({
               {...rest}
             >
               {fieldOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
               ))}
             </Select>
             {error && (
@@ -346,6 +345,7 @@ const CustomModal = ({
           }
         }}
       >
+        {children}
         <Box sx={{ display: 'grid', gap: 2, p: 1 }}>
           {fields.map(renderField)}
         </Box>

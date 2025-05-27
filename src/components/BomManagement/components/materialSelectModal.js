@@ -15,7 +15,7 @@ import {
     FormHelperText
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useBomDetailModalData } from '../hooks/useBomDetailModalData';
+import {useBomDetailModalData} from '../hooks/useBomDetailModalData';
 
 /**
  * 자재 선택 모달 컴포넌트
@@ -77,9 +77,9 @@ const MaterialSelectModal = ({
                 {rowData && !rowData.id?.toString().startsWith('NEW') ? '제품 수정' : '제품 등록'}
             </DialogTitle>
             <DialogContent>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Box sx={{display: 'flex', justifyContent: 'flex-end', mb: 2}}>
                     <Button
-                        startIcon={<RefreshIcon />}
+                        startIcon={<RefreshIcon/>}
                         onClick={loadMaterials}
                         size="small"
                     >
@@ -115,13 +115,15 @@ const MaterialSelectModal = ({
                                     disabled={!modalState.parentMaterialType}
                                 >
                                     <MenuItem value="">전체</MenuItem>
-                                    {[...new Set(modalState.parentMaterials.map(m => m.materialCategory))]
-                                        .filter(Boolean)
-                                        .map(category => (
-                                            <MenuItem key={category} value={category}>
-                                                {category}
-                                            </MenuItem>
-                                        ))}
+                                    {[...new Map(
+                                        modalState.parentMaterials
+                                            .filter(m => m.materialCategory)
+                                            .map(m => [m.materialCategory, m.materialCategoryName])
+                                    ).entries()].map(([categoryId, categoryName]) => (
+                                        <MenuItem key={categoryId} value={categoryId}>
+                                            {categoryName || categoryId}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                                 {!validation.parentMaterialCategory && (
                                     <FormHelperText>부모 제품의 유형을 선택해주세요</FormHelperText>
@@ -212,13 +214,15 @@ const MaterialSelectModal = ({
                                     disabled={!modalState.materialType}
                                 >
                                     <MenuItem value="">전체</MenuItem>
-                                    {[...new Set(modalState.materials.map(m => m.materialCategory))]
-                                        .filter(Boolean)
-                                        .map(category => (
-                                            <MenuItem key={category} value={category}>
-                                                {category}
-                                            </MenuItem>
-                                        ))}
+                                    {[...new Map(
+                                        modalState.materials
+                                            .filter(m => m.materialCategory)
+                                            .map(m => [m.materialCategory, m.materialCategoryName])
+                                    ).entries()].map(([categoryId, categoryName]) => (
+                                        <MenuItem key={categoryId} value={categoryId}>
+                                            {categoryName || categoryId}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
                                 {!validation.materialCategory && (
                                     <FormHelperText>제품의 유형을 선택해주세요</FormHelperText>
@@ -264,7 +268,7 @@ const MaterialSelectModal = ({
                                         </Grid>
                                         <Grid item xs={6}>
                                             <Typography variant="body2" color="text.secondary">자재유형</Typography>
-                                            <Typography>{modalState.selectedMaterial.materialCategory}</Typography>
+                                            <Typography>{modalState.selectedMaterial.materialCategoryName}</Typography>
                                         </Grid>
                                         <Grid item xs={6}>
                                             <Typography variant="body2" color="text.secondary">규격</Typography>
@@ -283,7 +287,7 @@ const MaterialSelectModal = ({
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>취소</Button>
-                <Button 
+                <Button
                     onClick={onSubmit}
                     variant="contained"
                     disabled={!isAllValid}

@@ -6,9 +6,10 @@ import {
     InputLabel,
     MenuItem,
     Select,
-    Grid,
+    Grid, Typography,
 } from '@mui/material';
 import { SearchCondition } from '../../Common';
+import {getTextColor} from "../utils/styleUtils";
 
 /**
  * BOM 관리 검색 폼 컴포넌트
@@ -31,11 +32,15 @@ const SearchForm = ({ onSearch, onReset }) => {
     });
 
     return (
+        <>
+        <Typography variant="body2" sx={{ mb: 1 }} color="red">
+            * 조회 조건은 BOM 목록에 대해 동작합니다.
+        </Typography>
         <SearchCondition
             onSearch={handleSubmit(onSearch)}
             onReset={onReset}
         >
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={6}>
                 <Controller
                     name="materialType"
                     control={control}
@@ -48,8 +53,6 @@ const SearchForm = ({ onSearch, onReset }) => {
                                 label="종류"
                             >
                                 <MenuItem value="">전체</MenuItem>
-                                <MenuItem value="RAW_MATERIAL">원자재</MenuItem>
-                                <MenuItem value="SUB_MATERIAL">부자재</MenuItem>
                                 <MenuItem value="HALF_PRODUCT">반제품</MenuItem>
                                 <MenuItem value="COMPLETE_PRODUCT">완제품</MenuItem>
                             </Select>
@@ -57,7 +60,7 @@ const SearchForm = ({ onSearch, onReset }) => {
                     )}
                 />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={6}>
                 <Controller
                     name="materialName"
                     control={control}
@@ -73,23 +76,24 @@ const SearchForm = ({ onSearch, onReset }) => {
                     )}
                 />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                    name="bomName"
-                    control={control}
-                    render={({field}) => (
-                        <TextField
-                            {...field}
-                            label="BOM 명"
-                            variant="outlined"
-                            size="small"
-                            fullWidth
-                            placeholder="BOM 명을 입력하세요"
-                        />
-                    )}
-                />
-            </Grid>
+            {/*<Grid item xs={12} sm={6} md={3}>*/}
+            {/*    <Controller*/}
+            {/*        name="bomName"*/}
+            {/*        control={control}*/}
+            {/*        render={({field}) => (*/}
+            {/*            <TextField*/}
+            {/*                {...field}*/}
+            {/*                label="BOM 명"*/}
+            {/*                variant="outlined"*/}
+            {/*                size="small"*/}
+            {/*                fullWidth*/}
+            {/*                placeholder="BOM 명을 입력하세요"*/}
+            {/*            />*/}
+            {/*        )}*/}
+            {/*    />*/}
+            {/*</Grid>*/}
         </SearchCondition>
+        </>
     );
 };
 

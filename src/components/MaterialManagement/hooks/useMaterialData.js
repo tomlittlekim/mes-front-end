@@ -49,7 +49,8 @@ export const useMaterialData = (executeQuery) => {
                             ...material,
                             id: material.systemMaterialId,
                             materialType: typeGroup.materialType,
-                            materialCategory: category.materialCategory
+                            materialCategory: category.materialCategory,
+                            materialCategoryName: category.materialCategoryName
                         })) || [];
                         return [...materials, ...categoryMaterials];
                     }, []) || [];
@@ -76,8 +77,42 @@ export const useMaterialData = (executeQuery) => {
         }
     };
 
+    const loadBOMMaterials = async (materialType) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const result = await executeQuery(GET_ALL_MATERIALS);
+
+            if (result.data?.getAllMaterials) {
+                // materialType에 맞는 것만 평탄화
+                const flattenedMaterials = result.data.getAllMaterials
+                    .filter(typeGroup => typeGroup.materialType === materialType)
+                    .flatMap(typeGroup =>
+                        (typeGroup.categories || []).flatMap(category =>
+                            (category.materials || []).map(material => ({
+                                ...material,
+                                id: material.systemMaterialId,
+                                materialType: typeGroup.materialType,
+                                materialCategory: category.materialCategory,
+                                materialCategoryName: category.materialCategoryName
+                            }))
+                        )
+                    );
+
+                return flattenedMaterials; // 바로 옵션에 쓸 수 있음
+            }
+            return [];
+        } catch (error) {
+            setError(error);
+            return [];
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadMaterials();
+        loadBOMMaterials();
     }, []);
 
     const getMaterialsByType = (materialType) => {
@@ -98,6 +133,7 @@ export const useMaterialData = (executeQuery) => {
         getMaterialsByType,
         getMaterialById,
         loadMaterials,
+        loadBOMMaterials,
         // 공통코드 옵션들
         unitOptions: commonCodes['CD20250402131435416'] || [],
         materialCategoryOptions: commonCodes['CD20250428144831625'] || [],
