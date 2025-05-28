@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { Typography, Button, Stack, Select, MenuItem } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
@@ -32,6 +32,9 @@ const ProductionResultList = ({
   tabId,
   height = 350
 }) => {
+  // 선택된 행들을 추적하기 위한 ref와 상태
+  const selectedRowIdsRef = useRef([]);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
   // 생산실적 그리드 컬럼 정의
   const productionResultColumns = useMemo(() => ([
     {
@@ -388,6 +391,80 @@ const ProductionResultList = ({
     }
   ]), [equipmentOptions, productOptions, warehouseOptions]);
 
+  // 선택 변경 핸들러
+  const handleSelectionChange = useCallback((newSelectionModel) => {
+    selectedRowIdsRef.current = newSelectionModel;
+    setSelectedRowIds(newSelectionModel);
+  }, []);
+
+  // 다중 삭제 핸들러
+  const handleMultipleDelete = useCallback(() => {
+    let currentSelection = selectedRowIdsRef.current.length > 0 ? selectedRowIdsRef.current : selectedRowIds;
+    
+    // 백업 방법: DOM에서 직접 체크된 항목들 찾기
+    if (!currentSelection || currentSelection.length === 0) {
+      try {
+        const checkedInputs = document.querySelectorAll('[data-testid="checkbox-selection-row"]:checked');
+        const checkedRowIds = Array.from(checkedInputs).map(input => {
+          const row = input.closest('[data-rowindex]');
+          if (row) {
+            const rowIndex = row.getAttribute('data-rowindex');
+            return productionResultList[parseInt(rowIndex)]?.id;
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        if (checkedRowIds.length > 0) {
+          currentSelection = checkedRowIds;
+        }
+      } catch (error) {
+        console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
+      }
+    }
+    
+    if (currentSelection && currentSelection.length > 0) {
+      // 선택된 생산실적들 중 실제 저장된 것들만 필터링 (prodResultId가 있는 것들)
+      const selectedResults = productionResultList.filter(result => 
+        currentSelection.includes(result.id) && result.prodResultId
+      );
+      
+      if (selectedResults.length === 0) {
+        Swal.fire({
+          title: '알림',
+          text: '삭제할 수 있는 생산실적이 없습니다. 저장되지 않은 임시 데이터는 목록에서 직접 제거해주세요.',
+          icon: 'warning',
+          confirmButtonText: '확인'
+        });
+        return;
+      }
+      
+      // 다중 삭제 확인 다이얼로그
+      Swal.fire({
+        title: '생산실적 삭제',
+        text: `선택된 ${selectedResults.length}건의 생산실적을 삭제하시겠습니까?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: '삭제',
+        cancelButtonText: '취소'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // prodResultId 목록 추출
+          const prodResultIds = selectedResults.map(result => result.prodResultId);
+          onDelete(prodResultIds); // 다중 삭제 함수 호출
+        }
+      });
+    } else {
+      Swal.fire({
+        title: '알림',
+        text: '삭제할 생산실적을 선택해주세요.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
+    }
+  }, [onDelete, selectedRowIds, productionResultList]);
+
   // 생산실적 목록 그리드 버튼: 독립형 생산실적 버튼 추가
   const productionResultButtons = useMemo(() => {
     const buttons = [];
@@ -405,11 +482,11 @@ const ProductionResultList = ({
     buttons.push(
         {label: '등록', onClick: onCreateResult, icon: <AddIcon/>, tooltip: '선택된 작업지시에 생산실적을 등록합니다'},
         {label: '저장', onClick: onSave, icon: <SaveIcon/>},
-        {label: '삭제', onClick: onDelete, icon: <DeleteIcon/>}
+        {label: '삭제', onClick: handleMultipleDelete, icon: <DeleteIcon/>}
     );
 
     return buttons;
-  }, [onCreateResult, onCreateIndependentResult, onSave, onDelete]);
+  }, [onCreateResult, onCreateIndependentResult, onSave, handleMultipleDelete]);
 
   // 생산실적 목록 그리드 커스텀 헤더
   const CustomHeader = () => (
@@ -499,7 +576,14 @@ const ProductionResultList = ({
           height={height}
           onRowClick={onRowClick}
           tabId={tabId + "-production-results"}
-          gridProps={gridProps}
+          gridProps={{
+            ...gridProps,
+            checkboxSelection: true,
+            onRowSelectionModelChange: handleSelectionChange,
+            onSelectionModelChange: handleSelectionChange,
+            rowSelectionModel: selectedRowIds,
+            selectionModel: selectedRowIds
+          }}
       />
   );
 };

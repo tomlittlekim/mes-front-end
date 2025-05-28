@@ -282,10 +282,16 @@ export const useProductionResultManagement = (tabId) => {
     saveResult(productionResult, setProductionResult, setProductionResultList);
   }, [saveResult, productionResult, setProductionResult, setProductionResultList]);
 
-  // 삭제 핸들러
-  const handleDelete = useCallback(() => {
-    deleteResult(productionResult, setProductionResult, setProductionResultList);
-  }, [deleteResult, productionResult]);
+  // 삭제 핸들러 (다중 삭제 지원)
+  const handleDelete = useCallback((prodResultIds) => {
+    // 다중 삭제인 경우
+    if (Array.isArray(prodResultIds)) {
+      deleteResult(prodResultIds, setProductionResult, setProductionResultList);
+    } else {
+      // 단일 삭제인 경우 (기존 방식 호환)
+      deleteResult(productionResult, setProductionResult, setProductionResultList);
+    }
+  }, [deleteResult, productionResult, setProductionResult, setProductionResultList]);
 
   // 생산실적 선택 핸들러
   const handleProductionResultSelect = useCallback((params) => {

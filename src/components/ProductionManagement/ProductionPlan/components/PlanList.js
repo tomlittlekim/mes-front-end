@@ -112,7 +112,6 @@ const PlanList = ({
 
   // 선택 변경 핸들러
   const handleSelectionChange = useCallback((newSelectionModel) => {
-    console.log('선택 모델 변경:', newSelectionModel); // 디버깅용
     selectedRowIdsRef.current = newSelectionModel;
     setSelectedRowIds(newSelectionModel);
   }, []);
@@ -457,14 +456,11 @@ const PlanList = ({
         
         if (checkedRowIds.length > 0) {
           currentSelection = checkedRowIds;
-          console.log('DOM에서 찾은 선택된 행들:', currentSelection);
         }
       } catch (error) {
         console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
       }
     }
-    
-    console.log('최종 선택된 행 ID들:', currentSelection); // 디버깅용
     
     if (currentSelection && currentSelection.length > 0) {
       onDelete(currentSelection);
@@ -483,7 +479,7 @@ const PlanList = ({
   return (
     <>
       <EnhancedDataGridWrapper
-        title="생산계획목록"
+        title="생산계획 목록"
         key={refreshKey}
         rows={planList}
         columns={planColumns}
