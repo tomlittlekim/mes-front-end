@@ -330,7 +330,7 @@ const UserManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        deleteUser(selectedUser.id).then(() => {
+        deleteUser(selectedUser.loginId).then(() => {
           Swal.fire({
             icon: 'success',
             title: '성공',
@@ -364,7 +364,7 @@ const UserManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        resetPwd(selectedUser.id).then((res) => {
+        resetPwd(selectedUser.loginId).then((res) => {
           Swal.fire({
             icon: 'success',
             title: '성공',

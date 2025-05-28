@@ -63,7 +63,7 @@ const ProfileContainer = () => {
     setError(null);
     
     try {
-      const result = await executeQuery(USER_DETAIL_GET, { id: profile.id });
+      const result = await executeQuery(USER_DETAIL_GET, { loginId: profile.loginId });
       
       if (result.data && result.data.getUserDetail) {
         const userDetail = result.data.getUserDetail;
@@ -318,7 +318,7 @@ const ProfileContainer = () => {
             setResetLoading(true);
             // 비밀번호 변경 쿼리 실행 - 파라미터 맞춤
             const result = await executeMutation(USER_PWD_CHANGE, { 
-              id: profile.id,
+              id: profile.loginId,
               currentPassword,
               newPassword
             });

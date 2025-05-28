@@ -69,32 +69,27 @@ export const upsertUser = (req) => {
 }
 
 const existUserIdQuery = `
-    query existLoginId($req: ExistLoginRequest!) {
-        existLoginId(req: $req)
+    query existLoginId($loginId: String!) {
+        existLoginId(loginId: $loginId)
     }
 `
 export const isExistsUserId = (loginId) => {
-    const variables = {
-        req: {
-            loginId: loginId
-        }
-    };
-    return graphFetch(existUserIdQuery, variables);
+    return graphFetch(existUserIdQuery, {loginId:loginId});
 }
 
 const deleteUserQuery = `
-    mutation deleteUser($id: Int!) {
-        deleteUser(id: $id)
+    mutation deleteUser($loginId: String!) {
+        deleteUser(loginId: $loginId)
     }
 `
-export const deleteUser = (id) => graphFetch(deleteUserQuery, {id:id})
+export const deleteUser = (loginId) => graphFetch(deleteUserQuery, {loginId:loginId})
 
 const resetPwdQuery = `
-    mutation resetPwd($id: Int!) {
-        resetPwd(id: $id)
+    mutation resetPwd($loginId: String!) {
+        resetPwd(loginId: $loginId)
     }
 `
-export const resetPwd = (id) => graphFetch(resetPwdQuery, {id:id})
+export const resetPwd = (loginId) => graphFetch(resetPwdQuery, {loginId:loginId})
 
 export const getUserSummery = async (loginId) => {
     const userSummeryQuery = `

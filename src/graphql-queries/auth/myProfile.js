@@ -1,6 +1,6 @@
 export const USER_DETAIL_QUERY = `
-query getUserDetail($id: Int!) {
-    getUserDetail(id: $id) {
+query getUserDetail($loginId: String!) {
+    getUserDetail(loginId: $loginId) {
         id
         site
         compCd
@@ -28,7 +28,7 @@ export const USER_DETAIL_MUTATION = `
 `
 
 export const USER_PWD_CHANGE_MUTATION = `
-  mutation changePwd($id: Int!, $currentPassword: String!, $newPassword: String!) {
-    changePwd(id: $id, currentPassword: $currentPassword, newPassword: $newPassword)
+  mutation changePwd($loginId: String!, $currentPassword: String!, $newPassword: String!) {
+    changePwd(loginId: $loginId, currentPassword: $currentPassword, newPassword: $newPassword)
   }
 `
