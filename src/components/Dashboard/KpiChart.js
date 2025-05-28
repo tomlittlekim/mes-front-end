@@ -1,25 +1,68 @@
-import React from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Box, 
+  Typography, 
+  useTheme, 
+  CircularProgress, 
+  FormControl, 
+  Select, 
+  MenuItem, 
+  InputLabel,
+  TextField,
+  Grid,
+  IconButton
+} from '@mui/material';
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  ReferenceLine 
+} from 'recharts';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
-// 샘플 데이터
-const sampleData = [
-  { name: '1', 생산성: 40, 품질: 30 },
-  { name: '2', 생산성: 25, 품질: 38 },
-  { name: '3', 생산성: 30, 품질: 20 },
-  { name: '4', 생산성: 45, 품질: 30 },
-  { name: '5', 생산성: 50, 품질: 20 },
-  { name: '6', 생산성: 20, 품질: 30 },
-  { name: '7', 생산성: 55, 품질: 50 },
-  { name: '8', 생산성: 30, 품질: 30 },
-  { name: '9', 생산성: 50, 품질: 35 },
-];
-
-const KpiChart = (props) => {
+/**
+ * KPI 차트 컴포넌트
+ * 
+ * @param {Object} props - 컴포넌트 속성
+ * @param {Object} props.kpiData - KPI 차트 데이터
+ * @param {boolean} props.isLoading - 로딩 상태
+ * @param {Function} props.onFilterChange - 필터 변경 핸들러
+ * @param {Object} props.filter - 현재 필터 설정
+ * @returns {JSX.Element}
+ */
+const KpiChart = ({ 
+  kpiData, 
+  isLoading, 
+  onFilterChange,
+  filter
+}) => {
   const theme = useTheme();
   const { domain } = useDomain();
   const isDarkMode = theme.palette.mode === 'dark';
+  
+  // 현재 차트의 필터 상태
+  const [localFilter, setLocalFilter] = useState({
+    date: filter?.date || new Date().toISOString().split('T')[0],
+    range: filter?.range || 'week'
+  });
+  
+  // 외부 필터가 변경되면 로컬 필터도 업데이트
+  useEffect(() => {
+    if (filter) {
+      setLocalFilter({
+        date: filter.date,
+        range: filter.range
+      });
+    }
+  }, [filter]);
   
   // 도메인별 색상 설정
   const getTextColor = () => {
@@ -39,18 +82,13 @@ const KpiChart = (props) => {
   const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
   
   // 도메인별 차트 색상
-  const getProductionColor = () => {
+  const getChartColors = () => {
     if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#e67e22' : '#d35400';
+      return isDarkMode 
+        ? ['#e67e22', '#f39c12', '#3498db', '#1abc9c', '#9b59b6'] 
+        : ['#d35400', '#e74c3c', '#2980b9', '#16a085', '#8e44ad'];
     }
-    return '#4caf50';
-  };
-  
-  const getQualityColor = () => {
-    if (domain === DOMAINS.PEMS) {
-      return isDarkMode ? '#f39c12' : '#e74c3c';
-    }
-    return '#ff5722';
+    return ['#4caf50', '#ff5722', '#2196f3', '#ff9800', '#9c27b0'];
   };
   
   const getTooltipBgColor = () => {
@@ -67,6 +105,208 @@ const KpiChart = (props) => {
     return isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
   };
 
+  // 차트 데이터 키 추출
+  const dataKeys = useMemo(() => {
+    if (!kpiData || !kpiData.chartData || kpiData.chartData.length === 0) {
+      return [];
+    }
+    
+    // 첫 번째 데이터 포인트에서 "name" 키를 제외한 모든 키 추출
+    const firstDataPoint = kpiData.chartData[0];
+    return Object.keys(firstDataPoint).filter(key => key !== 'name');
+  }, [kpiData]);
+  
+  // 로컬 필터 변경 핸들러
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    const newFilter = {
+      ...localFilter,
+      [name]: value
+    };
+    
+    setLocalFilter(newFilter);
+    
+    // 부모 컴포넌트에 필터 변경 알림
+    if (onFilterChange) {
+      onFilterChange(kpiData.kpiIndicatorCd, newFilter);
+    }
+  };
+  
+  // 필터 새로고침 핸들러
+  const handleRefresh = () => {
+    if (onFilterChange) {
+      onFilterChange(kpiData.kpiIndicatorCd, localFilter, true);
+    }
+  };
+
+  // 차트 타입에 따른 컴포넌트 렌더링
+  const renderChart = () => {
+    if (isLoading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+    
+    if (!kpiData || !kpiData.chartData || kpiData.chartData.length === 0) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <Typography variant="body1" color={getSecondaryTextColor()}>
+            데이터가 없습니다.
+          </Typography>
+        </Box>
+      );
+    }
+    
+    const chartColors = getChartColors();
+    
+    // 현재 필터 범위에 따른 X축 라벨 포맷 설정
+    const formatXAxis = (value) => {
+      if (!value) return '';
+      
+      // 날짜 형식(YYYY-MM-DD)인지 확인
+      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        switch (localFilter.range) {
+          case 'day':
+            return value.substring(5); // MM-DD 형식으로 표시
+          case 'week':
+            return value.substring(5); // MM-DD 형식으로 표시
+          case 'month':
+            return value.substring(8); // DD 형식으로 표시
+          default:
+            return value;
+        }
+      }
+      
+      // 시간 형식인 경우 (08, 09, 10 등)
+      if (localFilter.range === 'day' && /^\d{1,2}$/.test(value)) {
+        return `${value}시`;
+      }
+      
+      return value;
+    };
+    
+    // 차트 타입에 따라 다른 차트 렌더링
+    switch (kpiData.chartType?.toLowerCase()) {
+      case 'bar':
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={kpiData.chartData}
+              margin={{ top: 15, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis 
+                dataKey="name"
+                tick={{ fill: getTextColor() }}
+                tickFormatter={formatXAxis}
+              />
+              <YAxis 
+                tick={{ fill: getTextColor() }}
+                label={{ 
+                  value: kpiData.unit, 
+                  angle: -90, 
+                  position: 'insideLeft',
+                  style: { fill: getTextColor() }
+                }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: getTooltipBgColor(),
+                  borderColor: getTooltipBorderColor(),
+                  color: getTextColor()
+                }}
+                formatter={(value, name) => [`${value} ${kpiData.unit || ''}`, name]}
+                labelFormatter={formatXAxis}
+              />
+              <Legend wrapperStyle={{ color: getTextColor() }} />
+              {kpiData.targetValue && (
+                <ReferenceLine 
+                  y={kpiData.targetValue} 
+                  stroke="#ff0000" 
+                  strokeDasharray="3 3"
+                  label={{ 
+                    value: `목표: ${kpiData.targetValue}${kpiData.unit || ''}`,
+                    fill: '#ff0000',
+                    position: 'right'
+                  }}
+                />
+              )}
+              {dataKeys.map((key, index) => (
+                <Bar 
+                  key={key}
+                  dataKey={key} 
+                  fill={chartColors[index % chartColors.length]}
+                  name={key}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        );
+        
+      case 'line':
+      default:
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={kpiData.chartData}
+              margin={{ top: 15, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis 
+                dataKey="name"
+                tick={{ fill: getTextColor() }}
+                tickFormatter={formatXAxis}
+              />
+              <YAxis 
+                tick={{ fill: getTextColor() }}
+                label={{ 
+                  value: kpiData.unit, 
+                  angle: -90, 
+                  position: 'insideLeft',
+                  style: { fill: getTextColor() }
+                }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: getTooltipBgColor(),
+                  borderColor: getTooltipBorderColor(),
+                  color: getTextColor()
+                }}
+                formatter={(value, name) => [`${value} ${kpiData.unit || ''}`, name]}
+                labelFormatter={formatXAxis}
+              />
+              <Legend wrapperStyle={{ color: getTextColor() }} />
+              {kpiData.targetValue && (
+                <ReferenceLine 
+                  y={kpiData.targetValue} 
+                  stroke="#ff0000" 
+                  strokeDasharray="3 3"
+                  label={{ 
+                    value: `목표: ${kpiData.targetValue}${kpiData.unit || ''}`,
+                    fill: '#ff0000',
+                    position: 'right'
+                  }}
+                />
+              )}
+              {dataKeys.map((key, index) => (
+                <Line
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={chartColors[index % chartColors.length]}
+                  activeDot={{ r: 8 }}
+                  strokeWidth={2}
+                  name={key}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        );
+    }
+  };
+
   return (
     <Box sx={{ 
       p: 1,
@@ -75,58 +315,56 @@ const KpiChart = (props) => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <Box>
-        <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-          KPI 지표
-        </Typography>
-        <Typography variant="body2" sx={{ mb: 2, color: getSecondaryTextColor() }}>
-          생산성 및 품질 KPI 지표입니다.
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {kpiData?.kpiTitle || 'KPI 지표'}
+          </Typography>
+          <Typography variant="body2" sx={{ color: getSecondaryTextColor() }}>
+            {kpiData?.categoryNm ? `카테고리: ${kpiData.categoryNm}` : '핵심성과지표 데이터입니다.'}
+          </Typography>
+        </Box>
+        
+        {/* 인라인 필터 컨트롤 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TextField
+            name="date"
+            type="date"
+            size="small"
+            value={localFilter.date}
+            onChange={handleFilterChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            sx={{ width: 130 }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 90 }}>
+            <Select
+              name="range"
+              value={localFilter.range}
+              onChange={handleFilterChange}
+              sx={{ color: getTextColor() }}
+              displayEmpty
+            >
+              <MenuItem value="day">일간</MenuItem>
+              <MenuItem value="week">주간</MenuItem>
+              <MenuItem value="month">월간</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <IconButton 
+            size="small" 
+            onClick={handleRefresh}
+            sx={{ p: 1 }}
+          >
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+        </Box>
       </Box>
       
       <Box sx={{ flex: 1, width: '100%', minHeight: 250 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={sampleData}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 0,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-            <XAxis 
-              dataKey="name"
-              tick={{ fill: getTextColor() }}
-            />
-            <YAxis 
-              tick={{ fill: getTextColor() }}
-              domain={[0, 60]}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: getTooltipBgColor(),
-                borderColor: getTooltipBorderColor(),
-                color: getTextColor()
-              }}
-            />
-            <Legend wrapperStyle={{ color: getTextColor() }} />
-            <Line
-              type="monotone"
-              dataKey="생산성"
-              stroke={getProductionColor()}
-              activeDot={{ r: 8 }}
-              strokeWidth={2}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="품질" 
-              stroke={getQualityColor()} 
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {renderChart()}
       </Box>
     </Box>
   );
