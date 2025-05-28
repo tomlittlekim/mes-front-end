@@ -3,6 +3,7 @@ import './App.css';
 import { TabProvider } from './contexts/TabContext';
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext';
 import { DomainProvider } from './contexts/DomainContext';
+import { SidebarProvider } from './contexts/SidebarContext';
 import AppLayout from './components/Layout/AppLayout';
 import Login from './components/Auth/Login';
 import MobileAppContainer from './components/Mobile/MobileAppContainer';
@@ -210,9 +211,11 @@ function App() {
           <CustomThemeProvider>
             <ThemeConfigurator>
               <TabProvider>
-                <DeviceDetector>
-                  <AppContainer />
-                </DeviceDetector>
+                <SidebarProvider>
+                  <DeviceDetector>
+                    <AppContainer />
+                  </DeviceDetector>
+                </SidebarProvider>
               </TabProvider>
             </ThemeConfigurator>
           </CustomThemeProvider>

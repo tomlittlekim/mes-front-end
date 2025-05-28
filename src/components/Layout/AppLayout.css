@@ -3,6 +3,21 @@
   width: 100%;
   min-height: 100vh;
   height: 100vh; /* 뷰포트 높이로 고정 */
+  transition: all 0.3s ease;
+}
+
+/* SideBar 숨김 상태 */
+.app-layout.sidebar-collapsed .sidebar {
+  transform: translateX(-100%);
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* SideBar 표시 상태 */
+.app-layout:not(.sidebar-collapsed) .sidebar {
+  transform: translateX(0);
+  width: 240px;
 }
 
 .app-main {
@@ -78,8 +93,31 @@ body.imos .app-content::-webkit-scrollbar-thumb:hover {
   background-color: rgba(232, 240, 253, 0.8);
 }
 
+/* 모바일 환경에서의 SideBar 처리 */
 @media (max-width: 768px) {
   .app-content {
     padding: 15px;
+  }
+  
+  /* 모바일에서 SideBar가 표시될 때 오버레이 효과 */
+  .app-layout:not(.sidebar-collapsed) .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1100;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* 모바일에서 SideBar가 표시될 때 배경 오버레이 */
+  .app-layout:not(.sidebar-collapsed)::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    transition: opacity 0.3s ease;
   }
 }
