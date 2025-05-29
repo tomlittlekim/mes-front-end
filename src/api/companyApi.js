@@ -33,8 +33,8 @@ const upsertCompanyMutation = `
 
 // 회사 삭제 뮤테이션
 const deleteCompanyMutation = `
-  mutation deleteCompany($id: Int!) {
-    deleteCompany(id: $id)
+  mutation deleteCompany($compCd: String!) {
+    deleteCompany(compCd: $compCd)
   }
 `;
 
