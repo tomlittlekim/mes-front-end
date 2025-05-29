@@ -682,18 +682,19 @@ export const useWorkOrderManagement = (tabId) => {
         .then((response) => {
           const result = response.data.deleteWorkOrders;
           
-          // 삭제된 행들을 목록에서 제거
-          const deletedIds = existingRows.map(row => row.id);
-          const updatedList = workOrderList.filter(w => !deletedIds.includes(w.id));
-          setWorkOrderList(updatedList);
-          
-          // 선택된 작업지시가 삭제된 행에 포함되어 있으면 선택 해제
-          if (selectedWorkOrder && deletedIds.includes(selectedWorkOrder.id)) {
-            setSelectedWorkOrder(null);
-          }
-          
-          // 결과에 따른 메시지 표시
-          if (result.success) {
+          // 서버 응답이 성공이고 실제로 삭제된 항목이 있는 경우에만 UI에서 아이템 제거
+          if (result.success && result.deletedCount > 0) {
+            // 삭제된 행들을 목록에서 제거
+            const deletedIds = existingRows.map(row => row.id);
+            const updatedList = workOrderList.filter(w => !deletedIds.includes(w.id));
+            setWorkOrderList(updatedList);
+            
+            // 선택된 작업지시가 삭제된 행에 포함되어 있으면 선택 해제
+            if (selectedWorkOrder && deletedIds.includes(selectedWorkOrder.id)) {
+              setSelectedWorkOrder(null);
+            }
+            
+            // 성공 메시지 표시
             let message = `총 ${result.totalRequested}개 중 ${result.deletedCount}개가 삭제되었습니다.`;
             
             if (result.skippedCount > 0) {
@@ -701,15 +702,14 @@ export const useWorkOrderManagement = (tabId) => {
               if (result.skippedWorkOrders && result.skippedWorkOrders.length > 0) {
                 message += `\n삭제되지 않은 작업지시: ${result.skippedWorkOrders.join(', ')}`;
               }
-            }
-            
-            if (result.skippedCount > 0) {
               Message.showWarning(message);
             } else {
               Message.showSuccess(message);
             }
           } else {
-            Message.showError({ message: result.message || '삭제 중 오류가 발생했습니다.' });
+            // 삭제 실패 시 에러 메시지 표시 (UI는 변경하지 않음)
+            const errorMessage = result.message || '삭제 중 오류가 발생했습니다.';
+            Message.showError({ message: errorMessage });
           }
         })
         .catch((error) => {

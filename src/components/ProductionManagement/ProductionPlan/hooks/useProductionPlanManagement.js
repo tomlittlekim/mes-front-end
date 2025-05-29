@@ -689,14 +689,14 @@ export const useProductionPlanManagement = (tabId) => {
         .then((response) => {
           const result = response.data.deleteProductionPlans;
           
-          // 삭제된 행들을 목록에서 제거
-          const deletedIds = existingRows.map(row => row.id);
-          const updatedList = planList.filter(p => !deletedIds.includes(p.id));
-          setPlanList(updatedList);
-          setSelectedPlan(null);
-          
-          // 결과에 따른 메시지 표시
-          if (result.success) {
+          // 서버 응답이 성공이고 실제로 삭제된 항목이 있는 경우에만 UI에서 아이템 제거
+          if (result.success && result.deletedCount > 0) {
+            // 실제로 삭제된 항목들만 UI에서 제거
+            // 만약 일부만 삭제된 경우를 대비해 전체 목록을 다시 조회하는 것이 안전함
+            handleSearch(getValues());
+            setSelectedPlan(null);
+            
+            // 성공 메시지 표시
             let message = `총 ${result.totalRequested}개 중 ${result.deletedCount}개가 삭제되었습니다.`;
             
             if (result.skippedCount > 0) {
@@ -704,15 +704,14 @@ export const useProductionPlanManagement = (tabId) => {
               if (result.skippedPlans && result.skippedPlans.length > 0) {
                 message += `\n삭제되지 않은 계획: ${result.skippedPlans.join(', ')}`;
               }
-            }
-            
-            if (result.skippedCount > 0) {
               Message.showWarning(message);
             } else {
               Message.showSuccess(message);
             }
           } else {
-            Message.showError({ message: result.message || '삭제 중 오류가 발생했습니다.' });
+            // 삭제 실패 시 에러 메시지 표시 (UI는 변경하지 않음)
+            const errorMessage = result.message || '삭제 중 오류가 발생했습니다.';
+            Message.showError({ message: errorMessage });
           }
         })
         .catch((error) => {
@@ -728,7 +727,7 @@ export const useProductionPlanManagement = (tabId) => {
       // 신규 행만 삭제한 경우 성공 메시지
       Message.showSuccess(`${newRows.length}개의 신규 항목이 삭제되었습니다.`);
     }
-  }, [planList, selectedPlan, setAddRows, executeMutation]);
+  }, [planList, selectedPlan, setAddRows, executeMutation, handleSearch, getValues]);
 
   // 컴포넌트 마운트 시 제품 정보 및 고객사 정보 로드
   useEffect(() => {
