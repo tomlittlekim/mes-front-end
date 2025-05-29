@@ -488,12 +488,38 @@ const MobileProductionResult = () => {
             flagActive: true
           },
           defectInfos: defectInfos.map(info => ({
+            prodResultId: formData.prodResultId || null,
+            workOrderId: formData.workOrderId || null,
+            productId: formData.productId || null,
+            productName: productOptions.find(p => p.systemMaterialId === formData.productId)?.materialName || null,
+            defectName: null,
             defectQty: parseFloat(info.defectQty) || 0,
+            defectCause: info.defectCause || null,
+            state: info.state || 'NEW',
+            resultInfo: info.resultInfo || null,
+            defectType: info.defectCause || null,
             defectReason: info.defectReason || null,
-            resultInfo: info.resultInfo || null
+            equipmentId: formData.equipmentId || null,
+            flagActive: true
           }))
         }
       });
+      
+      console.log('서버에 전달된 defectInfos:', defectInfos.map(info => ({
+        prodResultId: formData.prodResultId || null,
+        workOrderId: formData.workOrderId || null,
+        productId: formData.productId || null,
+        productName: productOptions.find(p => p.systemMaterialId === formData.productId)?.materialName || null,
+        defectName: null,
+        defectQty: parseFloat(info.defectQty) || 0,
+        defectCause: info.defectCause || null,
+        state: info.state || 'NEW',
+        resultInfo: info.resultInfo || null,
+        defectType: info.defectCause || null,
+        defectReason: info.defectReason || null,
+        equipmentId: formData.equipmentId || null,
+        flagActive: true
+      })));
       
       if (data.updateProductionResultAtMobile) {
         setSnackbar({
@@ -680,8 +706,21 @@ const MobileProductionResult = () => {
         open={isDefectInfoDialogOpen}
         onClose={handleCloseDefectInfoDialog}
         defectInfos={defectInfos}
+        productionResult={selectedResult}
         onSave={(updatedDefectInfos) => {
-          setDefectInfos(updatedDefectInfos);
+          // 웹버전과 같이 서버 형식으로 변환
+          const defectInfosForServer = updatedDefectInfos.map(item => ({
+            workOrderId: selectedResult?.workOrderId || null,
+            prodResultId: selectedResult?.prodResultId || null,
+            productId: selectedResult?.productId || null,
+            defectQty: Number(item.defectQty),
+            defectCause: item.defectCause,
+            resultInfo: item.resultInfo,
+            state: 'NEW',
+            flagActive: true
+          }));
+          
+          setDefectInfos(defectInfosForServer);
           setIsDefectInfoDialogOpen(false);
         }}
         getAccentColor={getAccentColor}

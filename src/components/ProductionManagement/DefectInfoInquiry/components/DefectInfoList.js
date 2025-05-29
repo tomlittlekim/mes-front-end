@@ -132,20 +132,20 @@ const DefectInfoList = ({
       )
     },
     {
-      field: 'resultInfo',
-      headerName: '불량정보',
+      field: 'defectCause',
+      headerName: '불량종류',
       width: 170,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
           <Typography variant="body2">
-            {params.value || '-'}
+            {params.row.defectCauseName || '-'}
           </Typography>
       )
     },
     {
-      field: 'defectCause',
-      headerName: '불량원인',
+      field: 'resultInfo',
+      headerName: '불량정보',
       width: 170,
       headerAlign: 'center',
       align: 'center',

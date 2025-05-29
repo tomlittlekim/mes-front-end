@@ -490,6 +490,7 @@ export const useProductionResultOperations = (
         const productionResult = productionResultOrIds;
         if (!productionResult) {
           Message.showWarning('삭제할 생산실적을 선택해주세요.');
+          isLoadingRef.current = false;
           return;
         }
 
