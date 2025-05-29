@@ -223,7 +223,7 @@ const ProductionResultManagement = (props) => {
               • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 기록하여 생산이력을 관리합니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 불량수량이 1개 이상인 경우 불량정보를 반드시 입력해야 생산실적이 저장됩니다.
+              • 불량수량이 1 이상인 경우 불량정보를 반드시 입력해야 생산실적이 저장됩니다.
             </Typography>
           </Stack>
         </Box>
@@ -250,7 +250,7 @@ const ProductionResultManagement = (props) => {
             • 양품수량, 불량수량을 입력하면 자동으로 진척률과 불량률이 계산됩니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 불량수량이 1개 이상인 경우, 불량정보를 등록해야 저장할 수 있습니다.
+            • 불량수량이 1 이상인 경우, 불량정보를 등록해야 저장할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 저장 버튼을 클릭하여 입력한 생산실적 정보를 저장합니다.
