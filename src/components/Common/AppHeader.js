@@ -18,7 +18,7 @@ import {
   Typography
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CloseAllIcon from '@mui/icons-material/ClearAll';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import DomainIcon from '@mui/icons-material/DomainVerification';
@@ -374,7 +374,7 @@ const AppHeader = (props) => {
                 size="small"
                 disabled={tabs.length <= 1}
               >
-                <CloseAllIcon fontSize="small" />
+                <HighlightOffIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
