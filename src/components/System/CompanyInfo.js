@@ -265,7 +265,7 @@ const CompanyInfo = (props) => {
 
     if (result.isConfirmed) {
       try {
-        const response = await deleteCompany(selectedCompany.id);
+        const response = await deleteCompany(selectedCompany.compCd);
         if (response.deleteCompany) {
           await Swal.fire({
             icon: 'success',
