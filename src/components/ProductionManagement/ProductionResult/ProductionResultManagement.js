@@ -166,41 +166,6 @@ const ProductionResultManagement = (props) => {
           />
         </SearchCondition>
 
-        {/* 신규 기능 안내 메시지 */}
-        <Alert
-            severity="info"
-            sx={{
-              mb: 2,
-              '& .MuiAlert-message': {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }
-            }}
-        >
-          <Typography variant="body2" align="center">
-            "독립 생산실적" 버튼을 클릭하여 작업지시 없이도 생산실적을 등록할 수 있습니다.
-            제품ID는 필수 입력 항목입니다.
-          </Typography>
-        </Alert>
-
-        {/* 수정 제한 안내 메시지 추가 */}
-        <Alert
-            severity="warning"
-            sx={{
-              mb: 2,
-              '& .MuiAlert-message': {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }
-            }}
-        >
-          <Typography variant="body2" align="center" fontWeight="500">
-            등록된 생산실적은 수정할 수 없으며, 삭제 후 재등록해야 합니다.
-          </Typography>
-        </Alert>
-
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid container spacing={2}>

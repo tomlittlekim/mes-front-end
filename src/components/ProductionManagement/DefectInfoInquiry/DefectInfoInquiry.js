@@ -171,6 +171,7 @@ const DefectInfoInquiry = (props) => {
         {/* 하단 정보 영역 */}
         <Box className="info-box" mt={2} p={2} sx={{
           bgcolor: getBgColor(),
+          borderRadius: 1,
           border: `1px solid ${getBorderColor()}`
         }}>
           <Stack spacing={1}>
