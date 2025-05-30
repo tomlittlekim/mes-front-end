@@ -157,13 +157,6 @@ const DashboardContainer = () => {
   // 처음 로드 시 모든 KPI 데이터 가져오기
   useEffect(() => {
     loadAllKpiData();
-    
-    // 1분마다 모든 데이터 자동 갱신
-    const intervalId = setInterval(() => {
-      loadAllKpiData();
-    }, 60000);
-    
-    return () => clearInterval(intervalId);
   }, []);
 
   // 개별 차트 필터 변경 핸들러
