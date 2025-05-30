@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import StatCardContainer from './StatCardContainer';
 import KpiChart from '../components/Dashboard/KpiChart';
 import ApiStatus from '../components/Dashboard/ApiStatus';
-import KpiFilter from '../components/Dashboard/KpiFilter';
 import { Grid, Box, Card, CardContent, useTheme, CircularProgress, Typography } from '@mui/material';
 import { useDomain, DOMAINS } from '../contexts/DomainContext';
 import IotChart from "../components/Charts/IotChart";
 import { useGraphQL } from '../apollo/useGraphQL';
-import { GET_SUBSCRIBED_KPI_DATA, GET_KPI_CHART_DATA } from '../graphql-queries/KPI/queries';
+import { GET_KPI_CHART_DATA } from '../graphql-queries/KPI/queries';
 
 // Dashboard 컨테이너 컴포넌트
 const DashboardContainer = () => {
@@ -23,12 +22,6 @@ const DashboardContainer = () => {
   
   // KPI 지표별 필터 상태
   const [indicatorFilters, setIndicatorFilters] = useState({});
-  
-  // 기본 필터 (처음 로드 시 사용)
-  const [defaultFilter] = useState({
-    date: getTodayFormatted(),
-    range: 'week' // 기본값으로 주간 데이터
-  });
   
   // 현재 테마 가져오기
   const theme = useTheme();
@@ -52,104 +45,61 @@ const DashboardContainer = () => {
     return isDarkMode ? '#2d4764' : '#e0e0e0';
   };
 
-  // 단일 KPI 데이터 로드
-  const loadSingleKpiData = async (kpiIndicatorCd, filter) => {
-    try {
-      // 현재 모든 지표 가져오기
-      const allFilters = { ...indicatorFilters };
-      
-      // 특정 지표의 필터 업데이트
-      allFilters[kpiIndicatorCd] = filter;
-      
-      // 필터가 있는 모든 지표에 대한 indicatorFilters 구성
-      const activeFilters = Object.entries(allFilters)
-        .map(([code, filterData]) => ({
-          kpiIndicatorCd: code,
-          date: filterData.date,
-          range: filterData.range
-        }));
-      
-      // KPI 차트 데이터 요청 구성
-      const request = {
-        defaultFilter: defaultFilter,
-        indicatorFilters: activeFilters
-      };
-      
-      console.log('KPI 필터 요청:', JSON.stringify(request, null, 2));
-      
-      // GraphQL 쿼리 실행
-      const result = await executeQuery(GET_KPI_CHART_DATA, { request });
-      
-      if (result?.data?.getKpiChartData) {
-        // 받은 데이터로 전체 KPI 데이터 업데이트
-        setKpiData(result.data.getKpiChartData);
-      }
-    } catch (error) {
-      console.error(`KPI 데이터 로드 중 오류 발생 (${kpiIndicatorCd}):`, error);
-      
-      // 오류 발생 시 기존 API로 폴백
-      try {
-        const result = await executeQuery(GET_SUBSCRIBED_KPI_DATA, {
-          filter: defaultFilter
-        });
-        
-        if (result?.data?.getSubscribedKpiData) {
-          setKpiData(result.data.getSubscribedKpiData);
-        }
-      } catch (fallbackError) {
-        console.error('폴백 API 호출 중 오류 발생:', fallbackError);
-      }
-    }
-  };
-
   // 모든 KPI 데이터 로드
   const loadAllKpiData = async () => {
     setIsKpiLoading(true);
     try {
-      // 초기에는 기존 API로 구독 중인 KPI 지표 목록 가져오기
-      const result = await executeQuery(GET_SUBSCRIBED_KPI_DATA, {
-        filter: defaultFilter
+      // 지표별 필터가 있는지 확인
+      const hasFilters = Object.keys(indicatorFilters).length > 0;
+      
+      let filters = [];
+      
+      if (hasFilters) {
+        // 기존 필터 사용 (개별 지표에 대한 필터 설정이 있는 경우)
+        filters = Object.entries(indicatorFilters).map(([kpiIndicatorCd, filter]) => ({
+          kpiIndicatorCd,
+          date: filter.date,
+          range: filter.range
+        }));
+      } else {
+        // 초기 로드 시 기본 날짜와 범위로 모든 구독 KPI 데이터 요청
+        // 백엔드에서 사용자의 구독 정보를 기반으로 데이터 반환
+        const defaultDate = getTodayFormatted();
+        const defaultRange = 'week';
+        
+        filters = [{
+          date: defaultDate,
+          range: defaultRange
+        }];
+      }
+      
+      // GraphQL 쿼리 실행
+      const result = await executeQuery(GET_KPI_CHART_DATA, {
+        filters: filters
       });
       
-      if (result?.data?.getSubscribedKpiData) {
-        const subscribedData = result.data.getSubscribedKpiData;
+      if (result?.data?.getKpiChartData) {
+        const newData = result.data.getKpiChartData;
+        setKpiData(newData);
         
-        // 지표별 초기 필터 설정
-        const initialFilters = {};
-        subscribedData.forEach(item => {
-          initialFilters[item.kpiIndicatorCd] = {
-            date: defaultFilter.date,
-            range: defaultFilter.range
-          };
-        });
-        setIndicatorFilters(initialFilters);
-        
-        // 새로운 API 사용해서 모든 지표 데이터 한번에 로드
-        try {
-          const indicatorFiltersList = subscribedData.map(item => ({
-            kpiIndicatorCd: item.kpiIndicatorCd,
-            date: defaultFilter.date,
-            range: defaultFilter.range
-          }));
+        // 새로 받은 데이터를 기반으로 필터 상태 업데이트 (초기 로드 시에만)
+        if (!hasFilters && newData.length > 0) {
+          const defaultDate = getTodayFormatted();
+          const defaultRange = 'week';
           
-          const chartResult = await executeQuery(GET_KPI_CHART_DATA, {
-            request: {
-              defaultFilter: defaultFilter,
-              indicatorFilters: indicatorFiltersList
-            }
+          const initialFilters = {};
+          newData.forEach(item => {
+            initialFilters[item.kpiIndicatorCd] = {
+              date: defaultDate,
+              range: defaultRange
+            };
           });
           
-          if (chartResult?.data?.getKpiChartData) {
-            setKpiData(chartResult.data.getKpiChartData);
-          } else {
-            // 새 API 실패시 기존 데이터 사용
-            setKpiData(subscribedData);
-          }
-        } catch (chartError) {
-          console.error('KPI 차트 데이터 로드 중 오류 발생:', chartError);
-          // 새 API 실패시 기존 데이터 사용
-          setKpiData(subscribedData);
+          setIndicatorFilters(initialFilters);
         }
+      } else {
+        // 데이터 없음
+        setKpiData([]);
       }
     } catch (error) {
       console.error('KPI 데이터 로드 중 오류 발생:', error);
@@ -159,17 +109,58 @@ const DashboardContainer = () => {
     }
   };
 
+  // 단일 KPI 데이터 로드
+  const loadSingleKpiData = async (kpiIndicatorCd, filter) => {
+    try {
+      // 현재 필터 상태 업데이트
+      const updatedFilters = {
+        ...indicatorFilters,
+        [kpiIndicatorCd]: filter
+      };
+      
+      // 변경된 지표의 필터만 전송
+      const filters = [{
+        kpiIndicatorCd,
+        date: filter.date,
+        range: filter.range
+      }];
+      
+      // GraphQL 쿼리 실행
+      const result = await executeQuery(GET_KPI_CHART_DATA, {
+        filters
+      });
+      
+      if (result?.data?.getKpiChartData) {
+        // 새 데이터로 해당 차트만 업데이트
+        const newChartData = result.data.getKpiChartData;
+        
+        setKpiData(prevData => {
+          // 해당 차트 데이터만 업데이트하고 나머지는 유지
+          if (newChartData.length === 0) return prevData;
+          
+          return prevData.map(item => {
+            const updatedItem = newChartData.find(newItem => 
+              newItem.kpiIndicatorCd === item.kpiIndicatorCd
+            );
+            return updatedItem || item;
+          });
+        });
+        
+        // 필터 상태 업데이트
+        setIndicatorFilters(updatedFilters);
+      }
+    } catch (error) {
+      console.error(`KPI 데이터 로드 중 오류 발생 (${kpiIndicatorCd}):`, error);
+    }
+  };
+
   // 처음 로드 시 모든 KPI 데이터 가져오기
   useEffect(() => {
     loadAllKpiData();
     
     // 1분마다 모든 데이터 자동 갱신
     const intervalId = setInterval(() => {
-      // 각 차트별 현재 필터 설정으로 데이터 새로고침
-      kpiData.forEach(item => {
-        const filter = indicatorFilters[item.kpiIndicatorCd] || defaultFilter;
-        loadSingleKpiData(item.kpiIndicatorCd, filter);
-      });
+      loadAllKpiData();
     }, 60000);
     
     return () => clearInterval(intervalId);
@@ -186,46 +177,6 @@ const DashboardContainer = () => {
     // 필터 변경 즉시 데이터 새로고침 요청이 있으면 로드
     if (refresh) {
       loadSingleKpiData(kpiIndicatorCd, newFilter);
-    }
-  };
-
-  // 모든 데이터 새로고침 핸들러
-  const handleRefreshAll = () => {
-    kpiData.forEach(item => {
-      const filter = indicatorFilters[item.kpiIndicatorCd] || defaultFilter;
-      loadSingleKpiData(item.kpiIndicatorCd, filter);
-    });
-  };
-
-  // 대시보드 데이터
-  const dashboardData = {
-    stats: {
-      production: {
-        value: '85.7%',
-        trend: '3.2%',
-        status: 'up'
-      },
-      quality: {
-        value: '98.2%',
-        trend: '1.7%',
-        status: 'up'
-      },
-      inventory: {
-        value: '12,834',
-        trend: '2.4%',
-        status: 'down'
-      },
-      equipment: {
-        value: '95.3%',
-        trend: '0.5%',
-        status: 'up'
-      }
-    },
-    apiStatus: {
-      mainEquipment: 'online',
-      assemblyLine: 'online',
-      packagingSystem: 'online',
-      qualityControl: 'online'
     }
   };
 
@@ -311,7 +262,10 @@ const DashboardContainer = () => {
               kpiData={data} 
               isLoading={false} 
               onFilterChange={handleChartFilterChange}
-              filter={indicatorFilters[data.kpiIndicatorCd] || defaultFilter}
+              filter={indicatorFilters[data.kpiIndicatorCd] || {
+                date: getTodayFormatted(),
+                range: 'week'
+              }}
             />
           </CardContent>
         </Card>
@@ -413,6 +367,38 @@ const DashboardContainer = () => {
       </Grid>
     </Box>
   );
+};
+
+// 대시보드 데이터
+const dashboardData = {
+  stats: {
+    production: {
+      value: '85.7%',
+      trend: '3.2%',
+      status: 'up'
+    },
+    quality: {
+      value: '98.2%',
+      trend: '1.7%',
+      status: 'up'
+    },
+    inventory: {
+      value: '12,834',
+      trend: '2.4%',
+      status: 'down'
+    },
+    equipment: {
+      value: '95.3%',
+      trend: '0.5%',
+      status: 'up'
+    }
+  },
+  apiStatus: {
+    mainEquipment: 'online',
+    assemblyLine: 'online',
+    packagingSystem: 'online',
+    qualityControl: 'online'
+  }
 };
 
 export default DashboardContainer;

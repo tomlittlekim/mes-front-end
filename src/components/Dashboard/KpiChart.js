@@ -7,9 +7,6 @@ import {
   FormControl, 
   Select, 
   MenuItem, 
-  InputLabel,
-  TextField,
-  Grid,
   IconButton
 } from '@mui/material';
 import { 
@@ -27,6 +24,10 @@ import {
 } from 'recharts';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { format, parse } from 'date-fns';
+import ko from "date-fns/locale/ko";
 
 /**
  * KPI 차트 컴포넌트
@@ -53,6 +54,17 @@ const KpiChart = ({
     date: filter?.date || new Date().toISOString().split('T')[0],
     range: filter?.range || 'week'
   });
+  
+  // 날짜 객체로 변환
+  const dateObject = useMemo(() => {
+    try {
+      if (!localFilter.date) return new Date();
+      return parse(localFilter.date, 'yyyy-MM-dd', new Date());
+    } catch (error) {
+      console.error('날짜 파싱 오류:', error);
+      return new Date();
+    }
+  }, [localFilter.date]);
   
   // 외부 필터가 변경되면 로컬 필터도 업데이트
   useEffect(() => {
@@ -116,12 +128,12 @@ const KpiChart = ({
     return Object.keys(firstDataPoint).filter(key => key !== 'name');
   }, [kpiData]);
   
-  // 로컬 필터 변경 핸들러
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  // 범위 변경 핸들러
+  const handleRangeChange = (e) => {
+    const { value } = e.target;
     const newFilter = {
       ...localFilter,
-      [name]: value
+      range: value
     };
     
     setLocalFilter(newFilter);
@@ -129,6 +141,28 @@ const KpiChart = ({
     // 부모 컴포넌트에 필터 변경 알림
     if (onFilterChange) {
       onFilterChange(kpiData.kpiIndicatorCd, newFilter);
+    }
+  };
+  
+  // 날짜 변경 핸들러
+  const handleDateChange = (newDate) => {
+    if (!newDate) return;
+    
+    try {
+      const formattedDate = format(newDate, 'yyyy-MM-dd');
+      const newFilter = {
+        ...localFilter,
+        date: formattedDate
+      };
+      
+      setLocalFilter(newFilter);
+      
+      // 부모 컴포넌트에 필터 변경 알림
+      if (onFilterChange) {
+        onFilterChange(kpiData.kpiIndicatorCd, newFilter);
+      }
+    } catch (error) {
+      console.error('날짜 변환 오류:', error);
     }
   };
   
@@ -327,23 +361,21 @@ const KpiChart = ({
         
         {/* 인라인 필터 컨트롤 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TextField
-            name="date"
-            type="date"
-            size="small"
-            value={localFilter.date}
-            onChange={handleFilterChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            sx={{ width: 130 }}
-          />
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+            <DatePicker
+              label="조회일자"
+              value={dateObject}
+              onChange={handleDateChange}
+              slotProps={{ textField: { size: "small" } }}
+              sx={{ width: 150 }}
+            />
+          </LocalizationProvider>
           
           <FormControl size="small" sx={{ minWidth: 90 }}>
             <Select
               name="range"
               value={localFilter.range}
-              onChange={handleFilterChange}
+              onChange={handleRangeChange}
               sx={{ color: getTextColor() }}
               displayEmpty
             >
