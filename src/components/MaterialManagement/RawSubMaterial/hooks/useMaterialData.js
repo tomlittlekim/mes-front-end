@@ -11,7 +11,7 @@ import {
 } from '../../../../graphql-queries/material-master/materialQueries';
 import { SEARCH_CONDITIONS } from '../components/SearchForm';
 import Message from '../../../../utils/message/Message';
-import {getGridCodeList} from "../../../../api/standardInfo/commonCodeApi";
+import {getDefaultGridCodeList, getGridCodeList} from "../../../../api/standardInfo/commonCodeApi";
 import { getColumns } from '../components/MaterialGrid';
 
 // GraphQL 쿼리 정의
@@ -51,17 +51,32 @@ export const useMaterialData = (executeQuery, executeMutation) => {
   // 공통코드 로드
   useEffect(() => {
     const loadCommonCodes = async () => {
-      const codeClassIds = [
+      // site, comp cd 따라 다르게 호출되는 부분
+      const normalCodes = [
         'CD20250402131435416', // 단위
-        'CD20250428144831625', //자재유형
-        'CD20250428145908166' //원부자재
+        'CD20250428144831625', // 자재유형
+      ];
+
+      // site, comp cd = default 호출
+      const defaultCodes = [
+        'CD20250428145908166', // 원부자재
       ];
 
       try {
-        const codes = await getGridCodeList(codeClassIds);
-        setCommonCodes(codes);
+        // 각 API 호출에 대해 별도로 try-catch 처리
+        let codes1 = {}, codes2 = {};
+          codes1 = await getGridCodeList(normalCodes);
+          codes2 = await getDefaultGridCodeList(defaultCodes);
+
+        const mergedCodes = {
+          ...codes1,
+          ...codes2
+        };
+        
+        setCommonCodes(mergedCodes);
       } catch (error) {
         console.error('공통코드 로드 실패:', error);
+        setCommonCodes({}); // 에러 발생 시 빈 객체로 설정
       }
     };
 

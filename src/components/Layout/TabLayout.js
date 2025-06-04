@@ -245,8 +245,7 @@ const TabLayout = (props) => {
       // 아직 해당 탭의 컴포넌트가 없다면 생성
       if (!tabComponents[tabId]) {
         hasNewComponent = true;
-        console.log(`Creating component for tab: ${tabId}`);
-        
+
         // 모든 경우에 새 컴포넌트 생성 방식 사용
         const component = getTabComponent(tabId);
         setTabComponents(prev => ({
@@ -275,9 +274,7 @@ const TabLayout = (props) => {
         setTimeout(() => {
           const resizeEvent2 = new Event('resize');
           window.dispatchEvent(resizeEvent2);
-          
-          // 로깅
-          console.log('Grid size recalculation triggered for new tabs');
+
         }, 300);
       }, 100);
       
@@ -291,7 +288,6 @@ const TabLayout = (props) => {
       const newComponents = { ...prev };
       Object.keys(newComponents).forEach(tabId => {
         if (!tabContents[tabId]) {
-          console.log(`Removing component for tab: ${tabId}`);
           delete newComponents[tabId];
         }
       });
@@ -315,7 +311,6 @@ const TabLayout = (props) => {
         setTimeout(() => {
           const resizeEvent2 = new Event('resize');
           window.dispatchEvent(resizeEvent2);
-          console.log(`Tab ${activeTab} activated, grid size recalculated`);
         }, 200);
         
         // 세 번째 이벤트 - 더 긴 지연으로 DOM이 완전히 로드된 후 확실히 재계산
