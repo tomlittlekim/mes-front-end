@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
-import { Typography, Button, Stack, Select, MenuItem } from '@mui/material';
+import { Typography, Button, Stack, Select, MenuItem, TextField } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -8,6 +8,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import Swal from 'sweetalert2';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import ko from "date-fns/locale/ko";
 
 /**
  * 생산실적 목록 컴포넌트
@@ -152,12 +156,17 @@ const ProductionResultList = ({
       type: 'dateTime',
       valueGetter: (params) => {
         // params가 null이거나 undefined인 경우 체크
-        if (!params) return null;
+        if (!params || !params.value) return null;
+        
+        // 이미 Date 객체인 경우 그대로 반환
+        if (params.value instanceof Date) {
+          return params.value;
+        }
         
         // 문자열이나 다른 형식을 Date 객체로 변환
-        if (!params.value) return null;
         try {
-          return new Date(params.value);
+          const dateValue = new Date(params.value);
+          return isNaN(dateValue.getTime()) ? null : dateValue;
         } catch (e) {
           console.error("Date conversion error:", e);
           return null;
@@ -185,7 +194,38 @@ const ProductionResultList = ({
           console.error("Date formatting error:", e);
           return <Typography variant="body2">-</Typography>;
         }
-      }
+      },
+      renderEditCell: (params) => {
+        return (
+             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+               <DateTimePicker
+                 value={params.value || null}
+                 onChange={(newValue) => {
+                   console.log('DateTimePicker onChange:', { field: params.field, newValue });
+                   params.api.setEditCellValue({
+                     id: params.id,
+                     field: params.field,
+                     value: newValue
+                   });
+                   // 선택 후 자동으로 편집 모드 종료
+                   setTimeout(() => {
+                     params.api.stopCellEditMode({
+                       id: params.id,
+                       field: params.field
+                     });
+                   }, 100);
+                 }}
+                 slotProps={{
+                   textField: {
+                     size: 'small',
+                     fullWidth: true,
+                     variant: 'outlined'
+                   }
+                 }}
+               />
+             </LocalizationProvider>
+         );
+       }
     },
     // 생산종료일시 필드 (신규 등록시 수정 가능)
     {
@@ -198,12 +238,17 @@ const ProductionResultList = ({
       type: 'dateTime',
       valueGetter: (params) => {
         // params가 null이거나 undefined인 경우 체크
-        if (!params) return null;
+        if (!params || !params.value) return null;
+        
+        // 이미 Date 객체인 경우 그대로 반환
+        if (params.value instanceof Date) {
+          return params.value;
+        }
         
         // 문자열이나 다른 형식을 Date 객체로 변환
-        if (!params.value) return null;
         try {
-          return new Date(params.value);
+          const dateValue = new Date(params.value);
+          return isNaN(dateValue.getTime()) ? null : dateValue;
         } catch (e) {
           console.error("Date conversion error:", e);
           return null;
@@ -231,7 +276,38 @@ const ProductionResultList = ({
           console.error("Date formatting error:", e);
           return <Typography variant="body2">-</Typography>;
         }
-      }
+      },
+      renderEditCell: (params) => {
+        return (
+             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+               <DateTimePicker
+                 value={params.value || null}
+                 onChange={(newValue) => {
+                   console.log('DateTimePicker onChange:', { field: params.field, newValue });
+                   params.api.setEditCellValue({
+                     id: params.id,
+                     field: params.field,
+                     value: newValue
+                   });
+                   // 선택 후 자동으로 편집 모드 종료
+                   setTimeout(() => {
+                     params.api.stopCellEditMode({
+                       id: params.id,
+                       field: params.field
+                     });
+                   }, 100);
+                 }}
+                 slotProps={{
+                   textField: {
+                     size: 'small',
+                     fullWidth: true,
+                     variant: 'outlined'
+                   }
+                 }}
+               />
+             </LocalizationProvider>
+         );
+       }
     },
     {
       field: 'progressRate',
@@ -265,7 +341,7 @@ const ProductionResultList = ({
     },
     {
       field: 'equipmentId',
-      headerName: '설비ID',
+      headerName: '설비',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -285,6 +361,57 @@ const ProductionResultList = ({
                   </span>
               ) : params.value || ''}
             </Typography>
+        );
+      },
+      renderEditCell: (params) => {
+        return (
+            <Select
+                value={params.value || ''}
+                onChange={(e) => {
+                  params.api.setEditCellValue({
+                    id: params.id,
+                    field: params.field,
+                    value: e.target.value
+                  });
+                  // 선택 후 자동으로 편집 모드 종료
+                  params.api.stopCellEditMode({
+                    id: params.id,
+                    field: params.field
+                  });
+                }}
+                fullWidth
+                size="small"
+                sx={{ 
+                  minWidth: 150,
+                  '& .MuiSelect-select': {
+                    py: 0.5
+                  }
+                }}
+            >
+                <MenuItem value="">
+                    <em>선택하세요</em>
+                </MenuItem>
+                {equipmentOptions.map((option) => (
+                    <MenuItem 
+                      key={option.value} 
+                      value={option.value}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
+                    >
+                        <div>
+                          {option.label}
+                          {option.factoryName && option.lineName ? (
+                              <div style={{ fontSize: '0.75em', color: 'gray' }}>
+                                {option.factoryName} &gt; {option.lineName}
+                              </div>
+                          ) : null}
+                        </div>
+                    </MenuItem>
+                ))}
+            </Select>
         );
       }
     },
@@ -520,33 +647,39 @@ const ProductionResultList = ({
     // 행 업데이트 처리
     processRowUpdate: (newRow, oldRow) => {
       try {
-        // 현지 시간을 유지하면서 날짜를 문자열로 변환하는 함수
-        const formatLocalDate = (date) => {
-          if (!date) return null;
-          const d = date instanceof Date ? date : new Date(date);
-          if (isNaN(d.getTime())) return null;
+        console.log('processRowUpdate 호출됨:', { newRow, oldRow });
+        
+        // 날짜 필드 처리 함수
+        const proceseDateField = (fieldValue, oldFieldValue) => {
+          // null이나 undefined인 경우 처리
+          if (!fieldValue) {
+            // 기존 값이 있으면 유지, 없으면 null
+            return oldFieldValue || null;
+          }
           
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          const hours = String(d.getHours()).padStart(2, '0');
-          const minutes = String(d.getMinutes()).padStart(2, '0');
-          const seconds = String(d.getSeconds()).padStart(2, '0');
+          // 이미 Date 객체인 경우 그대로 반환
+          if (fieldValue instanceof Date) {
+            return fieldValue;
+          }
           
-          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+          // 문자열인 경우 Date 객체로 변환 시도
+          try {
+            const dateObj = new Date(fieldValue);
+            return isNaN(dateObj.getTime()) ? (oldFieldValue || null) : dateObj;
+          } catch (e) {
+            console.error('날짜 변환 오류:', e);
+            return oldFieldValue || null;
+          }
         };
         
-        // 날짜 필드가 Date 객체인 경우 로컬 시간 문자열로 변환
+        // 날짜 필드를 안전하게 처리
         const updatedRow = {
           ...newRow,
-          // Date 객체를 로컬 시간 문자열로 변환 (백엔드 저장을 위해)
-          prodStartTime: newRow.prodStartTime instanceof Date ? 
-                        formatLocalDate(newRow.prodStartTime) : 
-                        newRow.prodStartTime,
-          prodEndTime: newRow.prodEndTime instanceof Date ? 
-                      formatLocalDate(newRow.prodEndTime) : 
-                      newRow.prodEndTime
+          prodStartTime: proceseDateField(newRow.prodStartTime, oldRow.prodStartTime),
+          prodEndTime: proceseDateField(newRow.prodEndTime, oldRow.prodEndTime)
         };
+        
+        console.log('업데이트된 행:', updatedRow);
         
         // 변경된 생산실적 데이터 업데이트
         const updatedList = productionResultList.map(row => 
