@@ -20,6 +20,7 @@ export const PRODUCTION_RESULTS_QUERY = gql`
             prodStartTime
             prodEndTime
             createUser
+            createUserName
             createDate
             updateUser
             updateDate

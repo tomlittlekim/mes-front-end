@@ -38,6 +38,7 @@ export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
             resultInfo
             defectCause
             createUser
+            createUserName
             createDate
             updateUser
             updateDate
@@ -65,6 +66,7 @@ export const PRODUCTION_RESULTS_QUERY = gql`
             resultInfo
             defectCause
             createUser
+            createUserName
             createDate
             updateUser
             updateDate
@@ -112,6 +114,7 @@ export const DEFECT_INFO_BY_PROD_RESULT_QUERY = gql`
             state
             defectCause
             createUser
+            createUserName
             createDate
             updateUser
             updateDate
