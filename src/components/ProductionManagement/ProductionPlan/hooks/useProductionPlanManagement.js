@@ -10,6 +10,7 @@ import { useGridRow } from '../../../../utils/grid/useGridRow';
 import Message from '../../../../utils/message/Message';
 import useLocalStorageVO from '../../../Common/UseLocalStorageVO';
 import CustomDateEditor from '../editors/CustomDateEditor';
+import CustomDateTimeEditor from '../editors/CustomDateTimeEditor';
 import ShiftTypeEditor from '../editors/ShiftTypeEditor';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
 import { enrichProductWithDisplayValues } from '../utils/materialTypeUtils';
@@ -243,30 +244,29 @@ export const useProductionPlanManagement = (tabId) => {
       }
 
       try {
-        return format(new Date(dateObj), 'yyyy-MM-dd');
+        return format(new Date(dateObj), "yyyy-MM-dd'T'HH:mm:ss");
       } catch (error) {
         console.error("Invalid date string:", dateObj);
         return null;
       }
     }
 
-    // Date 객체 처리
+    // Date 객체 처리 - 시간까지 포함하여 포맷
     try {
-      return format(dateObj, 'yyyy-MM-dd');
+      return format(dateObj, "yyyy-MM-dd'T'HH:mm:ss");
     } catch (error) {
       console.error("Error formatting date:", dateObj);
       return null;
     }
   }, []);
 
-  // 새 행 생성 함수
+  // 새로운 행 생성 함수
   const createNewRow = useCallback(() => {
     const currentDate = new Date();
-    const currentUser = loginUser.loginId;
-    const newId = generateId();
-
+    const currentUser = loginUser?.name || 'SYSTEM';
+    
     return {
-      id: newId,
+      id: generateId(),
       prodPlanId: '자동입력',
       orderId: '',
       orderDetailId: '',
@@ -799,6 +799,7 @@ export const useProductionPlanManagement = (tabId) => {
 
     // 에디터 컴포넌트
     CustomDateEditor,
+    CustomDateTimeEditor,
     ShiftTypeEditor,
     ProductMaterialSelector,
 

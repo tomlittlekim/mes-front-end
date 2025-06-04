@@ -7,6 +7,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShiftTypeChip from './ShiftTypeChip';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
+import CustomDateTimeEditor from '../editors/CustomDateTimeEditor';
 import OrderInfoModal from './OrderInfoModal';
 
 /**
@@ -330,15 +331,18 @@ const PlanList = ({
       headerName: '계획시작일시',
       width: 180,
       editable: true,
-      type: 'date',
+      type: 'dateTime',
       headerAlign: 'center',
       align: 'center',
+      renderEditCell: (params) => (
+          <CustomDateTimeEditor {...params} />
+      ),
       renderCell: (params) => {
         let displayValue = '';
         if (params.value) {
           try {
             const date = new Date(params.value);
-            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm') : '';
           } catch (e) {
             displayValue = '';
           }
@@ -356,15 +360,18 @@ const PlanList = ({
       headerName: '계획종료일시',
       width: 180,
       editable: true,
-      type: 'date',
+      type: 'dateTime',
       headerAlign: 'center',
       align: 'center',
+      renderEditCell: (params) => (
+          <CustomDateTimeEditor {...params} />
+      ),
       renderCell: (params) => {
         let displayValue = '';
         if (params.value) {
           try {
             const date = new Date(params.value);
-            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm') : '';
           } catch (e) {
             displayValue = '';
           }
