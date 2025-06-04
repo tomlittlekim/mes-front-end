@@ -265,7 +265,7 @@ const ProductionResultList = ({
     },
     {
       field: 'equipmentId',
-      headerName: '설비ID',
+      headerName: '설비',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -285,6 +285,57 @@ const ProductionResultList = ({
                   </span>
               ) : params.value || ''}
             </Typography>
+        );
+      },
+      renderEditCell: (params) => {
+        return (
+            <Select
+                value={params.value || ''}
+                onChange={(e) => {
+                  params.api.setEditCellValue({
+                    id: params.id,
+                    field: params.field,
+                    value: e.target.value
+                  });
+                  // 선택 후 자동으로 편집 모드 종료
+                  params.api.stopCellEditMode({
+                    id: params.id,
+                    field: params.field
+                  });
+                }}
+                fullWidth
+                size="small"
+                sx={{ 
+                  minWidth: 150,
+                  '& .MuiSelect-select': {
+                    py: 0.5
+                  }
+                }}
+            >
+                <MenuItem value="">
+                    <em>선택하세요</em>
+                </MenuItem>
+                {equipmentOptions.map((option) => (
+                    <MenuItem 
+                      key={option.value} 
+                      value={option.value}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
+                    >
+                        <div>
+                          {option.label}
+                          {option.factoryName && option.lineName ? (
+                              <div style={{ fontSize: '0.75em', color: 'gray' }}>
+                                {option.factoryName} &gt; {option.lineName}
+                              </div>
+                          ) : null}
+                        </div>
+                    </MenuItem>
+                ))}
+            </Select>
         );
       }
     },
