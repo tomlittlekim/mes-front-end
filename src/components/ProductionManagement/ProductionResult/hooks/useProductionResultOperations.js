@@ -551,8 +551,8 @@ export const useProductionResultOperations = (
         defectQty: 0,
         equipmentId: selectedWorkOrder.equipmentId || '',
         warehouseId: '',  // 필수 입력값으로 변경
-        prodStartTime: new Date().toISOString(),  // 현재 시간 기본값
-        prodEndTime: new Date().toISOString(),
+        prodStartTime: new Date(),  // 현재 시간을 Date 객체로 초기화
+        prodEndTime: new Date(),   // 현재 시간을 Date 객체로 초기화
         createDate: null,
         flagActive: true,
         createUser: '',

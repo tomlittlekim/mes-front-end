@@ -213,28 +213,12 @@ const IndependentProductionModal = ({
       return;
     }
 
-    // 현지 시간을 유지하면서 날짜를 문자열로 변환하는 함수
-    const formatLocalDate = (date) => {
-      if (!date) return null;
-      const d = date instanceof Date ? date : new Date(date);
-      if (isNaN(d.getTime())) return null;
-      
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      const seconds = String(d.getSeconds()).padStart(2, '0');
-      
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    };
-    
-    // 저장할 데이터 준비 (불량원인과 비고 필드 제거)
+    // 저장할 데이터 준비 - 날짜는 Date 객체 그대로 유지
     const dataToSave = {
       ...productionData,
-      // 날짜 데이터 정리 - 로컬 시간 유지
-      prodStartTime: productionData.prodStartTime ? formatLocalDate(productionData.prodStartTime) : null,
-      prodEndTime: productionData.prodEndTime ? formatLocalDate(productionData.prodEndTime) : null
+      // 날짜 데이터는 Date 객체 그대로 전달 (그리드에서 올바르게 처리되도록)
+      prodStartTime: productionData.prodStartTime,
+      prodEndTime: productionData.prodEndTime
     };
 
     // 부모 컴포넌트의 저장 함수 호출
