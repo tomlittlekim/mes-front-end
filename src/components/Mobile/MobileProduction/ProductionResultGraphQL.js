@@ -19,6 +19,7 @@ export const PRODUCTION_RESULTS_MOBILE = gql`
             prodEndTime
             createDate
             createUser
+            createUserName
             updateDate
             updateUser
             flagActive

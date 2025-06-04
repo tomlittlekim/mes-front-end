@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Typography } from '@mui/material';
 import { format } from 'date-fns';
-import { EnhancedDataGridWrapper } from '../../../Common';
+import { EnhancedDataGridWrapper, FieldSelectionModal } from '../../../Common';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { transformDataForExport, exportToExcel, executePrint } from '../../../../utils/exportUtils';
 
 /**
  * 불량정보 목록 그리드 컴포넌트
@@ -27,6 +28,10 @@ const DefectInfoList = ({
   productOptions = [],
   equipmentOptions = []
 }) => {
+  // 필드 선택 모달 상태
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [exportType, setExportType] = useState(''); // 'print' | 'excel'
+
   // 날짜 포맷 함수
   const formatDateDisplay = (dateString) => {
     if (!dateString) return '-';
@@ -214,13 +219,72 @@ const DefectInfoList = ({
     }
   ]), [productOptions, equipmentOptions]);
 
+  // 모달 선택용 컬럼 정의 (모든 컬럼 포함)
+  const allAvailableColumns = useMemo(() => ([
+    ...defectInfoColumns,
+    {
+      field: 'createUserName',
+      headerName: '등록자명',
+      width: 130,
+      headerAlign: 'center',
+      align: 'center'
+    }
+  ]), [defectInfoColumns]);
+
+  // 출력 버튼 클릭 핸들러
+  const handlePrintClick = () => {
+    setExportType('print');
+    setIsFieldModalOpen(true);
+  };
+
+  // 엑셀 버튼 클릭 핸들러
+  const handleExcelClick = () => {
+    setExportType('excel');
+    setIsFieldModalOpen(true);
+  };
+
+  // 필드 선택 모달 확인 핸들러
+  const handleFieldSelectionConfirm = ({ selectedFields, userFieldType }) => {
+    try {
+      // 데이터 변환
+      const transformedData = transformDataForExport(
+        defectInfoList,
+        allAvailableColumns,
+        selectedFields,
+        userFieldType,
+        productOptions,
+        equipmentOptions
+      );
+
+      if (exportType === 'print') {
+        // 출력 실행
+        executePrint(transformedData, '불량정보 조회');
+      } else if (exportType === 'excel') {
+        // 엑셀 내보내기 실행
+        exportToExcel(transformedData, '불량정보조회', '불량정보');
+      }
+    } catch (error) {
+      console.error('내보내기 오류:', error);
+    } finally {
+      setIsFieldModalOpen(false);
+      setExportType('');
+    }
+  };
+
+  // 필드 선택 모달 취소 핸들러
+  const handleFieldSelectionClose = () => {
+    setIsFieldModalOpen(false);
+    setExportType('');
+  };
+
   // 불량정보 목록 그리드 버튼 (출력 및 엑셀 내보내기)
   const defectInfoButtons = useMemo(() => ([
-    { label: '출력', onClick: onPrint, icon: <PrintIcon /> },
-    { label: '엑셀', onClick: onExport, icon: <FileDownloadIcon /> }
-  ]), [onPrint, onExport]);
+    { label: '출력', onClick: handlePrintClick, icon: <PrintIcon /> },
+    { label: '엑셀', onClick: handleExcelClick, icon: <FileDownloadIcon /> }
+  ]), []);
 
   return (
+    <>
       <EnhancedDataGridWrapper
           title="불량정보 목록"
           rows={defectInfoList}
@@ -236,6 +300,28 @@ const DefectInfoList = ({
             }
           }}
       />
+
+      {/* 필드 선택 모달 */}
+      <FieldSelectionModal
+        open={isFieldModalOpen}
+        onClose={handleFieldSelectionClose}
+        title={exportType === 'print' ? '출력 필드 선택' : '엑셀 내보내기 필드 선택'}
+        fields={allAvailableColumns}
+        onConfirm={handleFieldSelectionConfirm}
+        defaultSelectedFields={[
+          'defectId',
+          'prodResultId',
+          'productId',
+          'productName',
+          'defectQty',
+          'defectCause',
+          'resultInfo',
+          'equipmentId',
+          'createDate'
+        ]}
+        defaultUserFieldType="id"
+      />
+    </>
   );
 };
 
