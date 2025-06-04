@@ -18,12 +18,28 @@ const ModelViewer = ({ tabId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const moveSpeed = 0.1;
 
+  // 키보드 상태 관리를 위한 ref 추가 (클로저 문제 해결)
+  const keysRef = useRef({
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    ArrowUp: false,
+    ArrowLeft: false,
+    ArrowDown: false,
+    ArrowRight: false,
+  });
+  
   // 키보드 상태 관리를 위한 상태 추가
   const [keys, setKeys] = useState({
     w: false,
     a: false,
     s: false,
     d: false,
+    ArrowUp: false,
+    ArrowLeft: false,
+    ArrowDown: false,
+    ArrowRight: false,
   });
 
   // 관심 지점(Point of Interest) 데이터 정의
@@ -92,24 +108,46 @@ const ModelViewer = ({ tabId }) => {
   // 키보드 이벤트 핸들러
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
-        setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: true }));
+      const key = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault(); // 기본 동작 방지
+        const keyToSet = ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key) ? e.key : key;
+        
+        // ref 업데이트
+        keysRef.current[keyToSet] = true;
+        
+        setKeys(prev => ({ ...prev, [keyToSet]: true }));
       }
     };
 
     const handleKeyUp = (e) => {
-      if (['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
-        setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: false }));
+      const key = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault(); // 기본 동작 방지
+        const keyToSet = ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key) ? e.key : key;
+        
+        // ref 업데이트
+        keysRef.current[keyToSet] = false;
+        
+        setKeys(prev => ({ ...prev, [keyToSet]: false }));
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // 이벤트를 document에 등록 (더 안정적)
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
     };
+  }, []);
+
+  // 컴포넌트 마운트 시 포커스 설정
+  useEffect(() => {
+    if (mountRef.current) {
+      mountRef.current.focus();
+    }
   }, []);
 
   // 포인트로 카메라 이동 함수
@@ -275,11 +313,7 @@ const ModelViewer = ({ tabId }) => {
       const intersectsModel = raycaster.intersectObjects(scene.children, true);
       if (intersectsModel.length > 0) {
         const point = intersectsModel[0].point;
-        console.log('클릭한 3D 좌표:', {
-          x: point.x,
-          y: point.y,
-          z: point.z
-        });
+        // 클릭한 좌표 정보는 개발 목적으로만 사용하므로 제거
       }
     };
 
@@ -289,6 +323,66 @@ const ModelViewer = ({ tabId }) => {
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
+      
+      // WASD 키보드 조작 처리
+      if (!isMovingToPoint && controlsRef.current) {
+        const camera = controlsRef.current.object;
+        const controls = controlsRef.current;
+        
+        // 이동 속도 설정
+        const moveSpeed = 0.1;
+        
+        const currentKeys = keysRef.current;
+        
+        // 직선 이동 처리
+        let moved = false;
+        
+        // 카메라의 현재 방향 벡터들 계산
+        const forward = new THREE.Vector3();
+        const right = new THREE.Vector3();
+        
+        // 카메라가 바라보는 방향 (forward)
+        camera.getWorldDirection(forward);
+        forward.y = 0; // Y축 성분 제거 (수평 이동만)
+        forward.normalize();
+        
+        // 카메라 기준 오른쪽 방향 (right)
+        right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
+        right.normalize();
+        
+        // W/↑: 카메라가 바라보는 방향으로 앞으로
+        if (currentKeys.w || currentKeys.ArrowUp) {
+          const movement = forward.clone().multiplyScalar(moveSpeed);
+          camera.position.add(movement);
+          controls.target.add(movement);
+          moved = true;
+        }
+        
+        // S/↓: 카메라가 바라보는 방향의 반대로 뒤로
+        if (currentKeys.s || currentKeys.ArrowDown) {
+          const movement = forward.clone().multiplyScalar(-moveSpeed);
+          camera.position.add(movement);
+          controls.target.add(movement);
+          moved = true;
+        }
+        
+        // A/←: 카메라 기준 왼쪽으로
+        if (currentKeys.a || currentKeys.ArrowLeft) {
+          const movement = right.clone().multiplyScalar(-moveSpeed);
+          camera.position.add(movement);
+          controls.target.add(movement);
+          moved = true;
+        }
+        
+        // D/→: 카메라 기준 오른쪽으로
+        if (currentKeys.d || currentKeys.ArrowRight) {
+          const movement = right.clone().multiplyScalar(moveSpeed);
+          camera.position.add(movement);
+          controls.target.add(movement);
+          moved = true;
+        }
+      }
+      
       controls.update();
       if (renderer && camera) renderer.render(scene, camera);
     };
@@ -326,7 +420,24 @@ const ModelViewer = ({ tabId }) => {
 
   return (
     <>
-      <div ref={mountRef} style={{ width: '100%', height: 'calc(100vh - 150px)', minHeight: '500px', border: '1px solid #ccc', position: 'relative' }}>
+      <div 
+        ref={mountRef} 
+        tabIndex={0}
+        style={{ 
+          width: '100%', 
+          height: 'calc(100vh - 150px)', 
+          minHeight: '500px', 
+          border: '1px solid #ccc', 
+          position: 'relative',
+          outline: 'none' // 포커스 아웃라인 제거
+        }}
+        onMouseDown={() => {
+          // 클릭 시 포커스 설정
+          if (mountRef.current) {
+            mountRef.current.focus();
+          }
+        }}
+      >
         {isLoading && (
           <div style={{
             position: 'absolute',
@@ -367,34 +478,58 @@ const ModelViewer = ({ tabId }) => {
           top: '20px',
           left: '20px',
           background: 'rgba(255, 255, 255, 0.9)',
-          padding: '10px',
           borderRadius: '8px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
           zIndex: 1000,
-          display: 'flex',
-          gap: '8px'
+          overflow: 'hidden'
         }}>
-          {pointsOfInterestData.map((point) => (
-            <div
-              key={point.id}
-              onClick={() => moveCameraToPoint(point.position3D)}
-              style={{
-                padding: '6px 12px',
-                background: '#00bfff',
-                color: 'white',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: '14px',
-                fontWeight: '500',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              {point.baseText}
+          {/* 포인트 버튼들 */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '10px'
+          }}>
+            {pointsOfInterestData.map((point) => (
+              <div
+                key={point.id}
+                onClick={() => moveCameraToPoint(point.position3D)}
+                style={{
+                  padding: '6px 12px',
+                  background: '#00bfff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                {point.baseText}
+              </div>
+            ))}
+          </div>
+          
+          {/* 키보드 조작 안내 */}
+          <div style={{
+            padding: '10px',
+            borderTop: '1px solid #eee',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            lineHeight: '1.4',
+            color: '#333'
+          }}>
+            <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>키보드 조작:</div>
+            <div>W/↑:앞으로</div>
+            <div>S/↓:뒤로</div>
+            <div>A/←:왼쪽으로</div>
+            <div>D/→:오른쪽으로</div>
+            <div style={{ marginTop: '4px', fontSize: '11px', opacity: '0.7' }}>
+              마우스: 시점 조작 및 줌
             </div>
-          ))}
+          </div>
         </div>
       </div>
       <PopupChartFor3d
