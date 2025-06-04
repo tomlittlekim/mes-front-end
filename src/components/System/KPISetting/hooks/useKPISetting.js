@@ -23,6 +23,7 @@ export const useKPISetting = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [selectedBranch, setSelectedBranch] = useState(null); // 선택된 지부
     const [initialData, setInitialData] = useState([]);
+    const [kpiTargetValues, setKpiTargetValues] = useState({}); //목표값
     
     const { executeQuery, executeMutation } = useGraphQL();
     
@@ -57,7 +58,8 @@ export const useKPISetting = () => {
                             return {
                                 id: company.id,
                                 name: company.name,
-                                selectedKPIs: selectedKPIs
+                                selectedKPIs: selectedKPIs,
+                                subscriptions: companySubscriptions
                             };
                         })
                     }));
@@ -193,6 +195,54 @@ export const useKPISetting = () => {
     }, []);
 
     /**
+     * KPI 목표치 변경 처리
+     * 
+     * @param {string} companyId - 회사 ID
+     * @param {string} kpiId - KPI 지표 ID
+     * @param {string|number} targetValue - 목표치 값
+     */
+    const handleTargetValueChange = useCallback((companyId, kpiId, targetValue) => {
+        setBranchList(prevList => {
+            return prevList.map(branch => {
+                return {
+                    ...branch,
+                    companies: branch.companies.map(company => {
+                        if (company.id === companyId) {
+                            // 해당 회사의 구독 정보 업데이트
+                            const updatedSubscriptions = company.subscriptions || [];
+                            const existingSubIndex = updatedSubscriptions.findIndex(
+                                sub => sub.kpiIndicatorCd === kpiId
+                            );
+                            
+                            if (existingSubIndex >= 0) {
+                                // 기존 구독 정보가 있으면 업데이트
+                                updatedSubscriptions[existingSubIndex] = {
+                                    ...updatedSubscriptions[existingSubIndex],
+                                    targetValue: targetValue
+                                };
+                            } else if (company.selectedKPIs.includes(kpiId)) {
+                                // 기존 구독은 없지만 선택된 KPI인 경우 새로 추가
+                                updatedSubscriptions.push({
+                                    site: branch.id,
+                                    compCd: company.id,
+                                    kpiIndicatorCd: kpiId,
+                                    targetValue: targetValue
+                                });
+                            }
+                            
+                            return {
+                                ...company,
+                                subscriptions: updatedSubscriptions
+                            };
+                        }
+                        return company;
+                    })
+                };
+            });
+        });
+    }, []);
+
+    /**
      * KPI 설정 저장
      * 변경된 회사의 KPI 설정 정보만 서버로 전송하는 방식으로 구현
      */
@@ -225,8 +275,11 @@ export const useKPISetting = () => {
                 const initialCompany = initialBranch.companies.find(c => c.id === company.id);
                 
                 // 초기 데이터가 없거나 KPI 선택 상태가 변경된 경우
-                if (!initialCompany || 
-                    JSON.stringify(initialCompany.selectedKPIs.sort()) !== JSON.stringify(company.selectedKPIs.sort())) {
+                if (
+                    !initialCompany ||
+                    JSON.stringify(initialCompany.selectedKPIs.sort()) !== JSON.stringify(company.selectedKPIs.sort()) ||
+                    JSON.stringify(initialCompany.subscriptions) !== JSON.stringify(company.subscriptions)
+                ) {
                     changedCompanies.push(company);
                 }
             });
@@ -244,21 +297,40 @@ export const useKPISetting = () => {
             
             // 변경된 회사만 처리
             changedCompanies.forEach(company => {
+                const initialCompany = initialBranch.companies.find(c => c.id === company.id);
                 // 모든 KPI 지표 가져오기
                 kpiIndicators.forEach(indicator => {
                     // 해당 KPI가 선택되었는지 확인
                     const isSelected = company.selectedKPIs.includes(indicator.id);
                     
-                    // 모든 KPI 지표를 전송 (선택된 것은 flagActive=true, 아닌 것은 flagActive=false)
-                    settingsData.push({
-                        site: branch.id,                   // SITE
-                        compCd: company.id,                // COMP_CD
-                        kpiIndicatorCd: indicator.id,      // KPI_INDICATOR_CD
-                        categoryId: indicator.categoryCd,  // CATEGORY_ID
-                        description: `${company.name}의 ${indicator.name} 모니터링`, // DESCRIPTION
-                        sort: isSelected ? (company.selectedKPIs.indexOf(indicator.id) + 1) : 0, // 정렬 순서
-                        flagActive: isSelected             // 활성화 여부
-                    });
+                    // 목표치 찾기
+                    const subscription = company.subscriptions?.find(sub => sub.kpiIndicatorCd === indicator.id);
+                    const targetValue = subscription ? subscription.targetValue : null;
+
+                    const initialIsSelected = initialCompany?.selectedKPIs.includes(indicator.id);
+                    const initialSubscription = initialCompany?.subscriptions?.find(sub => sub.kpiIndicatorCd === indicator.id);
+                    const initialTargetValue = initialSubscription ? initialSubscription.targetValue : null;
+
+                    // 변경 여부 판정
+                    const isChanged =
+                        isSelected !== initialIsSelected ||
+                        targetValue !== initialTargetValue;
+
+                    if (isChanged) {
+                        const setting = {
+                            site: branch.id,
+                            compCd: company.id,
+                            kpiIndicatorCd: indicator.id,
+                            categoryId: indicator.categoryCd,
+                            description: `${company.name}의 ${indicator.name} 모니터링`,
+                            sort: isSelected ? (company.selectedKPIs.indexOf(indicator.id) + 1) : 0,
+                            flagActive: isSelected,
+                        };
+                        if (typeof targetValue === 'number') {
+                            setting.targetValue = targetValue;
+                        }
+                        settingsData.push(setting);
+                    }
                 });
             });
 
@@ -294,6 +366,7 @@ export const useKPISetting = () => {
         handleBranchChange,
         handleCompanyKPIChange,
         handleKPIIndicatorSelection,
+        handleTargetValueChange,  // 목표치 변경 함수 추가
         saveSettings,
         maxKpiSelection: MAX_KPI_SELECTION  // 최대 선택 가능 개수 추가
     };

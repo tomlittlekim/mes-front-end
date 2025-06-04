@@ -29,7 +29,8 @@ const KPISetting = () => {
     selectedBranch,
     handleBranchChange,
     handleCompanyKPIChange,
-    handleKPIIndicatorSelection, 
+    handleKPIIndicatorSelection,
+    handleTargetValueChange,
     saveSettings,
     maxKpiSelection
   } = useKPISetting();
@@ -103,6 +104,7 @@ const KPISetting = () => {
                   kpiIndicators={kpiIndicators}
                   onCompanyKPIChange={handleCompanyKPIChange}
                   onKPIIndicatorSelection={handleKPIIndicatorSelection}
+                  onTargetValueChange={handleTargetValueChange}
                   isSaving={isSaving}
                   maxKpiSelection={maxKpiSelection}
                 />

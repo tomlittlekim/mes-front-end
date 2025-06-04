@@ -24,6 +24,7 @@ import CompanyItem from './CompanyItem';
  * @param {Array} kpiIndicators - KPI 지표 목록 데이터
  * @param {Function} onKPIIndicatorSelection - KPI 지표 선택/해제 처리 함수
  * @param {Function} onCompanyKPIChange - 회사별 KPI 변경 처리 함수
+ * @param {Function} onTargetValueChange - 목표값 변경 처리 함수
  * @param {boolean} isSaving - 저장 중 여부
  * @param {number} maxKpiSelection - 최대 선택 가능 KPI 개수
  */
@@ -32,8 +33,9 @@ const BranchCompanyList = ({
   kpiIndicators, 
   onKPIIndicatorSelection,
   onCompanyKPIChange,
+  onTargetValueChange,
   isSaving,
-  maxKpiSelection = 2 // 기본값 설정
+  maxKpiSelection = 2, // 기본값 설정
 }) => {
     // 지점별 확장 상태 관리
     const [expandedItems, setExpandedItems] = useState(branchList.map((_, index) => index));
@@ -220,6 +222,7 @@ const BranchCompanyList = ({
                                             kpiIndicators={kpiIndicators}
                                             onKPIIndicatorSelection={onKPIIndicatorSelection}
                                             onCompanyKPIChange={onCompanyKPIChange}
+                                            onTargetValueChange={onTargetValueChange}
                                             isSaving={isSaving}
                                             maxKpiSelection={maxKpiSelection}
                                             categorizedIndicators={categorizedIndicators}

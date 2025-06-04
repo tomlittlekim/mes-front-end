@@ -236,14 +236,30 @@ const KpiChart = ({
                 tick={{ fill: getTextColor() }}
                 tickFormatter={formatXAxis}
               />
-              <YAxis 
-                tick={{ fill: getTextColor() }}
-                label={{ 
-                  value: kpiData.unit, 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { fill: getTextColor() }
-                }}
+              <YAxis
+                  tick={{ fill: getTextColor() }}
+                  ticks={[0, 25, 50, 75, 100]}
+                  tickFormatter={value => value}
+                  label={{
+                    value: kpiData.unit,
+                    angle: -90,
+                    position: 'insideLeft',
+                    style: { fill: getTextColor() }
+                  }}
+                  domain={[
+                    0,
+                    (dataMax) => {
+                      if (
+                          typeof kpiData.targetValue === 'number' &&
+                          kpiData.targetValue > dataMax * 2
+                      ) {
+                        // 목표치가 데이터의 2배보다 크면, 목표치 + 10%까지만
+                        return kpiData.targetValue * 1.1;
+                      }
+                      // 아니면 데이터/목표치 중 큰 값 + 10% 여유
+                      return Math.max(dataMax, kpiData.targetValue ?? dataMax) * 1.1;
+                    }
+                  ]}
               />
               <Tooltip 
                 contentStyle={{ 

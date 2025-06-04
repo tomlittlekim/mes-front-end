@@ -4,13 +4,13 @@ import {
     Typography,
     Chip,
     Tooltip,
-    IconButton, 
+    IconButton,
     useTheme,
     Alert,
     Fade,
     Tabs,
     Tab,
-    Divider
+    Divider, TextField
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {useDomain} from "../../../../contexts/DomainContext";
@@ -30,8 +30,9 @@ const CompanyItem = ({
   company, 
   kpiIndicators, 
   onKPIIndicatorSelection,
+  onTargetValueChange,
   categorizedIndicators = {},
-  maxKpiSelection = 2 // 기본값 설정
+  maxKpiSelection = 2, // 기본값 설정
 }) => {
     // Theme 및 Context 관련
     const theme = useTheme();
@@ -106,6 +107,13 @@ const CompanyItem = ({
         );
     };
 
+    // 목표치 변경 처리
+    const handleTargetValueChange = (kpiId, value) => {
+        // 숫자만 입력되도록 처리
+        const numValue = value === '' ? '' : Number(value);
+        onTargetValueChange(company.id, kpiId, numValue);
+    };
+
     return (
         <Box
             sx={{
@@ -169,24 +177,50 @@ const CompanyItem = ({
                     <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
                         선택된 KPI:
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {company.selectedKPIs.map(kpiId => {
                             const indicator = kpiIndicators.find(ind => ind.id === kpiId);
-                            return indicator ? (
-                                <Chip
+                            const sub = (company.subscriptions || []).find(s => s.kpiIndicatorCd === kpiId);
+                            if (!indicator) return null;
+                            return (
+                                <Box
                                     key={kpiId}
-                                    label={indicator.name}
-                                    size="medium"
-                                    color="primary"
-                                    onDelete={() => handleKPIToggle(kpiId)}
-                                    sx={{ 
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 2,
                                         mb: 1,
-                                        fontSize: '0.85rem',
-                                        height: '36px',
-                                        padding: '0 6px'
+                                        p: 1,
+                                        border: '1px solid #eee',
+                                        borderRadius: 1,
                                     }}
-                                />
-                            ) : null;
+                                >
+                                    <Chip
+                                        label={indicator.name}
+                                        size="medium"
+                                        color="primary"
+                                        onDelete={() => handleKPIToggle(kpiId)}
+                                        sx={{
+                                            fontSize: '0.85rem',
+                                            height: '36px',
+                                            padding: '0 6px'
+                                        }}
+                                    />
+                                    <Typography variant="body2" sx={{ minWidth: 60 }}>
+                                        단위: <b>{indicator.unit || '-'}</b>
+                                    </Typography>
+                                    <TextField
+                                        key={kpiId}
+                                        label="목표값"
+                                        type="number"
+                                        size="small"
+                                        value={sub?.targetValue ?? ''}
+                                        onChange={(e) => handleTargetValueChange(kpiId, e.target.value)}
+                                        sx={{ width: 120 }}
+                                        inputProps={{ min: 0 }}
+                                    />
+                                </Box>
+                            );
                         })}
                     </Box>
                     <Divider sx={{ my: 2 }} />

@@ -25,7 +25,6 @@ export const GET_KPI_INDICATORS = `
       description
       categoryCd
       categoryNm
-      targetValue
       unit
       chartType
     }
@@ -42,6 +41,7 @@ export const GET_KPI_SUBSCRIPTIONS = `
       compCd
       kpiIndicatorCd
       categoryId
+      targetValue
       description
       sort
       flagActive
@@ -70,6 +70,7 @@ export const KPI_SETTING_INPUT = `
     compCd: String!
     kpiIndicatorCd: String!
     categoryId: String!
+    targetValue: Float
     description: String
     sort: Int
     flagActive: Boolean
