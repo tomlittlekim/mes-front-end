@@ -44,9 +44,9 @@ const ModelViewer = ({ tabId }) => {
 
   // 관심 지점(Point of Interest) 데이터 정의
   const pointsOfInterestData = [
-    { id: 'point1', position3D: new THREE.Vector3(-6.673079694028458, 1.188442585181138, 4.602528073794443), baseText: '포인트 1', deviceNumber: '001' },
-    { id: 'point2', position3D: new THREE.Vector3(-5.265677971408536, 0.4369102407435346, 5.60017773724662), baseText: '포인트 2', deviceNumber: '002' },
-    { id: 'point3', position3D: new THREE.Vector3(4.8119280895793946, 1.0851206174651207, -2.307622247417798), baseText: '포인트 3', deviceNumber: '003' },
+    { id: 'point1', position3D: new THREE.Vector3(-6.673079694028458, 1.188442585181138, 4.602528073794443), baseText: '1', deviceNumber: '001' },
+    { id: 'point2', position3D: new THREE.Vector3(-5.265677971408536, 0.4369102407435346, 5.60017773724662), baseText: '2', deviceNumber: '002' },
+    { id: 'point3', position3D: new THREE.Vector3(4.8119280895793946, 1.0851206174651207, -2.307622247417798), baseText: '3', deviceNumber: '003' },
   ];
 
   // IOT 데이터 fetch 함수 (IotChart와 동일)
@@ -192,6 +192,7 @@ const ModelViewer = ({ tabId }) => {
 
     let camera, renderer;
     let pointMeshes = [];
+    let hoveredSprite = null; // 현재 호버된 스프라이트 추적
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let animationFrameId;
@@ -259,34 +260,57 @@ const ModelViewer = ({ tabId }) => {
     );
 
     pointMeshes = pointsOfInterestData.map(pointData => {
-      // 메인 포인트 (큰 구체)
-      const mainGeometry = new THREE.SphereGeometry(0.08, 32, 32);
-      const mainMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x00bfff,
-        emissive: 0x00bfff,
-        emissiveIntensity: 0.5,
-        shininess: 100
-      });
-      const mainMesh = new THREE.Mesh(mainGeometry, mainMaterial);
-      mainMesh.position.copy(pointData.position3D);
-      mainMesh.userData.id = pointData.id;
-
-      // 후광 효과 (더 큰 반투명 구체)
-      const glowGeometry = new THREE.SphereGeometry(0.12, 32, 32);
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00bfff,
+      // 캔버스에 원형 배경과 숫자 텍스트를 그리기
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      
+      // 캔버스 크기 설정 (고해상도를 위해 큰 사이즈)
+      const size = 128;
+      canvas.width = size;
+      canvas.height = size;
+      
+      // 반투명 파란색 원 그리기
+      context.fillStyle = 'rgba(0, 191, 255, 0.8)'; // 반투명 파란색
+      context.strokeStyle = 'rgba(255, 255, 255, 0.9)'; // 흰색 테두리
+      context.lineWidth = 3;
+      
+      // 원 그리기
+      const centerX = size / 2;
+      const centerY = size / 2;
+      const radius = size * 0.4;
+      
+      context.beginPath();
+      context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      context.fill();
+      context.stroke();
+      
+      // 숫자 텍스트 그리기
+      context.fillStyle = 'white';
+      context.font = 'bold 48px Arial';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(pointData.baseText, centerX, centerY);
+      
+      // 텍스처 생성
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      
+      // 스프라이트 재질 생성
+      const spriteMaterial = new THREE.SpriteMaterial({ 
+        map: texture,
         transparent: true,
-        opacity: 0.3
+        alphaTest: 0.1
       });
-      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-      glowMesh.position.copy(pointData.position3D);
-
-      // 그룹으로 묶기
-      const group = new THREE.Group();
-      group.add(mainMesh);
-      group.add(glowMesh);
-      scene.add(group);
-      return mainMesh;
+      
+      // 스프라이트 생성
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.position.copy(pointData.position3D);
+      sprite.scale.set(0.25, 0.25, 0.25); // 크기를 절반으로 줄임
+      sprite.userData.id = pointData.id;
+      sprite.userData.originalScale = 0.25; // 원래 크기 저장
+      
+      scene.add(sprite);
+      return sprite;
     });
 
     // 클릭 이벤트 핸들러
@@ -317,8 +341,47 @@ const ModelViewer = ({ tabId }) => {
       }
     };
 
+    // 마우스 이동 이벤트 핸들러 (호버 효과)
+    const onMouseMove = (event) => {
+      if (!currentMount || !renderer || !camera) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      // 포인트 호버 처리
+      const intersects = raycaster.intersectObjects(pointMeshes);
+      
+      // 이전에 호버된 스프라이트가 있다면 원래 크기로 복원
+      if (hoveredSprite && !intersects.find(intersect => intersect.object === hoveredSprite)) {
+        const originalScale = hoveredSprite.userData.originalScale;
+        hoveredSprite.scale.set(originalScale, originalScale, originalScale);
+        hoveredSprite = null;
+        document.body.style.cursor = 'default';
+      }
+      
+      // 새로운 스프라이트에 호버 효과 적용
+      if (intersects.length > 0) {
+        const newHoveredSprite = intersects[0].object;
+        if (newHoveredSprite !== hoveredSprite) {
+          // 이전 호버 스프라이트 복원
+          if (hoveredSprite) {
+            const originalScale = hoveredSprite.userData.originalScale;
+            hoveredSprite.scale.set(originalScale, originalScale, originalScale);
+          }
+          
+          // 새로운 호버 스프라이트 확대
+          hoveredSprite = newHoveredSprite;
+          const hoverScale = hoveredSprite.userData.originalScale * 1.3; // 30% 확대
+          hoveredSprite.scale.set(hoverScale, hoverScale, hoverScale);
+          document.body.style.cursor = 'pointer';
+        }
+      }
+    };
+
     if (renderer && renderer.domElement) {
       renderer.domElement.addEventListener('click', onClick);
+      renderer.domElement.addEventListener('mousemove', onMouseMove);
     }
 
     const animate = () => {
@@ -402,12 +465,23 @@ const ModelViewer = ({ tabId }) => {
       window.removeEventListener('resize', handleResize);
       if (renderer && renderer.domElement) {
         renderer.domElement.removeEventListener('click', onClick);
+        renderer.domElement.removeEventListener('mousemove', onMouseMove);
       }
+      // 호버 상태 정리
+      if (hoveredSprite) {
+        const originalScale = hoveredSprite.userData.originalScale;
+        hoveredSprite.scale.set(originalScale, originalScale, originalScale);
+        hoveredSprite = null;
+      }
+      document.body.style.cursor = 'default';
+      
       if (controlsRef.current) controlsRef.current.dispose();
-      pointMeshes.forEach(mesh => {
-        scene.remove(mesh);
-        if (mesh.geometry) mesh.geometry.dispose();
-        if (mesh.material) mesh.material.dispose();
+      pointMeshes.forEach(sprite => {
+        scene.remove(sprite);
+        if (sprite.material) {
+          if (sprite.material.map) sprite.material.map.dispose();
+          sprite.material.dispose();
+        }
       });
       if (renderer) {
         renderer.dispose();
