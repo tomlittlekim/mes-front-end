@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Typography, Button, Stack, Select, MenuItem } from '@mui/material';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
+import { Typography, Button, Stack, Select, MenuItem, TextField } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -8,6 +8,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import Swal from 'sweetalert2';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import ko from "date-fns/locale/ko";
 
 /**
  * 생산실적 목록 컴포넌트
@@ -32,6 +36,9 @@ const ProductionResultList = ({
   tabId,
   height = 350
 }) => {
+  // 선택된 행들을 추적하기 위한 ref와 상태
+  const selectedRowIdsRef = useRef([]);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
   // 생산실적 그리드 컬럼 정의
   const productionResultColumns = useMemo(() => ([
     {
@@ -141,7 +148,7 @@ const ProductionResultList = ({
     // 생산시작일시 필드 (신규 등록시 수정 가능)
     {
       field: 'prodStartTime',
-      headerName: '생산시작일시',
+      headerName: '생산시작일시*',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -149,12 +156,17 @@ const ProductionResultList = ({
       type: 'dateTime',
       valueGetter: (params) => {
         // params가 null이거나 undefined인 경우 체크
-        if (!params) return null;
+        if (!params || !params.value) return null;
+        
+        // 이미 Date 객체인 경우 그대로 반환
+        if (params.value instanceof Date) {
+          return params.value;
+        }
         
         // 문자열이나 다른 형식을 Date 객체로 변환
-        if (!params.value) return null;
         try {
-          return new Date(params.value);
+          const dateValue = new Date(params.value);
+          return isNaN(dateValue.getTime()) ? null : dateValue;
         } catch (e) {
           console.error("Date conversion error:", e);
           return null;
@@ -182,12 +194,43 @@ const ProductionResultList = ({
           console.error("Date formatting error:", e);
           return <Typography variant="body2">-</Typography>;
         }
-      }
+      },
+      renderEditCell: (params) => {
+        return (
+             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+               <DateTimePicker
+                 value={params.value || null}
+                 onChange={(newValue) => {
+                   console.log('DateTimePicker onChange:', { field: params.field, newValue });
+                   params.api.setEditCellValue({
+                     id: params.id,
+                     field: params.field,
+                     value: newValue
+                   });
+                   // 선택 후 자동으로 편집 모드 종료
+                   setTimeout(() => {
+                     params.api.stopCellEditMode({
+                       id: params.id,
+                       field: params.field
+                     });
+                   }, 100);
+                 }}
+                 slotProps={{
+                   textField: {
+                     size: 'small',
+                     fullWidth: true,
+                     variant: 'outlined'
+                   }
+                 }}
+               />
+             </LocalizationProvider>
+         );
+       }
     },
     // 생산종료일시 필드 (신규 등록시 수정 가능)
     {
       field: 'prodEndTime',
-      headerName: '생산종료일시',
+      headerName: '생산종료일시*',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -195,12 +238,17 @@ const ProductionResultList = ({
       type: 'dateTime',
       valueGetter: (params) => {
         // params가 null이거나 undefined인 경우 체크
-        if (!params) return null;
+        if (!params || !params.value) return null;
+        
+        // 이미 Date 객체인 경우 그대로 반환
+        if (params.value instanceof Date) {
+          return params.value;
+        }
         
         // 문자열이나 다른 형식을 Date 객체로 변환
-        if (!params.value) return null;
         try {
-          return new Date(params.value);
+          const dateValue = new Date(params.value);
+          return isNaN(dateValue.getTime()) ? null : dateValue;
         } catch (e) {
           console.error("Date conversion error:", e);
           return null;
@@ -228,7 +276,38 @@ const ProductionResultList = ({
           console.error("Date formatting error:", e);
           return <Typography variant="body2">-</Typography>;
         }
-      }
+      },
+      renderEditCell: (params) => {
+        return (
+             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+               <DateTimePicker
+                 value={params.value || null}
+                 onChange={(newValue) => {
+                   console.log('DateTimePicker onChange:', { field: params.field, newValue });
+                   params.api.setEditCellValue({
+                     id: params.id,
+                     field: params.field,
+                     value: newValue
+                   });
+                   // 선택 후 자동으로 편집 모드 종료
+                   setTimeout(() => {
+                     params.api.stopCellEditMode({
+                       id: params.id,
+                       field: params.field
+                     });
+                   }, 100);
+                 }}
+                 slotProps={{
+                   textField: {
+                     size: 'small',
+                     fullWidth: true,
+                     variant: 'outlined'
+                   }
+                 }}
+               />
+             </LocalizationProvider>
+         );
+       }
     },
     {
       field: 'progressRate',
@@ -262,7 +341,7 @@ const ProductionResultList = ({
     },
     {
       field: 'equipmentId',
-      headerName: '설비ID',
+      headerName: '설비',
       width: 180,
       headerAlign: 'center',
       align: 'center',
@@ -282,6 +361,57 @@ const ProductionResultList = ({
                   </span>
               ) : params.value || ''}
             </Typography>
+        );
+      },
+      renderEditCell: (params) => {
+        return (
+            <Select
+                value={params.value || ''}
+                onChange={(e) => {
+                  params.api.setEditCellValue({
+                    id: params.id,
+                    field: params.field,
+                    value: e.target.value
+                  });
+                  // 선택 후 자동으로 편집 모드 종료
+                  params.api.stopCellEditMode({
+                    id: params.id,
+                    field: params.field
+                  });
+                }}
+                fullWidth
+                size="small"
+                sx={{ 
+                  minWidth: 150,
+                  '& .MuiSelect-select': {
+                    py: 0.5
+                  }
+                }}
+            >
+                <MenuItem value="">
+                    <em>선택하세요</em>
+                </MenuItem>
+                {equipmentOptions.map((option) => (
+                    <MenuItem 
+                      key={option.value} 
+                      value={option.value}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
+                    >
+                        <div>
+                          {option.label}
+                          {option.factoryName && option.lineName ? (
+                              <div style={{ fontSize: '0.75em', color: 'gray' }}>
+                                {option.factoryName} &gt; {option.lineName}
+                              </div>
+                          ) : null}
+                        </div>
+                    </MenuItem>
+                ))}
+            </Select>
         );
       }
     },
@@ -388,6 +518,80 @@ const ProductionResultList = ({
     }
   ]), [equipmentOptions, productOptions, warehouseOptions]);
 
+  // 선택 변경 핸들러
+  const handleSelectionChange = useCallback((newSelectionModel) => {
+    selectedRowIdsRef.current = newSelectionModel;
+    setSelectedRowIds(newSelectionModel);
+  }, []);
+
+  // 다중 삭제 핸들러
+  const handleMultipleDelete = useCallback(() => {
+    let currentSelection = selectedRowIdsRef.current.length > 0 ? selectedRowIdsRef.current : selectedRowIds;
+    
+    // 백업 방법: DOM에서 직접 체크된 항목들 찾기
+    if (!currentSelection || currentSelection.length === 0) {
+      try {
+        const checkedInputs = document.querySelectorAll('[data-testid="checkbox-selection-row"]:checked');
+        const checkedRowIds = Array.from(checkedInputs).map(input => {
+          const row = input.closest('[data-rowindex]');
+          if (row) {
+            const rowIndex = row.getAttribute('data-rowindex');
+            return productionResultList[parseInt(rowIndex)]?.id;
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        if (checkedRowIds.length > 0) {
+          currentSelection = checkedRowIds;
+        }
+      } catch (error) {
+        console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
+      }
+    }
+    
+    if (currentSelection && currentSelection.length > 0) {
+      // 선택된 생산실적들 중 실제 저장된 것들만 필터링 (prodResultId가 있는 것들)
+      const selectedResults = productionResultList.filter(result => 
+        currentSelection.includes(result.id) && result.prodResultId
+      );
+      
+      if (selectedResults.length === 0) {
+        Swal.fire({
+          title: '알림',
+          text: '삭제할 수 있는 생산실적이 없습니다. 저장되지 않은 임시 데이터는 목록에서 직접 제거해주세요.',
+          icon: 'warning',
+          confirmButtonText: '확인'
+        });
+        return;
+      }
+      
+      // 다중 삭제 확인 다이얼로그
+      Swal.fire({
+        title: '생산실적 삭제',
+        text: `선택된 ${selectedResults.length}건의 생산실적을 삭제하시겠습니까?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: '삭제',
+        cancelButtonText: '취소'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // prodResultId 목록 추출
+          const prodResultIds = selectedResults.map(result => result.prodResultId);
+          onDelete(prodResultIds); // 다중 삭제 함수 호출
+        }
+      });
+    } else {
+      Swal.fire({
+        title: '알림',
+        text: '삭제할 생산실적을 선택해주세요.',
+        icon: 'warning',
+        confirmButtonText: '확인'
+      });
+    }
+  }, [onDelete, selectedRowIds, productionResultList]);
+
   // 생산실적 목록 그리드 버튼: 독립형 생산실적 버튼 추가
   const productionResultButtons = useMemo(() => {
     const buttons = [];
@@ -405,11 +609,11 @@ const ProductionResultList = ({
     buttons.push(
         {label: '등록', onClick: onCreateResult, icon: <AddIcon/>, tooltip: '선택된 작업지시에 생산실적을 등록합니다'},
         {label: '저장', onClick: onSave, icon: <SaveIcon/>},
-        {label: '삭제', onClick: onDelete, icon: <DeleteIcon/>}
+        {label: '삭제', onClick: handleMultipleDelete, icon: <DeleteIcon/>}
     );
 
     return buttons;
-  }, [onCreateResult, onCreateIndependentResult, onSave, onDelete]);
+  }, [onCreateResult, onCreateIndependentResult, onSave, handleMultipleDelete]);
 
   // 생산실적 목록 그리드 커스텀 헤더
   const CustomHeader = () => (
@@ -443,17 +647,39 @@ const ProductionResultList = ({
     // 행 업데이트 처리
     processRowUpdate: (newRow, oldRow) => {
       try {
-        // 날짜 필드가 Date 객체인 경우 ISO 문자열로 변환
+        console.log('processRowUpdate 호출됨:', { newRow, oldRow });
+        
+        // 날짜 필드 처리 함수
+        const proceseDateField = (fieldValue, oldFieldValue) => {
+          // null이나 undefined인 경우 처리
+          if (!fieldValue) {
+            // 기존 값이 있으면 유지, 없으면 null
+            return oldFieldValue || null;
+          }
+          
+          // 이미 Date 객체인 경우 그대로 반환
+          if (fieldValue instanceof Date) {
+            return fieldValue;
+          }
+          
+          // 문자열인 경우 Date 객체로 변환 시도
+          try {
+            const dateObj = new Date(fieldValue);
+            return isNaN(dateObj.getTime()) ? (oldFieldValue || null) : dateObj;
+          } catch (e) {
+            console.error('날짜 변환 오류:', e);
+            return oldFieldValue || null;
+          }
+        };
+        
+        // 날짜 필드를 안전하게 처리
         const updatedRow = {
           ...newRow,
-          // Date 객체를 ISO 문자열로 변환 (백엔드 저장을 위해)
-          prodStartTime: newRow.prodStartTime instanceof Date ? 
-                        newRow.prodStartTime.toISOString() : 
-                        newRow.prodStartTime,
-          prodEndTime: newRow.prodEndTime instanceof Date ? 
-                      newRow.prodEndTime.toISOString() : 
-                      newRow.prodEndTime
+          prodStartTime: proceseDateField(newRow.prodStartTime, oldRow.prodStartTime),
+          prodEndTime: proceseDateField(newRow.prodEndTime, oldRow.prodEndTime)
         };
+        
+        console.log('업데이트된 행:', updatedRow);
         
         // 변경된 생산실적 데이터 업데이트
         const updatedList = productionResultList.map(row => 
@@ -483,7 +709,14 @@ const ProductionResultList = ({
           height={height}
           onRowClick={onRowClick}
           tabId={tabId + "-production-results"}
-          gridProps={gridProps}
+          gridProps={{
+            ...gridProps,
+            checkboxSelection: true,
+            onRowSelectionModelChange: handleSelectionChange,
+            onSelectionModelChange: handleSelectionChange,
+            rowSelectionModel: selectedRowIds,
+            selectionModel: selectedRowIds
+          }}
       />
   );
 };

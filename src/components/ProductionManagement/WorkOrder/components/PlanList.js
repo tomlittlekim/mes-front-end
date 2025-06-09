@@ -93,7 +93,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = 
     {
       field: 'planStartDate',
       headerName: '계획시작일시',
-      width: 150,
+      width: 180,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -101,7 +101,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = 
         if (params.value) {
           try {
             const date = new Date(params.value);
-            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm') : '';
           } catch (e) {
             displayValue = '';
           }
@@ -117,7 +117,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = 
     {
       field: 'planEndDate',
       headerName: '계획종료일시',
-      width: 150,
+      width: 180,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => {
@@ -125,7 +125,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = 
         if (params.value) {
           try {
             const date = new Date(params.value);
-            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm') : '';
           } catch (e) {
             displayValue = '';
           }
@@ -179,7 +179,7 @@ const PlanList = ({ planList, refreshKey, onRowClick, tabId, productMaterials = 
 
   return (
       <EnhancedDataGridWrapper
-          title="생산계획목록"
+          title="생산계획 목록"
           key={refreshKey}
           rows={planList}
           columns={planColumns}

@@ -291,6 +291,10 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
     );
   }
 
+  // 동적 차트 너비 계산
+  const itemWidth = 80; // 각 X축 항목이 차지할 대략적인 너비 (px)
+  const calculatedMinWidthForScroll = data.length * itemWidth;
+
   // 바 렌더링 커스터마이징 - 하이라이트 적용
   const getBarProps = (entry, dataKey) => {
     if (highlightedMaterial && entry.name === highlightedMaterial) {
@@ -358,135 +362,141 @@ const PlanVsActualChart = ({ data, highlightedMaterial, onBarMouseOver, onBarMou
   };
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart
-        data={data}
-        margin={{ top: 10, right: 30, left: 20, bottom: 30 }}
-        barGap={0}
-        barCategoryGap={30}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? theme.palette.grey[700] : theme.palette.grey[300]} />
-        <XAxis 
-          dataKey="name" 
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          height={50}
-          interval={0}
-          tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
-        />
-        <YAxis 
-          yAxisId="left"
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
-          width={50}
-        >
-          <Label 
-            value="수량" 
-            angle={-90} 
-            position="insideLeft" 
-            fill={axisColor} 
-            fontSize={12} 
-            dx={-10}
-          />
-        </YAxis>
-        <YAxis 
-          yAxisId="right"
-          orientation="right"
-          domain={[0, 100]}
-          tick={{ fill: axisColor, fontSize: 11 }} 
-          tickLine={{ stroke: axisColor }}
-          tickFormatter={(value) => `${value}%`}
-          width={50}
-        >
-          <Label 
-            value="달성률(%)" 
-            angle={90} 
-            position="insideRight" 
-            fill={axisColor} 
-            fontSize={12} 
-            dx={10}
-          />
-        </YAxis>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend 
-          wrapperStyle={{ 
-            fontSize: '12px', 
-            paddingTop: '5px',
-            bottom: 0
-          }} 
-          iconType="square"
-        />
-        <Bar 
-          yAxisId="left"
-          dataKey="계획수량" 
-          name="계획수량" 
-          barSize={20}
-          fill={planColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-plan-${index}`} 
-              {...getBarProps(entry, '계획수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+    // 1. 외부 Box: 스크롤 컨테이너 역할
+    <Box sx={{ width: '100%', height: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+      {/* 2. 내부 Box: ComposedChart의 실제 크기를 정의 */}
+      <Box sx={{ width: '100%', minWidth: `${calculatedMinWidthForScroll}px`, height: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={data}
+            margin={{ top: 10, right: 30, left: 20, bottom: 40 }} // bottom margin 증가
+            barGap={0}
+            barCategoryGap="30%" // 카테고리 간 간격 조정
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? theme.palette.grey[700] : theme.palette.grey[300]} />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fill: axisColor, fontSize: 11 }} 
+              tickLine={{ stroke: axisColor }}
+              height={60} // X축 높이 증가
+              interval={0}
+              tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
             />
-          ))}
-        </Bar>
-        <Bar 
-          yAxisId="left"
-          dataKey="지시수량" 
-          name="지시수량" 
-          barSize={20}
-          fill={orderColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-order-${index}`} 
-              {...getBarProps(entry, '지시수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+            <YAxis 
+              yAxisId="left"
+              tick={{ fill: axisColor, fontSize: 11 }} 
+              tickLine={{ stroke: axisColor }}
+              tickFormatter={(value) => value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}
+              width={50}
+            >
+              <Label 
+                value="수량" 
+                angle={-90} 
+                position="insideLeft" 
+                fill={axisColor} 
+                fontSize={12} 
+                dx={-10}
+              />
+            </YAxis>
+            <YAxis 
+              yAxisId="right"
+              orientation="right"
+              domain={[0, 100]}
+              tick={{ fill: axisColor, fontSize: 11 }} 
+              tickLine={{ stroke: axisColor }}
+              tickFormatter={(value) => `${value}%`}
+              width={50}
+            >
+              <Label 
+                value="달성률(%)" 
+                angle={90} 
+                position="insideRight" 
+                fill={axisColor} 
+                fontSize={12} 
+                dx={10}
+              />
+            </YAxis>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              wrapperStyle={{ 
+                fontSize: '12px', 
+                paddingTop: '5px',
+                bottom: 0 // 레전드 하단 위치
+              }} 
+              iconType="square"
             />
-          ))}
-        </Bar>
-        <Bar 
-          yAxisId="left"
-          dataKey="완료수량" 
-          name="완료수량" 
-          barSize={20}
-          fill={completedColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-completed-${index}`} 
-              {...getBarProps(entry, '완료수량')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-        <Bar 
-          yAxisId="right"
-          dataKey="달성률" 
-          name="달성률(%)" 
-          barSize={20}
-          fill={achievementColor}
-          isAnimationActive={false}
-        >
-          {data.map((entry, index) => (
-            <Cell 
-              key={`cell-achievement-${index}`} 
-              {...getBarProps(entry, '달성률')}
-              onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
-              onMouseOut={() => onBarMouseOut && onBarMouseOut()}
-            />
-          ))}
-        </Bar>
-      </ComposedChart>
-    </ResponsiveContainer>
+            <Bar 
+              yAxisId="left"
+              dataKey="계획수량" 
+              name="계획수량" 
+              barSize={20}
+              fill={planColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-plan-${index}`} 
+                  {...getBarProps(entry, '계획수량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar 
+              yAxisId="left"
+              dataKey="지시수량" 
+              name="지시수량" 
+              barSize={20}
+              fill={orderColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-order-${index}`} 
+                  {...getBarProps(entry, '지시수량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar 
+              yAxisId="left"
+              dataKey="완료수량" 
+              name="완료수량" 
+              barSize={20}
+              fill={completedColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-completed-${index}`} 
+                  {...getBarProps(entry, '완료수량')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+            <Bar 
+              yAxisId="right"
+              dataKey="달성률" 
+              name="달성률(%)" 
+              barSize={20}
+              fill={achievementColor}
+              isAnimationActive={false}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-achievement-${index}`} 
+                  {...getBarProps(entry, '달성률')}
+                  onMouseOver={() => onBarMouseOver && onBarMouseOver(entry.name)}
+                  onMouseOut={() => onBarMouseOut && onBarMouseOut()}
+                />
+              ))}
+            </Bar>
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Box>
+    </Box>
   );
 };
 

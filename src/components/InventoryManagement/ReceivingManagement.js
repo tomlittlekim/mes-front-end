@@ -395,7 +395,7 @@ const ReceivingManagement = (props) => {
     const newDetailedInventory = {
       id: `NEW_${Date.now()}`,
       inManagementId: selectedReceiving.inManagementId,
-      inInventoryId: crypto.randomUUID(),
+      inInventoryId: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
       supplierName: '자동입력',
       manufactureName: '자동입력',
       systemMaterialId: null,
@@ -1393,7 +1393,7 @@ const ReceivingManagement = (props) => {
               width: '100%',
             }}
           >
-            <Typography>
+            <Typography variant="body2">
               {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
             </Typography>
           </Box>

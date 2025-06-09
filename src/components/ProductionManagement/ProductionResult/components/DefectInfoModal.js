@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -29,6 +29,39 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Swal from 'sweetalert2';
+import { useGraphQL } from '../../../../apollo/useGraphQL';
+import { GET_INITIAL_CODES_QUERY } from '../../../../graphql-queries/common/codeQueries';
+
+// SweetAlert2 z-index 설정 (Material-UI Dialog보다 높게)
+const swalConfig = {
+  customClass: {
+    container: 'swal-container-high-z-index'
+  },
+  didOpen: () => {
+    // SweetAlert2 컨테이너의 z-index를 Material-UI Dialog보다 높게 설정
+    const swalContainer = document.querySelector('.swal2-container');
+    if (swalContainer) {
+      swalContainer.style.zIndex = '9999';
+    }
+    // SweetAlert2 팝업의 z-index도 설정
+    const swalPopup = document.querySelector('.swal2-popup');
+    if (swalPopup) {
+      swalPopup.style.zIndex = '10000';
+    }
+    // 백드롭도 설정
+    const swalBackdrop = document.querySelector('.swal2-backdrop-show');
+    if (swalBackdrop) {
+      swalBackdrop.style.zIndex = '9998';
+    }
+  },
+  willClose: () => {
+    // 모달이 닫힐 때 z-index 정리 (선택사항)
+    const swalContainer = document.querySelector('.swal2-container');
+    if (swalContainer) {
+      swalContainer.style.zIndex = '';
+    }
+  }
+};
 
 /**
  * 불량정보 등록 모달 컴포넌트
@@ -46,12 +79,17 @@ const DefectInfoModal = ({
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  const { executeQuery } = useGraphQL();
+
+  // executeQuery를 ref로 저장하여 의존성 문제 해결
+  const executeQueryRef = useRef(executeQuery);
+  executeQueryRef.current = executeQuery;
 
   // 상태 관리
   const [defectInfoList, setDefectInfoList] = useState([]);
   const [currentDefect, setCurrentDefect] = useState({
     defectQty: 0,
-    defectCause: '',
+    defectType: '',
     resultInfo: ''
   });
   const [editMode, setEditMode] = useState(false);
@@ -60,6 +98,7 @@ const DefectInfoModal = ({
   const [isValid, setIsValid] = useState(false);
   const [defectCause, setDefectCause] = useState('');
   const [detailInfo, setDetailInfo] = useState('');
+  const [defectTypeOptions, setDefectTypeOptions] = useState([]);
 
   // 생산실적 변경 시 초기화
   useEffect(() => {
@@ -73,6 +112,41 @@ const DefectInfoModal = ({
       setDefectInfoList([]);
     }
   }, [productionResult]);
+
+  // 불량유형 데이터 로드 함수를 useCallback으로 안정화
+  const loadDefectTypes = useCallback(async () => {
+    try {
+      const response = await executeQueryRef.current({
+        query: GET_INITIAL_CODES_QUERY,
+        variables: { codeClassId: 'DEFECT_TYPE' }
+      });
+      
+      if (response.data?.getInitialCodes) {
+        const options = response.data.getInitialCodes.map(code => ({
+          value: code.codeId,
+          label: code.codeName,
+          desc: code.codeDesc
+        }));
+        setDefectTypeOptions(options);
+      }
+    } catch (error) {
+      console.error('불량유형 데이터 로드 실패:', error);
+      Swal.fire({
+        title: '데이터 로드 실패',
+        text: '불량유형 데이터를 불러오는데 실패했습니다.',
+        icon: 'error',
+        confirmButtonText: '확인',
+        ...swalConfig
+      });
+    }
+  }, []); // 의존성 배열을 비워서 함수를 안정화
+
+  // 불량유형 데이터 로드
+  useEffect(() => {
+    if (open) {
+      loadDefectTypes();
+    }
+  }, [open, loadDefectTypes]);
 
   // 불량정보 목록 변경 시 유효성 검증
   useEffect(() => {
@@ -98,7 +172,7 @@ const DefectInfoModal = ({
     // 모든 불량정보가 유효한지 확인
     const isAllValid = defectInfoList.every(item =>
         item.defectQty > 0 &&
-        item.defectCause
+        item.defectType
     );
 
     setIsValid(isQtyValid && isAllValid);
@@ -112,17 +186,19 @@ const DefectInfoModal = ({
         title: '입력 오류',
         text: '불량수량은 0보다 커야 합니다.',
         icon: 'warning',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        ...swalConfig
       });
       return;
     }
 
-    if (!currentDefect.defectCause) {
+    if (!currentDefect.defectType) {
       Swal.fire({
         title: '입력 오류',
-        text: '불량원인을 입력해주세요.',
+        text: '불량유형을 입력해주세요.',
         icon: 'warning',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        ...swalConfig
       });
       return;
     }
@@ -137,7 +213,8 @@ const DefectInfoModal = ({
         title: '불량수량 초과',
         text: `총 불량수량(${totalDefectQty})을 초과할 수 없습니다. 현재 입력된 총량: ${newTotal}`,
         icon: 'warning',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        ...swalConfig
       });
       return;
     }
@@ -157,7 +234,7 @@ const DefectInfoModal = ({
     // 입력 필드 초기화
     setCurrentDefect({
       defectQty: 0,
-      defectCause: '',
+      defectType: '',
       resultInfo: ''
     });
   };
@@ -177,7 +254,8 @@ const DefectInfoModal = ({
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: '삭제',
-      cancelButtonText: '취소'
+      cancelButtonText: '취소',
+      ...swalConfig
     }).then((result) => {
       if (result.isConfirmed) {
         const updatedList = [...defectInfoList];
@@ -190,7 +268,7 @@ const DefectInfoModal = ({
           setEditIndex(-1);
           setCurrentDefect({
             defectQty: 0,
-            defectCause: '',
+            defectType: '',
             resultInfo: ''
           });
         }
@@ -230,7 +308,8 @@ const DefectInfoModal = ({
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '확인',
-        cancelButtonText: '취소'
+        cancelButtonText: '취소',
+        ...swalConfig
       }).then((result) => {
         if (result.isConfirmed) {
           // onClose 함수를 직접 호출하여 모달 닫기
@@ -266,7 +345,8 @@ const DefectInfoModal = ({
         title: '저장 오류',
         text: errorMessage,
         icon: 'error',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        ...swalConfig
       });
       return;
     }
@@ -281,8 +361,7 @@ const DefectInfoModal = ({
       prodResultId: productionResult?.prodResultId || null,
       productId: productId,
       defectQty: Number(item.defectQty),
-      defectType: null,
-      defectCause: item.defectCause,
+      defectCause: item.defectType,
       resultInfo: item.resultInfo,
       state: 'NEW',
       flagActive: true
@@ -293,7 +372,8 @@ const DefectInfoModal = ({
         title: '입력 오류',
         text: '불량수량이 입력되었으나 불량정보가 없습니다. 불량정보를 입력해주세요.',
         icon: 'warning',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        ...swalConfig
       });
       return;
     }
@@ -307,7 +387,8 @@ const DefectInfoModal = ({
         title: '저장 실패',
         text: '저장 기능이 정의되지 않았습니다. 관리자에게 문의하세요.',
         icon: 'error',
-        confirmButtonText: '확인'
+        confirmButtonText: '확인',
+        ...swalConfig
       });
     }
   };
@@ -334,6 +415,12 @@ const DefectInfoModal = ({
     setDetailInfo(e.target.value);
   };
 
+  // 불량유형 코드를 이름으로 변환하는 함수
+  const getDefectTypeName = (defectTypeCode) => {
+    const option = defectTypeOptions.find(opt => opt.value === defectTypeCode);
+    return option ? option.label : defectTypeCode;
+  };
+
   return (
       <Dialog
           open={open}
@@ -344,6 +431,9 @@ const DefectInfoModal = ({
             sx: {
               minHeight: '70vh'
             }
+          }}
+          sx={{
+            zIndex: 1300 // Material-UI Dialog 기본 z-index 명시적 설정
           }}
       >
         <DialogTitle sx={{
@@ -421,14 +511,25 @@ const DefectInfoModal = ({
                     />
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <TextField
-                        name="defectCause"
-                        label="불량원인"
-                        value={currentDefect.defectCause}
-                        onChange={handleInputChange}
-                        fullWidth
-                        size="small"
-                    />
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="defect-type-label">불량유형</InputLabel>
+                      <Select
+                          labelId="defect-type-label"
+                          name="defectType"
+                          value={currentDefect.defectType}
+                          label="불량유형"
+                          onChange={handleInputChange}
+                      >
+                        <MenuItem value="">
+                          <em>선택하세요</em>
+                        </MenuItem>
+                        {defectTypeOptions.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </Grid>
                   <Grid item xs={12} sm={5}>
                     <TextField
@@ -474,7 +575,7 @@ const DefectInfoModal = ({
                       }}>
                         <TableCell align="center" width="10%">번호</TableCell>
                         <TableCell align="center" width="20%">불량수량</TableCell>
-                        <TableCell align="center" width="30%">불량원인</TableCell>
+                        <TableCell align="center" width="30%">불량유형</TableCell>
                         <TableCell align="center" width="30%">상세내용</TableCell>
                         <TableCell align="center" width="10%">관리</TableCell>
                       </TableRow>
@@ -497,7 +598,7 @@ const DefectInfoModal = ({
                               }}>
                                 <TableCell align="center">{index + 1}</TableCell>
                                 <TableCell align="center">{defect.defectQty}</TableCell>
-                                <TableCell>{defect.defectCause}</TableCell>
+                                <TableCell>{getDefectTypeName(defect.defectType)}</TableCell>
                                 <TableCell>{defect.resultInfo || '-'}</TableCell>
                                 <TableCell align="center">
                                   <Box display="flex" justifyContent="center">

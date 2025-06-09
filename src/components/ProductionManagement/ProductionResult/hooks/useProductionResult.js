@@ -4,6 +4,7 @@ import Message from '../../../../utils/message/Message';
 import {
   SAVE_PRODUCTION_RESULT_MUTATION,
   DELETE_PRODUCTION_RESULT_MUTATION,
+  DELETE_PRODUCTION_RESULTS_MUTATION,
 } from './graphql-queries';
 
 /**
@@ -60,7 +61,7 @@ export const useProductionResult = () => {
           // 여기서는 경고만 로그로 남기고 계속 진행
         }
 
-        // 날짜 형식 변환 함수 (LocalDateTime 형식으로 변환)
+        // 날짜 형식 변환 함수 (LocalDateTime 형식으로 변환, 시간대 유지)
         const formatDateForServer = (dateValue) => {
           if (!dateValue) return null;
 
@@ -71,8 +72,15 @@ export const useProductionResult = () => {
 
             if (isNaN(date.getTime())) return null;
 
-            // 'YYYY-MM-DDTHH:MM:SS' 형식으로 변환 (Java LocalDateTime이 이해할 수 있는 형식)
-            return date.toISOString().split('.')[0];
+            // 현지 시간을 유지하면서 'YYYY-MM-DDTHH:MM:SS' 형식으로 변환
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
           } catch (e) {
             console.error('날짜 변환 오류:', e);
             return null;
@@ -212,9 +220,59 @@ export const useProductionResult = () => {
     });
   }, [executeMutation]);
 
+  /**
+   * 생산실적 다중 삭제 함수
+   *
+   * @param {Array} prodResultIds - 삭제할 생산실적 ID 목록
+   * @param {Function} onSuccess - 성공 시 콜백 함수
+   */
+  const deleteProductionResults = useCallback((prodResultIds, onSuccess) => {
+    // 유효성 검사
+    if (!prodResultIds || !Array.isArray(prodResultIds) || prodResultIds.length === 0) {
+      Message.showWarning('삭제할 생산실적을 선택해주세요.');
+      return;
+    }
+
+    // 이미 삭제 중인 항목들이 있는지 확인
+    const alreadyDeleting = prodResultIds.some(id => isDeletingRef.current[id]);
+    if (alreadyDeleting) {
+      Message.showWarning('삭제 처리 중인 항목이 있습니다. 잠시만 기다려주세요.');
+      return;
+    }
+
+    // 모든 항목을 삭제 중 상태로 설정
+    prodResultIds.forEach(id => {
+      isDeletingRef.current[id] = true;
+    });
+
+    // 삭제 확인 메시지 (Message.showDeleteConfirm 사용하지 않고 직접 처리)
+    executeMutation({
+      mutation: DELETE_PRODUCTION_RESULTS_MUTATION,
+      variables: { prodResultIds }
+    })
+    .then((result) => {
+      if (result.data && result.data.deleteProductionResults) {
+        Message.showSuccess(`${prodResultIds.length}건의 생산실적이 삭제되었습니다.`, onSuccess);
+      } else {
+        Message.showError({ message: '생산실적 삭제에 실패했습니다.' });
+      }
+    })
+    .catch((error) => {
+      console.error("Error deleting production results:", error);
+      Message.showError({ message: '생산실적 삭제 중 오류가 발생했습니다.' });
+    })
+    .finally(() => {
+      // 모든 항목의 삭제 상태 초기화
+      prodResultIds.forEach(id => {
+        delete isDeletingRef.current[id];
+      });
+    });
+  }, [executeMutation]);
+
   return {
     saveProductionResult,
-    deleteProductionResult
+    deleteProductionResult,
+    deleteProductionResults
   };
 };
 

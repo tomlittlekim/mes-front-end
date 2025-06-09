@@ -166,41 +166,6 @@ const ProductionResultManagement = (props) => {
           />
         </SearchCondition>
 
-        {/* 신규 기능 안내 메시지 */}
-        <Alert
-            severity="info"
-            sx={{
-              mb: 2,
-              '& .MuiAlert-message': {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }
-            }}
-        >
-          <Typography variant="body2" align="center">
-            "독립 생산실적" 버튼을 클릭하여 작업지시 없이도 생산실적을 등록할 수 있습니다.
-            제품ID는 필수 입력 항목입니다.
-          </Typography>
-        </Alert>
-
-        {/* 수정 제한 안내 메시지 추가 */}
-        <Alert
-            severity="warning"
-            sx={{
-              mb: 2,
-              '& .MuiAlert-message': {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }
-            }}
-        >
-          <Typography variant="body2" align="center" fontWeight="500">
-            등록된 생산실적은 수정할 수 없으며, 삭제 후 재등록해야 합니다.
-          </Typography>
-        </Alert>
-
         {/* 그리드 영역 */}
         {!isLoading && (
             <Grid container spacing={2}>
@@ -258,7 +223,7 @@ const ProductionResultManagement = (props) => {
               • 생산수량, 양품/불량 수량, 작업시간 등의 정보를 기록하여 생산이력을 관리합니다.
             </Typography>
             <Typography variant="body2" color={getTextColor()}>
-              • 불량수량이 1개 이상인 경우 불량정보를 반드시 입력해야 생산실적이 저장됩니다.
+              • 불량수량이 1 이상인 경우 불량정보를 반드시 입력해야 생산실적이 저장됩니다.
             </Typography>
           </Stack>
         </Box>
@@ -285,7 +250,7 @@ const ProductionResultManagement = (props) => {
             • 양품수량, 불량수량을 입력하면 자동으로 진척률과 불량률이 계산됩니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
-            • 불량수량이 1개 이상인 경우, 불량정보를 등록해야 저장할 수 있습니다.
+            • 불량수량이 1 이상인 경우, 불량정보를 등록해야 저장할 수 있습니다.
           </Typography>
           <Typography variant="body2" color={getTextColor()} paragraph>
             • 저장 버튼을 클릭하여 입력한 생산실적 정보를 저장합니다.

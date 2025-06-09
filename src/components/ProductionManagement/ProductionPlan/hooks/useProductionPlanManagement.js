@@ -10,6 +10,7 @@ import { useGridRow } from '../../../../utils/grid/useGridRow';
 import Message from '../../../../utils/message/Message';
 import useLocalStorageVO from '../../../Common/UseLocalStorageVO';
 import CustomDateEditor from '../editors/CustomDateEditor';
+import CustomDateTimeEditor from '../editors/CustomDateTimeEditor';
 import ShiftTypeEditor from '../editors/ShiftTypeEditor';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
 import { enrichProductWithDisplayValues } from '../utils/materialTypeUtils';
@@ -80,8 +81,15 @@ const SAVE_PRODUCTION_PLAN_MUTATION = `
 `;
 
 const DELETE_PRODUCTION_PLAN_MUTATION = `
-  mutation DeleteProductionPlan($prodPlanId: String!) {
-    deleteProductionPlan(prodPlanId: $prodPlanId)
+  mutation DeleteProductionPlans($prodPlanIds: [String!]!) {
+    deleteProductionPlans(prodPlanIds: $prodPlanIds) {
+      success
+      totalRequested
+      deletedCount
+      skippedCount
+      skippedPlans
+      message
+    }
   }
 `;
 
@@ -163,8 +171,6 @@ export const useProductionPlanManagement = (tabId) => {
       const response = await executeQuery({ query: PRODUCT_MATERIALS_QUERY });
 
       if (response?.data?.productMaterials) {
-        console.log("제품 정보 로드 성공:", response.data.productMaterials.length);
-
         // 제품 정보에 표시값 추가
         const enrichedProducts = response.data.productMaterials.map(
             product => enrichProductWithDisplayValues(product)
@@ -215,7 +221,6 @@ export const useProductionPlanManagement = (tabId) => {
       });
 
       if (response?.data?.getVendors) {
-        console.log("고객사 정보 로드 성공:", response.data.getVendors.length);
         setVendors(response.data.getVendors);
         setIsVendorsLoaded(true);
       } else {
@@ -239,30 +244,29 @@ export const useProductionPlanManagement = (tabId) => {
       }
 
       try {
-        return format(new Date(dateObj), 'yyyy-MM-dd');
+        return format(new Date(dateObj), "yyyy-MM-dd'T'HH:mm:ss");
       } catch (error) {
         console.error("Invalid date string:", dateObj);
         return null;
       }
     }
 
-    // Date 객체 처리
+    // Date 객체 처리 - 시간까지 포함하여 포맷
     try {
-      return format(dateObj, 'yyyy-MM-dd');
+      return format(dateObj, "yyyy-MM-dd'T'HH:mm:ss");
     } catch (error) {
       console.error("Error formatting date:", dateObj);
       return null;
     }
   }, []);
 
-  // 새 행 생성 함수
+  // 새로운 행 생성 함수
   const createNewRow = useCallback(() => {
     const currentDate = new Date();
-    const currentUser = loginUser.loginId;
-    const newId = generateId();
-
+    const currentUser = loginUser?.name || 'SYSTEM';
+    
     return {
-      id: newId,
+      id: generateId(),
       prodPlanId: '자동입력',
       orderId: '',
       orderDetailId: '',
@@ -291,27 +295,9 @@ export const useProductionPlanManagement = (tabId) => {
     resetRows
   } = useGridRow({
     createNewRow,
-    formatNewRow: (row) => ({
-      orderId: row.orderId || '',
-      orderDetailId: row.orderDetailId || '',
-      productId: row.productId || '',
-      shiftType: row.shiftType || 'DAY',
-      planQty: parseFloat(row.planQty) || 0,
-      planStartDate: formatDateToString(row.planStartDate),
-      planEndDate: formatDateToString(row.planEndDate),
-      flagActive: row.flagActive === undefined ? true : Boolean(row.flagActive)
-    }),
-    formatUpdatedRow: (row) => ({
-      prodPlanId: row.prodPlanId,
-      orderId: row.orderId || '',
-      orderDetailId: row.orderDetailId || '',
-      productId: row.productId || '',
-      shiftType: row.shiftType || 'DAY',
-      planQty: parseFloat(row.planQty) || 0,
-      planStartDate: formatDateToString(row.planStartDate),
-      planEndDate: formatDateToString(row.planEndDate),
-      flagActive: row.flagActive === undefined ? true : Boolean(row.flagActive)
-    })
+    formatNewRow: (row) => row,
+    formatUpdatedRow: (row) => row,
+    formatExistingRow: (row) => row
   });
 
   // 제품명을 캐싱된 제품 정보에서 조회하여 채우는 함수
@@ -650,42 +636,98 @@ export const useProductionPlanManagement = (tabId) => {
     });
   }, [planList, updatedRows, setAddRows, setUpdatedRows, executeMutation, formatDateToString, handleSearch, getValues]);
 
-  // 삭제 버튼 클릭 핸들러
-  const handleDelete = useCallback(() => {
-    if (!selectedPlan) {
-      Message.showWarning(Message.DELETE_SELECT_REQUIRED);
+  // 삭제 버튼 클릭 핸들러 - 다중 삭제 방식으로 변경
+  const handleDelete = useCallback((selectedRowIds) => {
+    // selectedRowIds가 전달되지 않은 경우 GridStateContext에서 가져오기
+    let rowsToDelete = selectedRowIds;
+    
+    if (!rowsToDelete || rowsToDelete.length === 0) {
+      // 기존 단일 선택 방식 호환성을 위해 selectedPlan 확인
+      if (selectedPlan) {
+        rowsToDelete = [selectedPlan.id];
+      } else {
+        Message.showWarning('삭제할 항목을 선택해주세요.');
+        return;
+      }
+    }
+
+    // 선택된 행들 찾기
+    const selectedRows = planList.filter(plan => rowsToDelete.includes(plan.id));
+    
+    if (selectedRows.length === 0) {
+      Message.showWarning('삭제할 항목을 선택해주세요.');
       return;
     }
 
-    // 신규 추가된 행이면 바로 목록에서만 삭제
-    if (selectedPlan.id.startsWith('NEW_')) {
-      const updatedList = planList.filter(p => p.id !== selectedPlan.id);
+    // 신규 추가된 행들과 기존 행들 분리
+    const newRows = selectedRows.filter(row => row.id.toString().startsWith('NEW_'));
+    const existingRows = selectedRows.filter(row => !row.id.toString().startsWith('NEW_'));
+
+    // 신규 추가된 행들은 바로 목록에서만 삭제
+    if (newRows.length > 0) {
+      const newRowIds = newRows.map(row => row.id);
+      const updatedList = planList.filter(p => !newRowIds.includes(p.id));
       setPlanList(updatedList);
       // 추가된 행 목록에서도 제거
-      setAddRows(prev => prev.filter(p => p.id !== selectedPlan.id));
-      setSelectedPlan(null);
-      return;
+      setAddRows(prev => prev.filter(p => !newRowIds.includes(p.id)));
     }
 
-    // Message 클래스의 삭제 확인 다이얼로그 사용
-    Message.showDeleteConfirm(() => {
-      executeMutation({
-        mutation: DELETE_PRODUCTION_PLAN_MUTATION,
-        variables: { prodPlanId: selectedPlan.prodPlanId }
-      })
-      .then(() => {
-        // 소프트 삭제 이후 목록에서 제거
-        const updatedList = planList.filter(p => p.id !== selectedPlan.id);
-        setPlanList(updatedList);
-        setSelectedPlan(null);
-        Message.showSuccess(Message.DELETE_SUCCESS);
-      })
-      .catch((error) => {
-        console.error("Error deleting production plan:", error);
-        Message.showError({ message: '삭제 중 오류가 발생했습니다.' });
-      });
-    });
-  }, [selectedPlan, planList, setAddRows, executeMutation]);
+    // 기존 행들이 있는 경우 서버에서 삭제
+    if (existingRows.length > 0) {
+      const prodPlanIds = existingRows.map(row => row.prodPlanId);
+      
+      // 삭제 확인 메시지
+      const confirmMessage = existingRows.length === 1 
+        ? '선택한 생산계획을 삭제하시겠습니까?' 
+        : `선택한 ${existingRows.length}개의 생산계획을 삭제하시겠습니까?`;
+      
+      Message.showDeleteConfirm(() => {
+        executeMutation({
+          mutation: DELETE_PRODUCTION_PLAN_MUTATION,
+          variables: { prodPlanIds }
+        })
+        .then((response) => {
+          const result = response.data.deleteProductionPlans;
+          
+          // 서버 응답이 성공이고 실제로 삭제된 항목이 있는 경우에만 UI에서 아이템 제거
+          if (result.success && result.deletedCount > 0) {
+            // 실제로 삭제된 항목들만 UI에서 제거
+            // 만약 일부만 삭제된 경우를 대비해 전체 목록을 다시 조회하는 것이 안전함
+            handleSearch(getValues());
+            setSelectedPlan(null);
+            
+            // 성공 메시지 표시
+            let message = `총 ${result.totalRequested}개 중 ${result.deletedCount}개가 삭제되었습니다.`;
+            
+            if (result.skippedCount > 0) {
+              message += `\n${result.skippedCount}개는 작업지시가 존재하여 삭제할 수 없습니다.`;
+              if (result.skippedPlans && result.skippedPlans.length > 0) {
+                message += `\n삭제되지 않은 계획: ${result.skippedPlans.join(', ')}`;
+              }
+              Message.showWarning(message);
+            } else {
+              Message.showSuccess(message);
+            }
+          } else {
+            // 삭제 실패 시 에러 메시지 표시 (UI는 변경하지 않음)
+            const errorMessage = result.message || '삭제 중 오류가 발생했습니다.';
+            Message.showError({ message: errorMessage });
+          }
+        })
+        .catch((error) => {
+          console.error("Error deleting production plans:", error);
+          let errorMessage = '삭제 중 오류가 발생했습니다.';
+          if (error?.graphQLErrors?.[0]?.message) {
+            errorMessage = error.graphQLErrors[0].message;
+          }
+          Message.showError({ message: errorMessage });
+        });
+      }, confirmMessage);
+    } else if (newRows.length > 0) {
+      // 신규 행만 삭제한 경우 성공 메시지
+      Message.showSuccess(`${newRows.length}개의 신규 항목이 삭제되었습니다.`);
+    }
+  }, [planList, selectedPlan, setAddRows, executeMutation, handleSearch, getValues]);
 
   // 컴포넌트 마운트 시 제품 정보 및 고객사 정보 로드
   useEffect(() => {
@@ -693,15 +735,11 @@ export const useProductionPlanManagement = (tabId) => {
 
     const loadInitialData = async () => {
       try {
-        console.log("초기 데이터 로드 시작...");
-
         // 1. 제품 정보 먼저 로드
         await loadProductMaterials();
-        console.log("제품 정보 로드 완료, 제품 수:", productMaterials.length);
 
         // 2. 고객사 정보 로드
         await loadVendors();
-        console.log("고객사 정보 로드 완료, 고객사 수:", vendors.length);
 
         // 3. 제품 정보 및 고객사 정보 로드 후 생산계획 목록 조회
         if (isMounted) {
@@ -761,6 +799,7 @@ export const useProductionPlanManagement = (tabId) => {
 
     // 에디터 컴포넌트
     CustomDateEditor,
+    CustomDateTimeEditor,
     ShiftTypeEditor,
     ProductMaterialSelector,
 

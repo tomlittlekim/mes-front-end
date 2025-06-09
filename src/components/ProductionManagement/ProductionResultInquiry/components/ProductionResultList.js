@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Typography } from '@mui/material';
 import { format } from 'date-fns';
-import { EnhancedDataGridWrapper } from '../../../Common';
+import { EnhancedDataGridWrapper, FieldSelectionModal } from '../../../Common';
 import PrintIcon from '@mui/icons-material/Print';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { transformDataForExport, exportToExcel, executePrint } from '../../../../utils/exportUtils';
 
 /**
  * 생산실적 목록 그리드 컴포넌트
@@ -27,6 +28,10 @@ const ProductionResultList = ({
   productOptions = [], // 제품 옵션 목록 추가
   equipmentOptions = [] // 설비 옵션 목록 추가
 }) => {
+  // 필드 선택 모달 상태
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [exportType, setExportType] = useState(''); // 'print' | 'excel'
+
   // 날짜 포맷 함수
   const formatDateDisplay = (dateString) => {
     if (!dateString) return '-';
@@ -306,13 +311,72 @@ const ProductionResultList = ({
     }
   ]), [productOptions, equipmentOptions]); // 의존성 배열에 equipmentOptions 추가
 
+  // 모달 선택용 컬럼 정의 (모든 컬럼 포함)
+  const allAvailableColumns = useMemo(() => ([
+    ...productionResultColumns,
+    {
+      field: 'createUserName',
+      headerName: '등록자명',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center'
+    }
+  ]), [productionResultColumns]);
+
+  // 출력 버튼 클릭 핸들러
+  const handlePrintClick = () => {
+    setExportType('print');
+    setIsFieldModalOpen(true);
+  };
+
+  // 엑셀 버튼 클릭 핸들러
+  const handleExcelClick = () => {
+    setExportType('excel');
+    setIsFieldModalOpen(true);
+  };
+
+  // 필드 선택 모달 확인 핸들러
+  const handleFieldSelectionConfirm = ({ selectedFields, userFieldType }) => {
+    try {
+      // 데이터 변환
+      const transformedData = transformDataForExport(
+        productionResultList,
+        allAvailableColumns,
+        selectedFields,
+        userFieldType,
+        productOptions,
+        equipmentOptions
+      );
+
+      if (exportType === 'print') {
+        // 출력 실행
+        executePrint(transformedData, '생산실적 조회');
+      } else if (exportType === 'excel') {
+        // 엑셀 내보내기 실행
+        exportToExcel(transformedData, '생산실적조회', '생산실적');
+      }
+    } catch (error) {
+      console.error('내보내기 오류:', error);
+    } finally {
+      setIsFieldModalOpen(false);
+      setExportType('');
+    }
+  };
+
+  // 필드 선택 모달 취소 핸들러
+  const handleFieldSelectionClose = () => {
+    setIsFieldModalOpen(false);
+    setExportType('');
+  };
+
   // 생산실적 목록 그리드 버튼 (출력 및 엑셀 내보내기)
   const productionResultButtons = useMemo(() => ([
-    { label: '출력', onClick: onPrint, icon: <PrintIcon /> },
-    { label: '엑셀', onClick: onExport, icon: <FileDownloadIcon /> }
-  ]), [onPrint, onExport]);
+    { label: '출력', onClick: handlePrintClick, icon: <PrintIcon /> },
+    { label: '엑셀', onClick: handleExcelClick, icon: <FileDownloadIcon /> }
+  ]), []);
 
   return (
+    <>
       <EnhancedDataGridWrapper
           title="생산실적 목록"
           rows={productionResultList}
@@ -328,6 +392,30 @@ const ProductionResultList = ({
             }
           }}
       />
+
+      {/* 필드 선택 모달 */}
+      <FieldSelectionModal
+        open={isFieldModalOpen}
+        onClose={handleFieldSelectionClose}
+        title={exportType === 'print' ? '출력 필드 선택' : '엑셀 내보내기 필드 선택'}
+        fields={allAvailableColumns}
+        onConfirm={handleFieldSelectionConfirm}
+        defaultSelectedFields={[
+          'prodResultId',
+          'workOrderId', 
+          'productId',
+          'productName',
+          'totalQty',
+          'goodQty',
+          'defectQty',
+          'equipmentId',
+          'prodStartTime',
+          'prodEndTime',
+          'createDate'
+        ]}
+        defaultUserFieldType="id"
+      />
+    </>
   );
 };
 

@@ -11,3 +11,17 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* SweetAlert2 z-index 설정 - Material-UI Dialog보다 높게 */
+.swal2-container {
+  z-index: 9999 !important;
+}
+
+.swal-container-high-z-index {
+  z-index: 9999 !important;
+}
+
+/* Material-UI Dialog의 기본 z-index는 1300이므로, SweetAlert2를 더 높게 설정 */
+.swal2-popup {
+  z-index: 10000 !important;
+}

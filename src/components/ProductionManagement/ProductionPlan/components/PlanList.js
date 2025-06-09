@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { Typography, Tooltip } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
@@ -7,6 +7,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShiftTypeChip from './ShiftTypeChip';
 import ProductMaterialSelector from '../editors/ProductMaterialSelector';
+import CustomDateTimeEditor from '../editors/CustomDateTimeEditor';
 import OrderInfoModal from './OrderInfoModal';
 
 /**
@@ -23,6 +24,8 @@ import OrderInfoModal from './OrderInfoModal';
  * @param {Object} props.gridProps - 그리드 추가 속성
  * @param {Array} props.productMaterials - 제품 정보 목록
  * @param {Object} props.vendorMap - 고객사ID를 고객사 정보로 매핑하는 객체
+ * @param {Array} props.addRows - 추가된 행 정보
+ * @param {Array} props.updatedRows - 수정된 행 정보
  * @returns {JSX.Element}
  */
 const PlanList = ({
@@ -35,8 +38,14 @@ const PlanList = ({
   tabId,
   gridProps,
   productMaterials,
-  vendorMap = {}
+  vendorMap = {},
+  addRows = [],
+  updatedRows = []
 }) => {
+  // 선택된 행들을 추적하기 위한 ref와 상태
+  const selectedRowIdsRef = useRef([]);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
+  
   // 주문정보 모달 상태 관리
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrderInfo, setSelectedOrderInfo] = useState({
@@ -101,6 +110,12 @@ const PlanList = ({
       );
     }
   };
+
+  // 선택 변경 핸들러
+  const handleSelectionChange = useCallback((newSelectionModel) => {
+    selectedRowIdsRef.current = newSelectionModel;
+    setSelectedRowIds(newSelectionModel);
+  }, []);
 
   // 생산계획 목록 그리드 컬럼 정의
   const planColumns = useMemo(() => ([
@@ -316,15 +331,18 @@ const PlanList = ({
       headerName: '계획시작일시',
       width: 180,
       editable: true,
-      type: 'date',
+      type: 'dateTime',
       headerAlign: 'center',
       align: 'center',
+      renderEditCell: (params) => (
+          <CustomDateTimeEditor {...params} />
+      ),
       renderCell: (params) => {
         let displayValue = '';
         if (params.value) {
           try {
             const date = new Date(params.value);
-            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm') : '';
           } catch (e) {
             displayValue = '';
           }
@@ -342,15 +360,18 @@ const PlanList = ({
       headerName: '계획종료일시',
       width: 180,
       editable: true,
-      type: 'date',
+      type: 'dateTime',
       headerAlign: 'center',
       align: 'center',
+      renderEditCell: (params) => (
+          <CustomDateTimeEditor {...params} />
+      ),
       renderCell: (params) => {
         let displayValue = '';
         if (params.value) {
           try {
             const date = new Date(params.value);
-            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd') : '';
+            displayValue = !isNaN(date) ? format(date, 'yyyy-MM-dd HH:mm') : '';
           } catch (e) {
             displayValue = '';
           }
@@ -423,17 +444,49 @@ const PlanList = ({
     }
   ]), [productMaterials, materialTypeMap]);
 
+  // 다중 삭제 핸들러
+  const handleMultipleDelete = useCallback(() => {
+    let currentSelection = selectedRowIdsRef.current.length > 0 ? selectedRowIdsRef.current : selectedRowIds;
+    
+    // 백업 방법: DOM에서 직접 체크된 항목들 찾기
+    if (!currentSelection || currentSelection.length === 0) {
+      try {
+        const checkedInputs = document.querySelectorAll('[data-testid="checkbox-selection-row"]:checked');
+        const checkedRowIds = Array.from(checkedInputs).map(input => {
+          const row = input.closest('[data-rowindex]');
+          if (row) {
+            const rowIndex = row.getAttribute('data-rowindex');
+            return planList[parseInt(rowIndex)]?.id;
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        if (checkedRowIds.length > 0) {
+          currentSelection = checkedRowIds;
+        }
+      } catch (error) {
+        console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
+      }
+    }
+    
+    if (currentSelection && currentSelection.length > 0) {
+      onDelete(currentSelection);
+    } else {
+      onDelete(); // 기존 방식 호환성을 위해 빈 배열 전달
+    }
+  }, [onDelete, selectedRowIds, planList]);
+
   // 생산계획 목록 그리드 버튼
   const planGridButtons = useMemo(() => ([
     { label: '등록', onClick: onAdd, icon: <AddIcon /> },
     { label: '저장', onClick: onSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: onDelete, icon: <DeleteIcon /> }
-  ]), [onAdd, onSave, onDelete]);
+    { label: '삭제', onClick: handleMultipleDelete, icon: <DeleteIcon /> }
+  ]), [onAdd, onSave, handleMultipleDelete]);
 
   return (
     <>
       <EnhancedDataGridWrapper
-        title="생산계획목록"
+        title="생산계획 목록"
         key={refreshKey}
         rows={planList}
         columns={planColumns}
@@ -443,7 +496,24 @@ const PlanList = ({
         tabId={tabId + "-production-plans"}
         gridProps={{
           ...gridProps,
-          onCellDoubleClick: handleCellDoubleClick
+          checkboxSelection: true, // 체크박스 선택 활성화
+          onCellDoubleClick: handleCellDoubleClick,
+          // 여러 버전의 속성명을 모두 시도
+          onRowSelectionModelChange: handleSelectionChange,
+          onSelectionModelChange: handleSelectionChange, // 구버전 호환
+          rowSelectionModel: selectedRowIds,
+          selectionModel: selectedRowIds, // 구버전 호환
+          // 새로운 행 모드 설정 (조건부로 추가)
+          ...(addRows && addRows.length > 0 && {
+            rowModesModel: {
+              ...addRows.reduce((acc, row) => {
+                if (row && row.id && row.id.toString().startsWith('NEW_')) {
+                  acc[row.id] = { mode: 'edit' };
+                }
+                return acc;
+              }, {})
+            }
+          })
         }}
       />
       

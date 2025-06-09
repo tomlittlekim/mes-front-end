@@ -103,21 +103,42 @@ export const useWorkOrderManagement = (tabId) => {
       }
   `;
 
-  const DELETE_WORK_ORDER_MUTATION = gql`
-      mutation DeleteWorkOrder($workOrderId: String!) {
-          deleteWorkOrder(workOrderId: $workOrderId)
+  const DELETE_WORK_ORDERS_MUTATION = gql`
+      mutation DeleteWorkOrders($workOrderIds: [String!]!) {
+          deleteWorkOrders(workOrderIds: $workOrderIds) {
+              success
+              totalRequested
+              deletedCount
+              skippedCount
+              skippedWorkOrders
+              message
+          }
       }
   `;
 
-  const START_WORK_ORDER_MUTATION = gql`
-      mutation StartWorkOrder($workOrderId: String!) {
-          startWorkOrder(workOrderId: $workOrderId)
+  const START_WORK_ORDERS_MUTATION = gql`
+      mutation StartWorkOrders($workOrderIds: [String!]!) {
+          startWorkOrders(workOrderIds: $workOrderIds) {
+              success
+              totalRequested
+              processedCount
+              skippedCount
+              skippedWorkOrders
+              message
+          }
       }
   `;
 
-  const COMPLETE_WORK_ORDER_MUTATION = gql`
-      mutation CompleteWorkOrder($workOrderId: String!) {
-          completeWorkOrder(workOrderId: $workOrderId)
+  const COMPLETE_WORK_ORDERS_MUTATION = gql`
+      mutation CompleteWorkOrders($workOrderIds: [String!]!) {
+          completeWorkOrders(workOrderIds: $workOrderIds) {
+              success
+              totalRequested
+              processedCount
+              skippedCount
+              skippedWorkOrders
+              message
+          }
       }
   `;
 
@@ -574,11 +595,6 @@ export const useWorkOrderManagement = (tabId) => {
       };
     });
 
-    console.log("저장할 데이터:", {
-      createdRows: createdWorkOrderInputs,
-      updatedRows: updatedWorkOrderInputs
-    });
-
     // API 호출
     executeMutation(SAVE_WORK_ORDER_MUTATION, {
       createdRows: createdWorkOrderInputs,
@@ -612,123 +628,324 @@ export const useWorkOrderManagement = (tabId) => {
     });
   }, [workOrderList, updatedRows, selectedPlan, setAddRows, setUpdatedRows, executeMutation, SAVE_WORK_ORDER_MUTATION, WORK_ORDERS_BY_PLAN_QUERY, executeQuery, formatWorkOrderGridData]);
 
-  // 삭제 버튼 클릭 핸들러
-  const handleDeleteWorkOrder = useCallback(() => {
-    if (!selectedWorkOrder) {
-      Message.showWarning(Message.DELETE_SELECT_REQUIRED);
+  // 삭제 버튼 클릭 핸들러 - 다중 삭제 방식으로 변경
+  const handleDeleteWorkOrder = useCallback((selectedRowIds) => {
+    // selectedRowIds가 전달되지 않은 경우 기존 단일 선택 방식 호환성 유지
+    let rowsToDelete = selectedRowIds;
+    
+    if (!rowsToDelete || rowsToDelete.length === 0) {
+      // 기존 단일 선택 방식 호환성을 위해 selectedWorkOrder 확인
+      if (selectedWorkOrder) {
+        rowsToDelete = [selectedWorkOrder.id];
+      } else {
+        Message.showWarning('삭제할 작업지시를 선택해주세요.');
+        return;
+      }
+    }
+
+    // 선택된 행들 찾기
+    const selectedRows = workOrderList.filter(workOrder => rowsToDelete.includes(workOrder.id));
+    
+    if (selectedRows.length === 0) {
+      Message.showWarning('삭제할 작업지시를 선택해주세요.');
       return;
     }
 
-    // 신규 추가된 행이면 바로 목록에서만 삭제
-    if (selectedWorkOrder.id.startsWith('NEW_')) {
-      const updatedList = workOrderList.filter(w => w.id !== selectedWorkOrder.id);
+    // 신규 추가된 행들과 기존 행들 분리
+    const newRows = selectedRows.filter(row => row.id.toString().startsWith('NEW_'));
+    const existingRows = selectedRows.filter(row => !row.id.toString().startsWith('NEW_'));
+
+    // 신규 추가된 행들은 바로 목록에서만 삭제
+    if (newRows.length > 0) {
+      const newRowIds = newRows.map(row => row.id);
+      const updatedList = workOrderList.filter(w => !newRowIds.includes(w.id));
       setWorkOrderList(updatedList);
       // 추가된 행 목록에서도 제거
-      setAddRows(prev => prev.filter(w => w.id !== selectedWorkOrder.id));
-      setSelectedWorkOrder(null);
-      return;
+      setAddRows(prev => prev.filter(w => !newRowIds.includes(w.id)));
+      // 선택된 작업지시가 삭제된 행에 포함되어 있으면 선택 해제
+      if (selectedWorkOrder && newRowIds.includes(selectedWorkOrder.id)) {
+        setSelectedWorkOrder(null);
+      }
     }
 
-    // Message 클래스의 삭제 확인 다이얼로그 사용
-    Message.showDeleteConfirm(() => {
-      executeMutation(DELETE_WORK_ORDER_MUTATION, { workOrderId: selectedWorkOrder.workOrderId })
-      .then(() => {
-        // 소프트 삭제 이후 목록에서 제거 (UI 상에서 표시되지 않도록)
-        const updatedList = workOrderList.filter(w => w.id !== selectedWorkOrder.id);
-        setWorkOrderList(updatedList);
-        setSelectedWorkOrder(null);
-        Message.showSuccess(Message.DELETE_SUCCESS);
-      })
-      .catch((error) => {
-        console.error("Error deleting work order:", error);
-        Message.showError({ message: '삭제 중 오류가 발생했습니다.' });
-      });
-    });
-  }, [selectedWorkOrder, workOrderList, setAddRows, executeMutation, DELETE_WORK_ORDER_MUTATION]);
+    // 기존 행들이 있는 경우 서버에서 삭제
+    if (existingRows.length > 0) {
+      const workOrderIds = existingRows.map(row => row.workOrderId);
+      
+      // 삭제 확인 메시지
+      const confirmMessage = existingRows.length === 1 
+        ? '선택한 작업지시를 삭제하시겠습니까?' 
+        : `선택한 ${existingRows.length}개의 작업지시를 삭제하시겠습니까?`;
+      
+      Message.showDeleteConfirm(() => {
+        executeMutation(DELETE_WORK_ORDERS_MUTATION, { workOrderIds })
+        .then((response) => {
+          const result = response.data.deleteWorkOrders;
+          
+          // 서버 응답이 성공이고 실제로 삭제된 항목이 있는 경우에만 UI에서 아이템 제거
+          if (result.success && result.deletedCount > 0) {
+            // 삭제된 행들을 목록에서 제거
+            const deletedIds = existingRows.map(row => row.id);
+            const updatedList = workOrderList.filter(w => !deletedIds.includes(w.id));
+            setWorkOrderList(updatedList);
+            
+            // 선택된 작업지시가 삭제된 행에 포함되어 있으면 선택 해제
+            if (selectedWorkOrder && deletedIds.includes(selectedWorkOrder.id)) {
+              setSelectedWorkOrder(null);
+            }
+            
+            // 성공 메시지 표시
+            let message = `총 ${result.totalRequested}개 중 ${result.deletedCount}개가 삭제되었습니다.`;
+            
+            if (result.skippedCount > 0) {
+              message += `\n${result.skippedCount}개는 생산실적이 존재하여 삭제할 수 없습니다.`;
+              if (result.skippedWorkOrders && result.skippedWorkOrders.length > 0) {
+                message += `\n삭제되지 않은 작업지시: ${result.skippedWorkOrders.join(', ')}`;
+              }
+              Message.showWarning(message);
+            } else {
+              Message.showSuccess(message);
+            }
+          } else {
+            // 삭제 실패 시 에러 메시지 표시 (UI는 변경하지 않음)
+            const errorMessage = result.message || '삭제 중 오류가 발생했습니다.';
+            Message.showError({ message: errorMessage });
+          }
+        })
+        .catch((error) => {
+          console.error("Error deleting work orders:", error);
+          let errorMessage = '삭제 중 오류가 발생했습니다.';
+          if (error?.graphQLErrors?.[0]?.message) {
+            errorMessage = error.graphQLErrors[0].message;
+          }
+          Message.showError({ message: errorMessage });
+        });
+      }, confirmMessage);
+    } else if (newRows.length > 0) {
+      // 신규 행만 삭제한 경우 성공 메시지
+      Message.showSuccess(`${newRows.length}개의 신규 항목이 삭제되었습니다.`);
+    }
+  }, [workOrderList, selectedWorkOrder, setAddRows, executeMutation, DELETE_WORK_ORDERS_MUTATION]);
 
-  // 작업 시작 핸들러
-  const handleStartWork = useCallback(() => {
-    if (!selectedWorkOrder) {
+  // 작업 시작 핸들러 - 다중 처리 방식으로 변경
+  const handleStartWork = useCallback((selectedRowIds) => {
+    // selectedRowIds가 전달되지 않은 경우 기존 단일 선택 방식 호환성 유지
+    let rowsToStart = selectedRowIds;
+    
+    if (!rowsToStart || rowsToStart.length === 0) {
+      // 기존 단일 선택 방식 호환성을 위해 selectedWorkOrder 확인
+      if (selectedWorkOrder) {
+        rowsToStart = [selectedWorkOrder.id];
+      } else {
+        Message.showWarning('시작할 작업지시를 선택해주세요.');
+        return;
+      }
+    }
+
+    // 선택된 행들 찾기
+    const selectedRows = workOrderList.filter(workOrder => rowsToStart.includes(workOrder.id));
+    
+    if (selectedRows.length === 0) {
       Message.showWarning('시작할 작업지시를 선택해주세요.');
       return;
     }
 
-    if (selectedWorkOrder.state === 'IN_PROGRESS' || selectedWorkOrder.state === 'COMPLETED') {
-      Message.showWarning('이미 진행 중이거나 완료된 작업입니다.');
+    // 신규 추가된 행들은 제외 (workOrderId가 없음)
+    const existingRows = selectedRows.filter(row => 
+      !row.id.toString().startsWith('NEW_') && row.workOrderId && row.workOrderId !== '자동입력'
+    );
+
+    if (existingRows.length === 0) {
+      Message.showWarning('시작할 수 있는 작업지시가 없습니다. (신규 추가된 항목은 저장 후 시작 가능합니다)');
       return;
     }
 
-    // 사용자 확인 다이얼로그 표시
-    Message.showConfirm(
-        '작업 시작',
-        `작업지시 [${selectedWorkOrder.workOrderId}]를 시작하시겠습니까?`,
-        () => {
-          // 백엔드 API 호출하여 상태 변경
-          executeMutation(START_WORK_ORDER_MUTATION, { workOrderId: selectedWorkOrder.workOrderId })
-          .then((result) => {
-            if (result?.data?.startWorkOrder) {
-              // 상태 변경
-              const updatedOrder = { ...selectedWorkOrder, state: 'IN_PROGRESS' };
-
-              setWorkOrderList(prev =>
-                  prev.map(order => order.id === selectedWorkOrder.id ? updatedOrder : order)
-              );
-
-              setSelectedWorkOrder(updatedOrder);
-              Message.showSuccess('작업이 시작되었습니다.');
-            } else {
-              Message.showError({ message: '작업 시작 처리에 실패했습니다.' });
-            }
-          })
-          .catch((error) => {
-            console.error("Error starting work order:", error);
-            Message.showError({ message: '작업 시작 중 오류가 발생했습니다.' });
-          });
-        }
+    // 이미 진행 중이거나 완료된 작업지시 필터링
+    const startableRows = existingRows.filter(row => 
+      row.state === 'PLANNED'
     );
-  }, [selectedWorkOrder, executeMutation, START_WORK_ORDER_MUTATION]);
 
-  // 작업 완료 핸들러
-  const handleCompleteWork = useCallback(() => {
-    if (!selectedWorkOrder) {
+    if (startableRows.length === 0) {
+      Message.showWarning('시작할 수 있는 작업지시가 없습니다. (계획됨 상태의 작업지시만 시작 가능합니다)');
+      return;
+    }
+
+    const workOrderIds = startableRows.map(row => row.workOrderId);
+    
+    // 시작 확인 메시지
+    const confirmMessage = startableRows.length === 1 
+      ? `작업지시 [${startableRows[0].workOrderId}]를 시작하시겠습니까?`
+      : `선택한 ${startableRows.length}개의 작업지시를 시작하시겠습니까?`;
+    
+    Message.showConfirm(
+      '작업 시작',
+      confirmMessage,
+      () => {
+        // 백엔드 API 호출하여 상태 변경
+        executeMutation(START_WORK_ORDERS_MUTATION, { workOrderIds })
+        .then((response) => {
+          const result = response.data.startWorkOrders;
+          
+          if (result.success) {
+            // 성공적으로 처리된 작업지시들의 상태를 'IN_PROGRESS'로 변경
+            const processedWorkOrderIds = workOrderIds.filter(id => 
+              !result.skippedWorkOrders.includes(id)
+            );
+            
+            setWorkOrderList(prev =>
+              prev.map(order => {
+                if (processedWorkOrderIds.includes(order.workOrderId)) {
+                  return { ...order, state: 'IN_PROGRESS' };
+                }
+                return order;
+              })
+            );
+
+            // 선택된 작업지시가 처리된 경우 상태 업데이트
+            if (selectedWorkOrder && processedWorkOrderIds.includes(selectedWorkOrder.workOrderId)) {
+              setSelectedWorkOrder(prev => ({ ...prev, state: 'IN_PROGRESS' }));
+            }
+            
+            // 결과에 따른 메시지 표시
+            let message = `총 ${result.totalRequested}개 중 ${result.processedCount}개가 시작되었습니다.`;
+            
+            if (result.skippedCount > 0) {
+              message += `\n${result.skippedCount}개는 시작할 수 없습니다.`;
+              if (result.skippedWorkOrders && result.skippedWorkOrders.length > 0) {
+                message += `\n시작되지 않은 작업지시: ${result.skippedWorkOrders.join(', ')}`;
+              }
+            }
+            
+            if (result.skippedCount > 0) {
+              Message.showWarning(message);
+            } else {
+              Message.showSuccess(message);
+            }
+          } else {
+            Message.showError({ message: result.message || '작업 시작 처리에 실패했습니다.' });
+          }
+        })
+        .catch((error) => {
+          console.error("Error starting work orders:", error);
+          let errorMessage = '작업 시작 중 오류가 발생했습니다.';
+          if (error?.graphQLErrors?.[0]?.message) {
+            errorMessage = error.graphQLErrors[0].message;
+          }
+          Message.showError({ message: errorMessage });
+        });
+      }
+    );
+  }, [workOrderList, selectedWorkOrder, executeMutation, START_WORK_ORDERS_MUTATION]);
+
+  // 작업 완료 핸들러 - 다중 처리 방식으로 변경
+  const handleCompleteWork = useCallback((selectedRowIds) => {
+    // selectedRowIds가 전달되지 않은 경우 기존 단일 선택 방식 호환성 유지
+    let rowsToComplete = selectedRowIds;
+    
+    if (!rowsToComplete || rowsToComplete.length === 0) {
+      // 기존 단일 선택 방식 호환성을 위해 selectedWorkOrder 확인
+      if (selectedWorkOrder) {
+        rowsToComplete = [selectedWorkOrder.id];
+      } else {
+        Message.showWarning('완료할 작업지시를 선택해주세요.');
+        return;
+      }
+    }
+
+    // 선택된 행들 찾기
+    const selectedRows = workOrderList.filter(workOrder => rowsToComplete.includes(workOrder.id));
+    
+    if (selectedRows.length === 0) {
       Message.showWarning('완료할 작업지시를 선택해주세요.');
       return;
     }
 
-    if (selectedWorkOrder.state === 'COMPLETED') {
-      Message.showWarning('이미 완료된 작업입니다.');
+    // 신규 추가된 행들은 제외 (workOrderId가 없음)
+    const existingRows = selectedRows.filter(row => 
+      !row.id.toString().startsWith('NEW_') && row.workOrderId && row.workOrderId !== '자동입력'
+    );
+
+    if (existingRows.length === 0) {
+      Message.showWarning('완료할 수 있는 작업지시가 없습니다. (신규 추가된 항목은 저장 후 완료 가능합니다)');
       return;
     }
 
-    // 사용자 확인 다이얼로그 표시
-    Message.showConfirm(
-        '작업 완료',
-        `작업지시 [${selectedWorkOrder.workOrderId}]를 완료 처리하시겠습니까?`,
-        () => {
-          // 백엔드 API 호출하여 상태 변경
-          executeMutation(COMPLETE_WORK_ORDER_MUTATION, { workOrderId: selectedWorkOrder.workOrderId })
-          .then((result) => {
-            if (result?.data?.completeWorkOrder) {
-              // 상태 변경
-              const updatedOrder = { ...selectedWorkOrder, state: 'COMPLETED' };
-
-              setWorkOrderList(prev =>
-                  prev.map(order => order.id === selectedWorkOrder.id ? updatedOrder : order)
-              );
-
-              setSelectedWorkOrder(updatedOrder);
-              Message.showSuccess('작업이 완료되었습니다.');
-            } else {
-              Message.showError({ message: '작업 완료 처리에 실패했습니다.' });
-            }
-          })
-          .catch((error) => {
-            console.error("Error completing work order:", error);
-            Message.showError({ message: '작업 완료 중 오류가 발생했습니다.' });
-          });
-        }
+    // 이미 완료된 작업지시 필터링 (진행중 또는 계획됨 상태만 완료 가능)
+    const completableRows = existingRows.filter(row => 
+      row.state === 'IN_PROGRESS' || row.state === 'PLANNED'
     );
-  }, [selectedWorkOrder, executeMutation, COMPLETE_WORK_ORDER_MUTATION]);
+
+    if (completableRows.length === 0) {
+      Message.showWarning('완료할 수 있는 작업지시가 없습니다. (계획됨 또는 진행중 상태의 작업지시만 완료 가능합니다)');
+      return;
+    }
+
+    const workOrderIds = completableRows.map(row => row.workOrderId);
+    
+    // 완료 확인 메시지
+    const confirmMessage = completableRows.length === 1 
+      ? `작업지시 [${completableRows[0].workOrderId}]를 완료 처리하시겠습니까?`
+      : `선택한 ${completableRows.length}개의 작업지시를 완료 처리하시겠습니까?`;
+    
+    Message.showConfirm(
+      '작업 완료',
+      confirmMessage,
+      () => {
+        // 백엔드 API 호출하여 상태 변경
+        executeMutation(COMPLETE_WORK_ORDERS_MUTATION, { workOrderIds })
+        .then((response) => {
+          const result = response.data.completeWorkOrders;
+          
+          if (result.success) {
+            // 성공적으로 처리된 작업지시들의 상태를 'COMPLETED'로 변경
+            const processedWorkOrderIds = workOrderIds.filter(id => 
+              !result.skippedWorkOrders.includes(id)
+            );
+            
+            setWorkOrderList(prev =>
+              prev.map(order => {
+                if (processedWorkOrderIds.includes(order.workOrderId)) {
+                  return { ...order, state: 'COMPLETED' };
+                }
+                return order;
+              })
+            );
+
+            // 선택된 작업지시가 처리된 경우 상태 업데이트
+            if (selectedWorkOrder && processedWorkOrderIds.includes(selectedWorkOrder.workOrderId)) {
+              setSelectedWorkOrder(prev => ({ ...prev, state: 'COMPLETED' }));
+            }
+            
+            // 결과에 따른 메시지 표시
+            let message = `총 ${result.totalRequested}개 중 ${result.processedCount}개가 완료되었습니다.`;
+            
+            if (result.skippedCount > 0) {
+              message += `\n${result.skippedCount}개는 완료할 수 없습니다.`;
+              if (result.skippedWorkOrders && result.skippedWorkOrders.length > 0) {
+                message += `\n완료되지 않은 작업지시: ${result.skippedWorkOrders.join(', ')}`;
+              }
+            }
+            
+            if (result.skippedCount > 0) {
+              Message.showWarning(message);
+            } else {
+              Message.showSuccess(message);
+            }
+          } else {
+            Message.showError({ message: result.message || '작업 완료 처리에 실패했습니다.' });
+          }
+        })
+        .catch((error) => {
+          console.error("Error completing work orders:", error);
+          let errorMessage = '작업 완료 중 오류가 발생했습니다.';
+          if (error?.graphQLErrors?.[0]?.message) {
+            errorMessage = error.graphQLErrors[0].message;
+          }
+          Message.showError({ message: errorMessage });
+        });
+      }
+    );
+  }, [workOrderList, selectedWorkOrder, executeMutation, COMPLETE_WORK_ORDERS_MUTATION]);
 
   // 날짜 범위 변경 핸들러
   const handleDateRangeChange = useCallback((fieldName, startDate, endDate) => {

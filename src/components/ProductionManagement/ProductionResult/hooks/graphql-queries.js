@@ -38,6 +38,7 @@ export const PRODUCTION_RESULTS_BY_WORK_ORDER_QUERY = gql`
             resultInfo
             defectCause
             createUser
+            createUserName
             createDate
             updateUser
             updateDate
@@ -65,6 +66,7 @@ export const PRODUCTION_RESULTS_QUERY = gql`
             resultInfo
             defectCause
             createUser
+            createUserName
             createDate
             updateUser
             updateDate
@@ -89,6 +91,13 @@ export const DELETE_PRODUCTION_RESULT_MUTATION = gql`
     }
 `;
 
+// 생산실적 다중 삭제 뮤테이션
+export const DELETE_PRODUCTION_RESULTS_MUTATION = gql`
+    mutation DeleteProductionResults($prodResultIds: [String!]!) {
+        deleteProductionResults(prodResultIds: $prodResultIds)
+    }
+`;
+
 // 불량정보 관련 쿼리
 export const DEFECT_INFO_BY_PROD_RESULT_QUERY = gql`
     query getDefectInfosByProdResultId($prodResultId: String!) {
@@ -105,6 +114,7 @@ export const DEFECT_INFO_BY_PROD_RESULT_QUERY = gql`
             state
             defectCause
             createUser
+            createUserName
             createDate
             updateUser
             updateDate

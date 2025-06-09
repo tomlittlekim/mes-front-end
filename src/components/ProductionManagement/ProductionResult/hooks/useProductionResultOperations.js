@@ -29,7 +29,7 @@ export const useProductionResultOperations = (
     setProductionResult
 ) => {
   const {executeQuery} = useGraphQL();
-  const {saveProductionResult, deleteProductionResult} = useProductionResult();
+  const {saveProductionResult, deleteProductionResult, deleteProductionResults} = useProductionResult();
 
   // 상태 관리
   const [isDefectInfoModalOpen, setIsDefectInfoModalOpen] = useState(false);
@@ -250,8 +250,13 @@ export const useProductionResultOperations = (
 
       // 상태 초기화
       setModalResolveReject({resolve: null, reject: null, saveAction: null});
+      
+      // 로딩 상태 초기화 (모달을 닫을 때 항상 초기화)
+      isLoadingRef.current = false;
     } catch (error) {
       console.error("Error during modal close:", error);
+      // 오류 발생 시에도 로딩 상태 초기화
+      isLoadingRef.current = false;
     }
   }, [modalResolveReject]);
 
@@ -286,13 +291,30 @@ export const useProductionResultOperations = (
       
       // 모달 닫기 (모달 관련 상태 업데이트)
       setIsDefectInfoModalOpen(false);
+      setCurrentProductionResult(null);
+      
+      // 모달 관련 상태 초기화
+      setModalResolveReject({resolve: null, reject: null, saveAction: null});
       
       // 액션이 있으면 즉시 실행 - defectsForSave를 직접 전달
       if (currentSaveAction) {
-        currentSaveAction(defectsForSave);
+        try {
+          currentSaveAction(defectsForSave);
+        } catch (error) {
+          console.error('불량정보 저장 중 오류:', error);
+          // 오류 발생 시 로딩 상태 초기화
+          isLoadingRef.current = false;
+          Message.showError({message: '불량정보 저장 중 오류가 발생했습니다.'});
+        }
       }
     } else {
+      // 불량정보가 없는 경우에도 모달 상태 초기화
       setIsDefectInfoModalOpen(false);
+      setCurrentProductionResult(null);
+      setModalResolveReject({resolve: null, reject: null, saveAction: null});
+      
+      // 로딩 상태 초기화
+      isLoadingRef.current = false;
     }
   }, [currentProductionResult, modalResolveReject]);
 
@@ -329,6 +351,18 @@ export const useProductionResultOperations = (
             Message.showWarning('창고는 필수 입력 항목입니다.');
             return Promise.resolve();
           }
+          
+          // 생산시작일시 필수 입력 검사 추가
+          if (!currentRow.prodStartTime) {
+            Message.showWarning('생산시작일시는 필수 입력 항목입니다.');
+            return Promise.resolve();
+          }
+          
+          // 생산종료일시 필수 입력 검사 추가
+          if (!currentRow.prodEndTime) {
+            Message.showWarning('생산종료일시는 필수 입력 항목입니다.');
+            return Promise.resolve();
+          }
 
           // 음수 검사
           if (currentRow.goodQty < 0 || currentRow.defectQty < 0) {
@@ -342,14 +376,49 @@ export const useProductionResultOperations = (
             return Promise.resolve();
           }
 
-          isLoadingRef.current = true;
-
-          // 불량수량이 있는 경우 불량정보 모달 표시
+          // 불량수량이 있는 경우 불량정보 모달 표시 (로딩 상태를 먼저 설정하지 않음)
           if (currentRow.defectQty > 0) {
             setCurrentProductionResult(currentRow);
+            
+            // 불량정보 입력 후 저장 처리를 위한 콜백 설정
+            setModalResolveReject({
+              resolve: () => {
+                // 모달이 닫혔을 때 로딩 상태 초기화
+                isLoadingRef.current = false;
+              },
+              reject: () => {
+                // 모달 취소 시에도 로딩 상태 초기화
+                isLoadingRef.current = false;
+              },
+              saveAction: (defectInfos) => {
+                // 불량정보와 함께 저장 실행
+                isLoadingRef.current = true; // 실제 저장 시점에 로딩 상태 설정
+                
+                saveProductionResult(
+                  true,
+                  currentRow,
+                  selectedWorkOrder,
+                  defectInfos,
+                  () => {
+                    // 성공 후 작업지시 목록 새로 조회 및 생산실적 목록 초기화
+                    setTimeout(() => {
+                      refreshWorkOrderList();
+                      setSelectedWorkOrder(null);
+                      setProductionResult(null);
+                      setProductionResultList([]);
+                      setDefectInfosForSave([]);
+                      isLoadingRef.current = false;
+                    }, 500);
+                  }
+                );
+              }
+            });
+            
             openDefectInfoModal(currentRow);
             return;
           }
+          
+          isLoadingRef.current = true;
 
           // 불량수량이 없는 경우 바로 저장
           await saveProductionResult(
@@ -379,22 +448,49 @@ export const useProductionResultOperations = (
   );
 
   /**
-   * 생산실적 삭제 함수
+   * 생산실적 삭제 함수 (단일/다중 삭제 지원)
    *
-   * @param {Object} productionResult - 삭제할 생산실적
+   * @param {Object|Array} productionResultOrIds - 삭제할 생산실적 객체 또는 ID 배열
    * @param {Function} setProductionResult - 생산실적 상태 변경 함수
    * @param {Function} setProductionResultList - 생산실적 목록 상태 변경 함수
    */
   const deleteResult = useCallback(
-      (productionResult, setProductionResult, setProductionResultList) => {
-        if (!productionResult) {
-          Message.showWarning('삭제할 생산실적을 선택해주세요.');
-          return;
-        }
-
+      (productionResultOrIds, setProductionResult, setProductionResultList) => {
         // 로딩 중인 경우 중복 호출 방지
         if (isLoadingRef.current) {
           Message.showWarning('처리 중입니다. 잠시만 기다려주세요.');
+          return;
+        }
+
+        // 배열인 경우 (다중 삭제)
+        if (Array.isArray(productionResultOrIds)) {
+          if (productionResultOrIds.length === 0) {
+            Message.showWarning('삭제할 생산실적을 선택해주세요.');
+            return;
+          }
+
+          isLoadingRef.current = true;
+
+          // 다중 삭제 처리
+          deleteProductionResults(
+              productionResultOrIds,
+              () => {
+                // 삭제 후 작업지시 목록 새로 조회 및 생산실적 목록 초기화
+                refreshWorkOrderList();
+                setSelectedWorkOrder(null);
+                setProductionResult(null);
+                setProductionResultList([]);
+                isLoadingRef.current = false;
+              }
+          );
+          return;
+        }
+
+        // 단일 삭제 처리 (기존 로직 유지)
+        const productionResult = productionResultOrIds;
+        if (!productionResult) {
+          Message.showWarning('삭제할 생산실적을 선택해주세요.');
+          isLoadingRef.current = false;
           return;
         }
 
@@ -427,7 +523,7 @@ export const useProductionResultOperations = (
             }
         );
       },
-      [deleteProductionResult, refreshWorkOrderList, setSelectedWorkOrder]
+      [deleteProductionResult, deleteProductionResults, refreshWorkOrderList, setSelectedWorkOrder]
   );
 
   /**
@@ -455,8 +551,8 @@ export const useProductionResultOperations = (
         defectQty: 0,
         equipmentId: selectedWorkOrder.equipmentId || '',
         warehouseId: '',  // 필수 입력값으로 변경
-        prodStartTime: new Date().toISOString(),  // 현재 시간 기본값
-        prodEndTime: new Date().toISOString(),
+        prodStartTime: new Date(),  // 현재 시간을 Date 객체로 초기화
+        prodEndTime: new Date(),   // 현재 시간을 Date 객체로 초기화
         createDate: null,
         flagActive: true,
         createUser: '',
@@ -500,6 +596,18 @@ export const useProductionResultOperations = (
       return;
     }
     
+    // 생산시작일시 필수 체크 추가
+    if (!newIndependentResult.prodStartTime) {
+      Message.showWarning('생산시작일시는 필수 입력 항목입니다.');
+      return;
+    }
+    
+    // 생산종료일시 필수 체크 추가
+    if (!newIndependentResult.prodEndTime) {
+      Message.showWarning('생산종료일시는 필수 입력 항목입니다.');
+      return;
+    }
+    
     // 양품수량과 불량수량이 음수인지 검사
     if (newIndependentResult.goodQty < 0 || newIndependentResult.defectQty < 0) {
       Message.showWarning('양품수량과 불량수량은 0 이상이어야 합니다.');
@@ -524,18 +632,26 @@ export const useProductionResultOperations = (
     if (prodResult.defectQty > 0) {
       // 불량정보 모달 표시 전에 현재 생산실적 정보 설정
       setCurrentProductionResult(prodResult);
-      openDefectInfoModal(prodResult);
       
       // 불량정보 입력 후 저장 처리를 위한 콜백 설정
       setModalResolveReject({
-        resolve: () => {}, // 빈 함수로 설정하여 오류 방지
-        reject: () => {},  // 빈 함수로 설정하여 오류 방지
+        resolve: () => {
+          // 모달이 닫혔을 때 로딩 상태 초기화
+          isLoadingRef.current = false;
+        },
+        reject: () => {
+          // 모달 취소 시에도 로딩 상태 초기화
+          isLoadingRef.current = false;
+        },
         saveAction: (directDefectInfos) => {
           // 직접 전달된 불량정보 사용
           if (!directDefectInfos || directDefectInfos.length === 0) {
             Message.showWarning('불량수량이 입력되었으나 불량정보가 없습니다. 불량정보를 입력해주세요.');
+            isLoadingRef.current = false; // 경고 후 로딩 상태 초기화
             return;
           }
+          
+          isLoadingRef.current = true; // 실제 저장 시점에 로딩 상태 설정
           
           saveProductionResult(
             true, // 새로운 생산실적
@@ -556,10 +672,14 @@ export const useProductionResultOperations = (
           );
         }
       });
+      
+      openDefectInfoModal(prodResult);
       return;
     }
     
     // 불량수량이 없는 경우 바로 저장
+    isLoadingRef.current = true; // 저장 시작 시 로딩 상태 설정
+    
     saveProductionResult(
       true, // 새로운 생산실적
       prodResult,
@@ -576,7 +696,11 @@ export const useProductionResultOperations = (
           isLoadingRef.current = false;
         }, 500);
       }
-    );
+    ).catch((error) => {
+      // 저장 실패 시 로딩 상태 초기화
+      console.error('독립 생산실적 저장 실패:', error);
+      isLoadingRef.current = false;
+    });
   }, [
     saveProductionResult, 
     setIsIndependentModalOpen, 

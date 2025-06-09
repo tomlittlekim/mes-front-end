@@ -62,7 +62,21 @@ const getCodeListQuery = `
         }
       }
     }
-`
+    `
+
+const getDefaultCodeListQuery = `
+      query getGridDefaultCodeList($codeClassIds: [String!]!) {
+    getGridDefaultCodeList(codeClassIds: $codeClassIds) {
+        codeClassId
+        codeClassName
+        codeClassDesc
+        codes {
+          codeId
+          codeName
+        }
+      }
+    }
+    `
 
 const saveCodeMutation = `
       mutation saveCode($createdRows: [CodeInput], $updatedRows: [CodeUpdate]) {
@@ -116,16 +130,73 @@ export const getInitialCodes = async (codeClassId) =>{
   }));
 }
 
+/**
+ * 공통으로 불러오는 부분 많아서 캐싱 로직 추가
+ */
+let codeCache = {};
+
 export const getGridCodeList = async (codeClassIds) => {
+  const cacheKey = `normal_${codeClassIds.sort().join('_')}`;
+
+  // 캐시에 있으면 캐시된 값 반환
+  if (codeCache[cacheKey]) {
+    return codeCache[cacheKey];
+  }
+
   const response = await graphFetch(getCodeListQuery, { codeClassIds });
 
-  return response.getGridCodeList.reduce((acc, codeClass) => {
+  if (!response.getGridCodeList) {
+    console.warn('getGridCodeList 응답이 없습니다:', response);
+    return {};
+  }
+
+  const result = response.getGridCodeList.reduce((acc, codeClass) => {
     acc[codeClass.codeClassId] = codeClass.codes.map(row => ({
       value: row.codeId,
       label: row.codeName,
     }));
     return acc;
   }, {});
+
+  // 결과를 캐시에 저장
+  codeCache[cacheKey] = result;
+
+  return result;
+};
+
+export const getDefaultGridCodeList = async (codeClassIds) => {
+  // 캐시 키 생성
+  const cacheKey = `default_${codeClassIds.sort().join('_')}`;
+
+  // 캐시에 있으면 캐시된 값 반환
+  if (codeCache[cacheKey]) {
+    return codeCache[cacheKey];
+  }
+
+  const response = await graphFetch(getDefaultCodeListQuery, { codeClassIds });
+
+  if (!response.getGridDefaultCodeList) {
+    console.warn('getGridDefaultCodeList 응답이 없습니다:', response);
+    return {};
+  }
+
+  const result = response.getGridDefaultCodeList.reduce((acc, codeClass) => {
+    acc[codeClass.codeClassId] = codeClass.codes.map(row => ({
+      value: row.codeId,
+      label: row.codeName,
+    }));
+    return acc;
+  }, {});
+
+  // 결과를 캐시에 저장
+  codeCache[cacheKey] = result;
+
+  return result;
+};
+
+// 캐시 초기화 함수
+export const clearCodeCache = () => {
+  codeCache = {};
 };
 
 export const saveCodeClass = (req) =>  graphFetch(saveCodeClassMutation,req)

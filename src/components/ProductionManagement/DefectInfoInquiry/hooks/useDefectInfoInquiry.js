@@ -298,20 +298,25 @@ export const useDefectInfoInquiry = (tabId) => {
 
   // 테마 관련 유틸리티 함수
   const getTextColor = useCallback(() => {
-    return isDarkMode ? theme.palette.text.primary : theme.palette.text.primary;
-  }, [isDarkMode, theme]);
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#f0e6d9' : 'rgba(0, 0, 0, 0.87)';
+    }
+    return isDarkMode ? '#b3c5e6' : 'rgba(0, 0, 0, 0.87)';
+  }, [domain, isDarkMode]);
 
   const getBgColor = useCallback(() => {
-    return isDarkMode 
-      ? theme.palette.background.paper 
-      : theme.palette.background.paper;
-  }, [isDarkMode, theme]);
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? 'rgba(45, 30, 15, 0.5)' : 'rgba(252, 235, 212, 0.6)';
+    }
+    return isDarkMode ? 'rgba(0, 27, 63, 0.5)' : 'rgba(232, 244, 253, 0.6)';
+  }, [domain, isDarkMode]);
 
   const getBorderColor = useCallback(() => {
-    return isDarkMode 
-      ? theme.palette.divider 
-      : theme.palette.divider;
-  }, [isDarkMode, theme]);
+    if (domain === DOMAINS.PEMS) {
+      return isDarkMode ? '#3d2814' : '#f5e8d7';
+    }
+    return isDarkMode ? '#1e3a5f' : '#e0e0e0';
+  }, [domain, isDarkMode]);
 
   // 초기화 함수
   const init = async () => {

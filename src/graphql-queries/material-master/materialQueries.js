@@ -94,6 +94,7 @@ export const ALL_MATERIALS_QUERY = `
             materialType
             categories {
                 materialCategory
+                materialCategoryName
                 materials {
                     systemMaterialId
                     userMaterialId

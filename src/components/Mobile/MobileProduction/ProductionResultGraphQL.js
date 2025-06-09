@@ -19,6 +19,7 @@ export const PRODUCTION_RESULTS_MOBILE = gql`
             prodEndTime
             createDate
             createUser
+            createUserName
             updateDate
             updateUser
             flagActive
@@ -102,9 +103,9 @@ export const UPDATE_PRODUCTION_RESULT_MOBILE = gql`
     }
 `;
 
-// 생산실적 삭제 뮤테이션
-export const DELETE_PRODUCTION_RESULT = gql`
-    mutation DeleteProductionResult($prodResultId: String!) {
-        deleteProductionResult(prodResultId: $prodResultId)
+// 생산실적 다중 삭제 뮤테이션
+export const DELETE_PRODUCTION_RESULTS = gql`
+    mutation DeleteProductionResults($prodResultIds: [String!]!) {
+        deleteProductionResults(prodResultIds: $prodResultIds)
     }
 `; 

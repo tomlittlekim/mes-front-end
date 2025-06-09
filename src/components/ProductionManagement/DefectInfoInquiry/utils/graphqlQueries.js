@@ -17,9 +17,11 @@ export const ALL_DEFECT_INFOS_QUERY = gql`
             resultInfo
             state
             defectCause
+            defectCauseName
             equipmentId
             createDate
             createUser
+            createUserName
             updateDate
             updateUser
             flagActive
@@ -44,9 +46,11 @@ export const DEFECT_INFO_BY_PROD_RESULT_QUERY = gql`
             resultInfo
             state
             defectCause
+            defectCauseName
             equipmentId
             createDate
             createUser
+            createUserName
             updateDate
             updateUser
             flagActive

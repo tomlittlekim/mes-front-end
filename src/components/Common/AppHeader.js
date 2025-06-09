@@ -3,6 +3,7 @@ import './AppHeader.css';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import { useTabs } from '../../contexts/TabContext';
+import { useSidebar } from '../../contexts/SidebarContext';
 import {
   Box,
   IconButton,
@@ -17,7 +18,7 @@ import {
   Typography
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CloseAllIcon from '@mui/icons-material/ClearAll';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import DomainIcon from '@mui/icons-material/DomainVerification';
@@ -27,6 +28,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PersonIcon from '@mui/icons-material/Person';
+import MenuIcon from '@mui/icons-material/Menu';
+import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import Swal from 'sweetalert2';
 import SyncIcon from '@mui/icons-material/Sync';
 import {useNavigate} from "react-router-dom";
@@ -82,6 +85,7 @@ const AppHeader = (props) => {
   const { activeTab, closeAllTabs, closeTab, tabs, setActiveTab } = useTabs();
   const { theme, toggleTheme } = useTheme();
   const { domain, toggleDomain, nginxEnv, domainName } = useDomain();
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const muiTheme = useMuiTheme();
   const { logout } = useLocalStorageVO();
 
@@ -350,6 +354,18 @@ const AppHeader = (props) => {
         <Divider orientation="vertical" flexItem className="header-divider" />
         
         <div className="header-actions">
+          {/* SideBar 토글 버튼 */}
+          <Tooltip title={`${isCollapsed ? '사이드바 표시' : '사이드바 숨김'} (Ctrl+B)`}>
+            <IconButton 
+              onClick={toggleSidebar} 
+              size="small"
+              color="inherit"
+              className="header-action-button"
+            >
+              {isCollapsed ? <MenuIcon fontSize="small" /> : <MenuOpenIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+          
           {/* 전체 탭 닫기 버튼 */}
           <Tooltip title="모든 탭 닫기">
             <span>
@@ -358,7 +374,7 @@ const AppHeader = (props) => {
                 size="small"
                 disabled={tabs.length <= 1}
               >
-                <CloseAllIcon fontSize="small" />
+                <HighlightOffIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>

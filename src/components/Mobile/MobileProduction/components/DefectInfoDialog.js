@@ -20,19 +20,27 @@ import {
   CardContent,
   Fab,
   InputAdornment,
-  Alert
+  Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  FormHelperText
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import { NEW_DEFECT_INFO } from '../ProductionResultConstants';
+import { useQuery } from '@apollo/client';
+import { GET_INITIAL_CODES_QUERY } from '../../../../graphql-queries/common/codeQueries';
 
 // 상위 컴포넌트에서 총 불량수량 제한값을 전달받음
 const DefectInfoDialog = ({
   open,
   onClose,
   defectInfos = [],
+  productionResult,
   onSave,
   getAccentColor,
   maxDefectQty = null // 최대 불량수량 (생산실적의 불량수량)
@@ -41,6 +49,14 @@ const DefectInfoDialog = ({
   const [currentDefectInfo, setCurrentDefectInfo] = useState({ ...NEW_DEFECT_INFO });
   const [errors, setErrors] = useState({});
   const [isAdding, setIsAdding] = useState(false);
+
+  // 불량종류 데이터 로드
+  const { data: defectTypesData, loading: defectTypesLoading } = useQuery(GET_INITIAL_CODES_QUERY, {
+    variables: { codeClassId: 'DEFECT_TYPE' },
+    skip: !open
+  });
+
+  const defectTypes = defectTypesData?.getInitialCodes || [];
 
   // 다이얼로그가 열릴 때 데이터 설정
   useEffect(() => {
@@ -111,9 +127,23 @@ const DefectInfoDialog = ({
     // 불량정보 추가
     const updatedDefectInfo = {
       ...currentDefectInfo,
+      prodResultId: productionResult?.prodResultId || null,
+      workOrderId: productionResult?.workOrderId || null,
+      productId: productionResult?.productId || null,
+      defectQty: currentDefectInfo.defectQty,
+      defectCause: currentDefectInfo.defectCause, // DEFECT_TYPE codeId
+      defectType: currentDefectInfo.defectCause, // defectType과 defectCause 동일하게 설정
       defectReason: currentDefectInfo.defectReason || '',
-      resultInfo: currentDefectInfo.resultInfo || ''
+      resultInfo: currentDefectInfo.resultInfo || '',
+      defectCauseName: currentDefectInfo.defectCause ? 
+        defectTypes.find(type => type.codeId === currentDefectInfo.defectCause)?.codeName || '' : '',
+      state: 'NEW',
+      flagActive: true
     };
+
+    console.log('추가된 불량정보:', updatedDefectInfo);
+    console.log('currentDefectInfo.defectCause:', currentDefectInfo.defectCause);
+    console.log('productionResult:', productionResult);
 
     // 불량정보 추가
     setLocalDefectInfos(prev => [...prev, updatedDefectInfo]);
@@ -135,6 +165,17 @@ const DefectInfoDialog = ({
       });
       return;
     }
+    
+    console.log('DefectInfoDialog에서 저장할 불량정보들:', localDefectInfos);
+    console.log('각 불량정보의 defectCause 값:', localDefectInfos.map(info => ({ 
+      defectQty: info.defectQty, 
+      defectCause: info.defectCause,
+      defectType: info.defectType,
+      productId: info.productId,
+      workOrderId: info.workOrderId,
+      prodResultId: info.prodResultId,
+      state: info.state
+    })));
     
     onSave(localDefectInfos);
     onClose();
@@ -208,14 +249,14 @@ const DefectInfoDialog = ({
                 <CardContent sx={{ p: 2 }}>
                   <Grid container spacing={1}>
                     <Grid item xs={4}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>불량수량</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>불량 수량</Typography>
                       <Typography variant="body1" color="error" sx={{ fontSize: '1.1rem', fontWeight: 'medium' }}>
                         {defectInfo.defectQty || 0}
                       </Typography>
                     </Grid>
                     <Grid item xs={8}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>불량 요인</Typography>
-                      <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{defectInfo.defectCause || '-'}</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>불량 종류</Typography>
+                      <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{defectInfo.defectCauseName || defectInfo.defectCause || '-'}</Typography>
                     </Grid>
                     <Grid item xs={12} sx={{ mt: 1 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>불량 정보</Typography>
@@ -267,21 +308,33 @@ const DefectInfoDialog = ({
                 />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  label="불량 요인"
-                  name="defectCause"
-                  value={currentDefectInfo.defectCause || ''}
-                  onChange={handleDefectInfoChange}
-                  fullWidth
+                <FormControl 
+                  fullWidth 
                   variant="outlined"
-                  placeholder="불량이 발생한 원인을 입력하세요"
-                  InputProps={{
-                    sx: { fontSize: '1.2rem', py: 0.5 }
-                  }}
-                  InputLabelProps={{
-                    sx: { fontSize: '1.2rem' }
-                  }}
-                />
+                  error={!!errors.defectCause}
+                >
+                  <InputLabel sx={{ fontSize: '1.2rem' }}>불량종류</InputLabel>
+                  <Select
+                    label="불량종류"
+                    name="defectCause"
+                    value={currentDefectInfo.defectCause || ''}
+                    onChange={handleDefectInfoChange}
+                    sx={{ fontSize: '1.2rem', py: 0.5 }}
+                    disabled={defectTypesLoading}
+                  >
+                    <MenuItem value="">
+                      <em>선택하세요</em>
+                    </MenuItem>
+                    {defectTypes.map((type) => (
+                      <MenuItem key={type.codeId} value={type.codeId}>
+                        {type.codeName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.defectCause && (
+                    <FormHelperText>{errors.defectCause}</FormHelperText>
+                  )}
+                </FormControl>
               </Grid>
               <Grid item xs={12}>
                 <TextField

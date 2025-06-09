@@ -86,9 +86,9 @@ const IndependentProductionModal = ({
     const totalQuantityValid = 
         (Number(productionData.goodQty) + Number(productionData.defectQty)) > 0;
 
-    // 시작일시가 종료일시보다 이후인지 검증
-    let dateValid = true;
-    if (productionData.prodStartTime && productionData.prodEndTime) {
+    // 날짜가 비어있지 않은지, 그리고 시작일시가 종료일시보다 이후인지 검증
+    let dateValid = productionData.prodStartTime !== null && productionData.prodEndTime !== null;
+    if (dateValid && productionData.prodStartTime && productionData.prodEndTime) {
       dateValid = new Date(productionData.prodStartTime) <= new Date(productionData.prodEndTime);
     }
 
@@ -213,12 +213,12 @@ const IndependentProductionModal = ({
       return;
     }
 
-    // 저장할 데이터 준비 (불량원인과 비고 필드 제거)
+    // 저장할 데이터 준비 - 날짜는 Date 객체 그대로 유지
     const dataToSave = {
       ...productionData,
-      // 날짜 데이터 정리
-      prodStartTime: productionData.prodStartTime ? new Date(productionData.prodStartTime) : null,
-      prodEndTime: productionData.prodEndTime ? new Date(productionData.prodEndTime) : null
+      // 날짜 데이터는 Date 객체 그대로 전달 (그리드에서 올바르게 처리되도록)
+      prodStartTime: productionData.prodStartTime,
+      prodEndTime: productionData.prodEndTime
     };
 
     // 부모 컴포넌트의 저장 함수 호출
@@ -373,14 +373,15 @@ const IndependentProductionModal = ({
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                 <DateTimePicker
-                    label="생산시작일시"
+                    label="생산시작일시 (필수)"
                     value={productionData.prodStartTime}
                     onChange={(newValue) => handleDateChange('prodStartTime', newValue)}
                     format="yyyy-MM-dd HH:mm"
                     slotProps={{
                       textField: {
                         fullWidth: true,
-                        variant: 'outlined'
+                        variant: 'outlined',
+                        required: true
                       }
                     }}
                 />
@@ -390,7 +391,7 @@ const IndependentProductionModal = ({
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                 <DateTimePicker
-                    label="생산종료일시"
+                    label="생산종료일시 (필수)"
                     value={productionData.prodEndTime}
                     onChange={(newValue) => handleDateChange('prodEndTime', newValue)}
                     format="yyyy-MM-dd HH:mm"
@@ -398,6 +399,7 @@ const IndependentProductionModal = ({
                       textField: {
                         fullWidth: true,
                         variant: 'outlined',
+                        required: true,
                         error: validationErrors.date,
                         helperText: validationErrors.date ? "종료일시는 시작일시 이후여야 합니다" : ""
                       }
@@ -473,9 +475,13 @@ const IndependentProductionModal = ({
                     '제품ID는 필수 입력 항목입니다.' :
                     validationErrors.warehouseId ?
                         '창고는 필수 입력 항목입니다.' :
-                        validationErrors.date ?
-                            '종료일시는 시작일시 이후여야 합니다.' :
-                            '입력 정보를 확인해주세요.'}
+                        !productionData.prodStartTime ? 
+                            '생산시작일시는 필수 입력 항목입니다.' :
+                            !productionData.prodEndTime ?
+                                '생산종료일시는 필수 입력 항목입니다.' :
+                                validationErrors.date ?
+                                    '종료일시는 시작일시 이후여야 합니다.' :
+                                    '입력 정보를 확인해주세요.'}
           </Typography>
           <Box>
             <Button 

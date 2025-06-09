@@ -25,3 +25,10 @@ yarn-error.log*
 ### IntelliJ IDEA ###
 .idea
 .idea/
+
+### localHistory Ignore ( agh ) ###
+.localhistory/
+localhistory/
+.history/
+
+

@@ -34,7 +34,7 @@ import {
   WAREHOUSE_OPTIONS,
   START_PRODUCTION_MOBILE,
   UPDATE_PRODUCTION_RESULT_MOBILE,
-  DELETE_PRODUCTION_RESULT
+  DELETE_PRODUCTION_RESULTS
 } from './ProductionResultGraphQL';
 import { SEARCH_CONDITIONS } from './ProductionResultConstants';
 import ProductionResultList from './components/ProductionResultList';
@@ -488,12 +488,38 @@ const MobileProductionResult = () => {
             flagActive: true
           },
           defectInfos: defectInfos.map(info => ({
+            prodResultId: formData.prodResultId || null,
+            workOrderId: formData.workOrderId || null,
+            productId: formData.productId || null,
+            productName: productOptions.find(p => p.systemMaterialId === formData.productId)?.materialName || null,
+            defectName: null,
             defectQty: parseFloat(info.defectQty) || 0,
+            defectCause: info.defectCause || null,
+            state: info.state || 'NEW',
+            resultInfo: info.resultInfo || null,
+            defectType: info.defectCause || null,
             defectReason: info.defectReason || null,
-            resultInfo: info.resultInfo || null
+            equipmentId: formData.equipmentId || null,
+            flagActive: true
           }))
         }
       });
+      
+      console.log('서버에 전달된 defectInfos:', defectInfos.map(info => ({
+        prodResultId: formData.prodResultId || null,
+        workOrderId: formData.workOrderId || null,
+        productId: formData.productId || null,
+        productName: productOptions.find(p => p.systemMaterialId === formData.productId)?.materialName || null,
+        defectName: null,
+        defectQty: parseFloat(info.defectQty) || 0,
+        defectCause: info.defectCause || null,
+        state: info.state || 'NEW',
+        resultInfo: info.resultInfo || null,
+        defectType: info.defectCause || null,
+        defectReason: info.defectReason || null,
+        equipmentId: formData.equipmentId || null,
+        flagActive: true
+      })));
       
       if (data.updateProductionResultAtMobile) {
         setSnackbar({
@@ -532,21 +558,22 @@ const MobileProductionResult = () => {
     setDeleteTargetId(null);
   };
 
-  // 생산실적 삭제 핸들러
+  // 생산실적 삭제 핸들러 (다중 삭제 API 사용)
   const handleDeleteProductionResult = async () => {
     if (!deleteTargetId) return;
     
     try {
       setSaving(true);
       
+      // 단일 ID를 배열로 감싸서 다중 삭제 API 호출
       const { data } = await executeMutation({
-        mutation: DELETE_PRODUCTION_RESULT,
+        mutation: DELETE_PRODUCTION_RESULTS,
         variables: {
-          prodResultId: deleteTargetId
+          prodResultIds: [deleteTargetId] // 배열로 감싸서 전송
         }
       });
       
-      if (data.deleteProductionResult) {
+      if (data.deleteProductionResults) {
         setSnackbar({
           open: true,
           message: '생산실적이 삭제되었습니다.',
@@ -679,8 +706,21 @@ const MobileProductionResult = () => {
         open={isDefectInfoDialogOpen}
         onClose={handleCloseDefectInfoDialog}
         defectInfos={defectInfos}
+        productionResult={selectedResult}
         onSave={(updatedDefectInfos) => {
-          setDefectInfos(updatedDefectInfos);
+          // 웹버전과 같이 서버 형식으로 변환
+          const defectInfosForServer = updatedDefectInfos.map(item => ({
+            workOrderId: selectedResult?.workOrderId || null,
+            prodResultId: selectedResult?.prodResultId || null,
+            productId: selectedResult?.productId || null,
+            defectQty: Number(item.defectQty),
+            defectCause: item.defectCause,
+            resultInfo: item.resultInfo,
+            state: 'NEW',
+            flagActive: true
+          }));
+          
+          setDefectInfos(defectInfosForServer);
           setIsDefectInfoDialogOpen(false);
         }}
         getAccentColor={getAccentColor}

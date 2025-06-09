@@ -21,6 +21,7 @@ export const NEW_PRODUCTION_RESULT = {
 // 신규 불량정보 기본값
 export const NEW_DEFECT_INFO = {
     defectQty: 0,
+    defectCause: "",
     defectReason: "",
     resultInfo: ""
 }; 

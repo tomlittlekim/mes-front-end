@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { gql } from '@apollo/client';
 import { ALL_MATERIALS_QUERY } from "../../../graphql-queries/material-master/materialQueries";
-import { getGridCodeList } from '../../../api/standardInfo/commonCodeApi';
+import {getDefaultGridCodeList, getGridCodeList} from '../../../api/standardInfo/commonCodeApi';
 
 const GET_ALL_MATERIALS = gql`${ALL_MATERIALS_QUERY}`;
 
@@ -15,17 +15,29 @@ export const useMaterialData = (executeQuery) => {
     // 공통코드 로드
     useEffect(() => {
         const loadCommonCodes = async () => {
-            const codeClassIds = [
+            // site, comp cd 따라 다르게 호출되는 부분
+            const normalCodes = [
                 'CD20250402131435416', // 단위
-                'CD20250428144831625', //자재유형
-                'CD20250428150231000', //원부자재 제품반제품 - 자재종류
-                'CD20250428150231541', //제품반제품
-                'CD20250428145908166' //원부자재
+                'CD20250428144831625', // 자재유형
+            ];
+
+            // site, comp cd = default 호출
+            const defaultCodes = [
+                'CD20250428150231000', // 원부자재 제품반제품 - 자재종류
+                'CD20250428150231541', // 제품반제품
+                'CD20250428145908166', // 원부자재
             ];
 
             try {
-                const codes = await getGridCodeList(codeClassIds);
-                setCommonCodes(codes);
+                const [codes1, codes2] = await Promise.all([
+                    getGridCodeList(normalCodes),
+                    getDefaultGridCodeList(defaultCodes)
+                ]);
+
+                setCommonCodes({
+                    ...codes1,
+                    ...codes2
+                });
             } catch (error) {
                 console.error('공통코드 로드 실패:', error);
             }
@@ -49,7 +61,8 @@ export const useMaterialData = (executeQuery) => {
                             ...material,
                             id: material.systemMaterialId,
                             materialType: typeGroup.materialType,
-                            materialCategory: category.materialCategory
+                            materialCategory: category.materialCategory,
+                            materialCategoryName: category.materialCategoryName
                         })) || [];
                         return [...materials, ...categoryMaterials];
                     }, []) || [];
@@ -76,8 +89,42 @@ export const useMaterialData = (executeQuery) => {
         }
     };
 
+    const loadBOMMaterials = async (materialType) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const result = await executeQuery(GET_ALL_MATERIALS);
+
+            if (result.data?.getAllMaterials) {
+                // materialType에 맞는 것만 평탄화
+                const flattenedMaterials = result.data.getAllMaterials
+                    .filter(typeGroup => typeGroup.materialType === materialType)
+                    .flatMap(typeGroup =>
+                        (typeGroup.categories || []).flatMap(category =>
+                            (category.materials || []).map(material => ({
+                                ...material,
+                                id: material.systemMaterialId,
+                                materialType: typeGroup.materialType,
+                                materialCategory: category.materialCategory,
+                                materialCategoryName: category.materialCategoryName
+                            }))
+                        )
+                    );
+
+                return flattenedMaterials; // 바로 옵션에 쓸 수 있음
+            }
+            return [];
+        } catch (error) {
+            setError(error);
+            return [];
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadMaterials();
+        loadBOMMaterials();
     }, []);
 
     const getMaterialsByType = (materialType) => {
@@ -98,6 +145,7 @@ export const useMaterialData = (executeQuery) => {
         getMaterialsByType,
         getMaterialById,
         loadMaterials,
+        loadBOMMaterials,
         // 공통코드 옵션들
         unitOptions: commonCodes['CD20250402131435416'] || [],
         materialCategoryOptions: commonCodes['CD20250428144831625'] || [],

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Typography, FormControl, Select, MenuItem } from '@mui/material';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
+import { Typography, FormControl, Select, MenuItem, Stack } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -42,6 +42,10 @@ const WorkOrderList = ({
   tabId,
   productMaterials = []
 }) => {
+  // 선택된 행들을 추적하기 위한 ref와 상태
+  const selectedRowIdsRef = useRef([]);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
+
   // 상태 옵션 정의
   const stateOptions = [
     { value: 'PLANNED', label: '계획됨' },
@@ -291,14 +295,116 @@ const WorkOrderList = ({
     }
   ]), [shiftOptions, stateOptions, productMaterials]);
 
+  // 선택 변경 핸들러
+  const handleSelectionChange = useCallback((newSelectionModel) => {
+    selectedRowIdsRef.current = newSelectionModel;
+    setSelectedRowIds(newSelectionModel);
+  }, []);
+
+  // 다중 삭제 핸들러
+  const handleMultipleDelete = useCallback(() => {
+    let currentSelection = selectedRowIdsRef.current.length > 0 ? selectedRowIdsRef.current : selectedRowIds;
+    
+    // 백업 방법: DOM에서 직접 체크된 항목들 찾기
+    if (!currentSelection || currentSelection.length === 0) {
+      try {
+        const checkedInputs = document.querySelectorAll('[data-testid="checkbox-selection-row"]:checked');
+        const checkedRowIds = Array.from(checkedInputs).map(input => {
+          const row = input.closest('[data-rowindex]');
+          if (row) {
+            const rowIndex = row.getAttribute('data-rowindex');
+            return workOrderList[parseInt(rowIndex)]?.id;
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        if (checkedRowIds.length > 0) {
+          currentSelection = checkedRowIds;
+        }
+      } catch (error) {
+        console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
+      }
+    }
+    
+    if (currentSelection && currentSelection.length > 0) {
+      onDeleteWorkOrder(currentSelection);
+    } else {
+      onDeleteWorkOrder(); // 기존 방식 호환성을 위해 빈 배열 전달
+    }
+  }, [onDeleteWorkOrder, selectedRowIds, workOrderList]);
+
+  // 다중 작업시작 핸들러
+  const handleMultipleStartWork = useCallback(() => {
+    let currentSelection = selectedRowIdsRef.current.length > 0 ? selectedRowIdsRef.current : selectedRowIds;
+    
+    // 백업 방법: DOM에서 직접 체크된 항목들 찾기
+    if (!currentSelection || currentSelection.length === 0) {
+      try {
+        const checkedInputs = document.querySelectorAll('[data-testid="checkbox-selection-row"]:checked');
+        const checkedRowIds = Array.from(checkedInputs).map(input => {
+          const row = input.closest('[data-rowindex]');
+          if (row) {
+            const rowIndex = row.getAttribute('data-rowindex');
+            return workOrderList[parseInt(rowIndex)]?.id;
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        if (checkedRowIds.length > 0) {
+          currentSelection = checkedRowIds;
+        }
+      } catch (error) {
+        console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
+      }
+    }
+    
+    if (currentSelection && currentSelection.length > 0) {
+      onStartWork(currentSelection);
+    } else {
+      onStartWork(); // 기존 방식 호환성을 위해 빈 배열 전달
+    }
+  }, [onStartWork, selectedRowIds, workOrderList]);
+
+  // 다중 작업완료 핸들러
+  const handleMultipleCompleteWork = useCallback(() => {
+    let currentSelection = selectedRowIdsRef.current.length > 0 ? selectedRowIdsRef.current : selectedRowIds;
+    
+    // 백업 방법: DOM에서 직접 체크된 항목들 찾기
+    if (!currentSelection || currentSelection.length === 0) {
+      try {
+        const checkedInputs = document.querySelectorAll('[data-testid="checkbox-selection-row"]:checked');
+        const checkedRowIds = Array.from(checkedInputs).map(input => {
+          const row = input.closest('[data-rowindex]');
+          if (row) {
+            const rowIndex = row.getAttribute('data-rowindex');
+            return workOrderList[parseInt(rowIndex)]?.id;
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        if (checkedRowIds.length > 0) {
+          currentSelection = checkedRowIds;
+        }
+      } catch (error) {
+        console.warn('DOM에서 선택된 행을 찾는 중 오류:', error);
+      }
+    }
+    
+    if (currentSelection && currentSelection.length > 0) {
+      onCompleteWork(currentSelection);
+    } else {
+      onCompleteWork(); // 기존 방식 호환성을 위해 빈 배열 전달
+    }
+  }, [onCompleteWork, selectedRowIds, workOrderList]);
+
   // 작업지시 목록 그리드 버튼
   const workOrderGridButtons = useMemo(() => ([
     { label: '등록', onClick: onAddWorkOrder, icon: <AddIcon /> },
     { label: '저장', onClick: onSaveWorkOrder, icon: <SaveIcon /> },
-    { label: '삭제', onClick: onDeleteWorkOrder, icon: <DeleteIcon /> },
-    { label: '작업시작', onClick: onStartWork, icon: <PlayCircleOutlineIcon /> },
-    { label: '작업완료', onClick: onCompleteWork, icon: <CheckCircleOutlineIcon /> }
-  ]), [onAddWorkOrder, onSaveWorkOrder, onDeleteWorkOrder, onStartWork, onCompleteWork]);
+    { label: '삭제', onClick: handleMultipleDelete, icon: <DeleteIcon /> },
+    { label: '작업시작', onClick: handleMultipleStartWork, icon: <PlayCircleOutlineIcon /> },
+    { label: '작업완료', onClick: handleMultipleCompleteWork, icon: <CheckCircleOutlineIcon /> }
+  ]), [onAddWorkOrder, onSaveWorkOrder, handleMultipleDelete, handleMultipleStartWork, handleMultipleCompleteWork]);
 
   // 그리드 속성 설정
   const gridProps = useMemo(() => ({
@@ -316,9 +422,27 @@ const WorkOrderList = ({
     }
   }), []);
 
+  // 작업지시 목록 그리드 커스텀 헤더
+  const CustomHeader = () => (
+      <Stack direction="column" spacing={0.5} width="100%">
+        <Typography 
+          variant="subtitle1" 
+          fontWeight="600"
+          sx={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '100%'
+          }}
+        >
+          작업지시 목록 {selectedPlan ? '- ' + selectedPlan.prodPlanId : ''}
+        </Typography>
+      </Stack>
+  );
+
   return (
       <EnhancedDataGridWrapper
-          title={`작업지시목록 ${selectedPlan ? '- ' + selectedPlan.prodPlanId : ''}`}
+          title={<CustomHeader />}
           key={refreshKey + "-workorders"}
           rows={workOrderList}
           columns={workOrderColumns}
@@ -328,7 +452,12 @@ const WorkOrderList = ({
           tabId={tabId + "-work-orders"}
           gridProps={{
             ...gridProps,
-            initialState: workOrderInitialState
+            initialState: workOrderInitialState,
+            checkboxSelection: true,
+            onRowSelectionModelChange: handleSelectionChange,
+            onSelectionModelChange: handleSelectionChange,
+            rowSelectionModel: selectedRowIds,
+            selectionModel: selectedRowIds
           }}
       />
   );

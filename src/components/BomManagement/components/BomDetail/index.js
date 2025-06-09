@@ -24,7 +24,9 @@ const BomDetail = ({
   handleDetailDelete,
   setBomDetailList,
   handleOpenMaterialSelectModal,
-  apiRef
+  apiRef,
+  //드롭다운 옵션
+  materialCategoryOptions,
 }) => {
   // 그리드 버튼 정의
   const bomDetailGridButtons = [
@@ -33,14 +35,18 @@ const BomDetail = ({
     { label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon /> }
   ];
 
+    // 드롭다운 옵션이 포함된 컬럼 생성
   // 컬럼 정의 가져오기
-  const bomDetailColumns = getBomDetailColumns(handleOpenMaterialSelectModal);
+    const bomDetailColumns = getBomDetailColumns({
+        handleOpenMaterialSelectModal,
+        materialCategoryOptions
+    });
 
   return (
     <Grid item xs={12} md={6}>
       <EnhancedDataGridWrapper
         key={selectedBom?.bomId || 'empty'}
-        title={`상세정보 ${selectedBom ? '- ' + selectedBom.bomName : ''}`}
+        title={`상세정보 ${selectedBom ? '- ' + selectedBom.materialName : ''}`}
         rows={bomDetailList}
         columns={bomDetailColumns}
         buttons={bomDetailGridButtons}

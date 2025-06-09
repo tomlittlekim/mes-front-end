@@ -9,6 +9,9 @@ import {
     BOM_DETAIL_DELETE,
     BOM_DETAIL_NEW_ROW_STRUCTURE
 } from '../constants/BomConstants';
+import {getGridCodeList} from "../../../api/standardInfo/commonCodeApi";
+import {useGridValidation} from "../../../utils/grid/useGridValidation";
+import {getColumns} from "../../MaterialManagement/HalfProductMaterial/components/HalfProductGrid";
 
 /**
  * BOM 상세 데이터 관리를 위한 커스텀 훅
@@ -22,6 +25,25 @@ export const useBomDetailData = (executeQuery, executeMutation, selectedBom) => 
     const [bomDetailList, setBomDetailList] = useState([]);
     const [prevBomId, setPrevBomId] = useState(null);
     const { generateId, formatGridData } = useGridUtils();
+    const [commonCodes, setCommonCodes] = useState({});
+
+    // 공통코드 로드
+    useEffect(() => {
+        const loadCommonCodes = async () => {
+            const codeClassIds = [
+                'CD20250428144831625', //자재유형
+            ];
+
+            try {
+                const codes = await getGridCodeList(codeClassIds);
+                setCommonCodes(codes);
+            } catch (error) {
+                console.error('공통코드 로드 실패:', error);
+            }
+        };
+
+        loadCommonCodes();
+    }, []);
 
     // 데이터 포맷팅 함수
     const formatBomDetailData = (data) => formatGridData(data, 'getBomDetails', bom => ({
@@ -155,6 +177,9 @@ export const useBomDetailData = (executeQuery, executeMutation, selectedBom) => 
         }
     }, [selectedBom?.bomId]); // bomId가 변경될 때만 실행
 
+    // 드롭다운 옵션들
+    const materialCategoryOptions = commonCodes['CD20250428144831625'] || [];
+
     // BOM 상세 저장 처리
     const handleDetailSave = async (selectedBomId) => {
         if (!selectedBomId) return false;
@@ -243,7 +268,9 @@ export const useBomDetailData = (executeQuery, executeMutation, selectedBom) => 
         loadDetailData,
         handleDetailSave,
         handleDetailDelete,
-        generateId
+        generateId,
+        //드랍다운 옵션들
+        materialCategoryOptions,
     };
 };
 
