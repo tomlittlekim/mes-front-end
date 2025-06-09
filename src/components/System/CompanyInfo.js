@@ -204,10 +204,7 @@ const CompanyInfo = (props) => {
       });
 
       setIsEditMode(false);
-      if (isDeveloper) {
-        const companiesResponse = await getCompanies(searchCondition);
-        setCompanyList(companiesResponse.getCompanies);
-      }
+      await loadInitialData()
     } catch (error) {
       console.error('저장 중 오류 발생:', error);
       Swal.fire({
@@ -274,8 +271,7 @@ const CompanyInfo = (props) => {
             confirmButtonText: '확인'
           });
 
-          const companiesResponse = await getCompanies(searchCondition);
-          setCompanyList(companiesResponse.getCompanies);
+          await loadInitialData()
           setSelectedCompany(null);
           setDetailInfo({
             id: null,
@@ -367,8 +363,8 @@ const CompanyInfo = (props) => {
       headerName: '구독 여부',
       flex: 0.5,
       renderCell: (params) => (
-        <span className={`status-badge ${params.value ? 'active' : 'inactive'}`}>
-          {params.value ? '예' : '아니오'}
+        <span className={`status-badge ${params.value === 'true' ? 'active' : 'inactive'}`}>
+          {params.value === 'true' ? '예' : '아니오'}
         </span>
       )
     }

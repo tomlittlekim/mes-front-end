@@ -24,7 +24,7 @@ const upsertMenusQuery = `
 
 // 메뉴 삭제 뮤테이션
 const deleteMenuQuery = `
-    mutation deleteMenu($menuId: String) {
+    mutation deleteMenu($menuId: String!) {
         deleteMenu(menuId: $menuId)
     }
 `;
