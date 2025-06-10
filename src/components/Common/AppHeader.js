@@ -432,15 +432,15 @@ const AppHeader = (props) => {
               <ListItemText>내 프로필</ListItemText>
             </MenuItem>
 
-            {/* 개발 환경에서만 도메인 전환 메뉴 표시 */}
-            {(!nginxEnv || nginxEnv === '') && (
-              <MenuItem onClick={handleDomainToggle}>
-                <ListItemIcon>
-                  <DomainIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}</ListItemText>
-              </MenuItem>
-            )}
+            {/* 개발 환경에서만 도메인 전환 메뉴 표시  -  대표님께서 가려달라고 하셔서 주석처리함 */}
+            {/*{(!nginxEnv || nginxEnv === '') && (*/}
+            {/*  <MenuItem onClick={handleDomainToggle}>*/}
+            {/*    <ListItemIcon>*/}
+            {/*      <DomainIcon fontSize="small" />*/}
+            {/*    </ListItemIcon>*/}
+            {/*    <ListItemText>{`${domain === DOMAINS.IMOS ? 'PEMS' : 'iMOS'} 도메인으로 전환`}</ListItemText>*/}
+            {/*  </MenuItem>*/}
+            {/*)}*/}
 
             <MenuItem onClick={handleUserMenuClose}>
               <ListItemIcon>
