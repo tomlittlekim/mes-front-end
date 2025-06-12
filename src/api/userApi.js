@@ -91,6 +91,16 @@ const resetPwdQuery = `
 `
 export const resetPwd = (loginId) => graphFetch(resetPwdQuery, {loginId:loginId})
 
+const resetPasswordQuery = `
+        mutation resetPasswordByUserInfo($userName: String!, $phoneNum: String!) {
+            resetPasswordByUserInfo(userName: $userName, phoneNum: $phoneNum)
+        }
+    `;
+export const resetPasswordByUserInfo = async (req) => {
+    const result = await graphFetch(resetPasswordQuery, {userName: req.name, phoneNum: req.phoneNumber});
+    return result.resetPasswordByUserInfo;
+};
+
 export const getUserSummery = async (loginId) => {
     const userSummeryQuery = `
     query getUserSummery($loginId: String!) {
