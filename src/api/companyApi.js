@@ -33,8 +33,8 @@ const upsertCompanyMutation = `
 
 // 회사 삭제 뮤테이션
 const deleteCompanyMutation = `
-  mutation deleteCompany($id: Int!) {
-    deleteCompany(id: $id)
+  mutation deleteCompany($compCd: String!) {
+    deleteCompany(compCd: $compCd)
   }
 `;
 
@@ -82,6 +82,6 @@ export const getCompanyDetails = () => graphFetch(companyDetailsQuery);
 
 export const upsertCompany = (req) => graphFetch(upsertCompanyMutation, { req });
 
-export const deleteCompany = (id) => graphFetch(deleteCompanyMutation, { id });
+export const deleteCompany = (compCd) => graphFetch(deleteCompanyMutation, { compCd: compCd });
 
 export const getCompaniesForSelect = () => graphFetch(companiesForSelectQuery); 

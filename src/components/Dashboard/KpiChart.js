@@ -228,7 +228,7 @@ const KpiChart = ({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={kpiData.chartData}
-              margin={{ top: 15, right: 30, left: 0, bottom: 5 }}
+              margin={{ top: 20, right: 20 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis 
@@ -279,7 +279,7 @@ const KpiChart = ({
                   label={{ 
                     value: `목표: ${kpiData.targetValue}${kpiData.unit || ''}`,
                     fill: '#ff0000',
-                    position: 'right'
+                    position: 'insideRight',
                   }}
                 />
               )}
@@ -298,10 +298,10 @@ const KpiChart = ({
       case 'line':
       default:
         return (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" aspect={2}>
             <LineChart
               data={kpiData.chartData}
-              margin={{ top: 15, right: 30, left: 0, bottom: 5 }}
+              margin={{ top: 20, right: 20 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis 
@@ -336,7 +336,7 @@ const KpiChart = ({
                   label={{ 
                     value: `목표: ${kpiData.targetValue}${kpiData.unit || ''}`,
                     fill: '#ff0000',
-                    position: 'right'
+                    position: 'insideRight',
                   }}
                 />
               )}

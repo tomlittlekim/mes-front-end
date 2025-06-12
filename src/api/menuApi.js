@@ -24,8 +24,8 @@ const upsertMenusQuery = `
 
 // 메뉴 삭제 뮤테이션
 const deleteMenuQuery = `
-    mutation deleteMenu($id: Int) {
-        deleteMenu(id: $id)
+    mutation deleteMenu($menuId: String!) {
+        deleteMenu(menuId: $menuId)
     }
 `;
 
@@ -36,4 +36,4 @@ export const getMenus = () => graphFetch(menusQuery);
 export const upsertMenus = (req) => graphFetch(upsertMenusQuery, { req });
 
 // 메뉴 삭제
-export const deleteMenu = (id) => graphFetch(deleteMenuQuery, { id }); 
+export const deleteMenu = (menuId) => graphFetch(deleteMenuQuery, { menuId: menuId });

@@ -290,7 +290,7 @@ const MenuManagement = (props) => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const res = await deleteMenu(selectedMenu.id);
+          const res = await deleteMenu(selectedMenu.menuId);
           if (res.deleteMenu) {  // deleteCompany -> deleteMenu로 수정
             await Swal.fire({
               icon: 'success',

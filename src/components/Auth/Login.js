@@ -12,12 +12,17 @@ import {
   Checkbox,
   useTheme,
   Divider,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress, Tooltip
 } from '@mui/material';
-import { Visibility, VisibilityOff, Person, Lock, SyncAlt } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Person, Lock, SyncAlt, Phone, AccountCircle } from '@mui/icons-material';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import Swal from 'sweetalert2';
-import {signIn} from "../../api/userApi";
+import {signIn, resetPasswordByUserInfo} from "../../api/userApi";
 import useLocalStorageVO from "../../components/Common/UseLocalStorageVO"
 import {useLocation} from "react-router-dom";
 
@@ -35,10 +40,72 @@ const Login = () => {
   const isDarkMode = theme.palette.mode === 'dark';
   const { setUserInfo } = useLocalStorageVO();
 
+  // 비밀번호 초기화 관련 상태
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetData, setResetData] = useState({
+    name: '',
+    phoneNumber: ''
+  });
+
+
   const handleChange = (e) => {
     let { name, value } = e.target;
     setReq({...req, [name]: value});
   }
+
+  // 비밀번호 초기화 핸들러들
+  const handleResetDataChange = (e) => {
+    const { name, value } = e.target;
+    setResetData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleOpenResetDialog = () => {
+    setIsResetDialogOpen(true);
+    setResetData({ name: '', phoneNumber: '' });
+  };
+
+  const handleCloseResetDialog = () => {
+    setIsResetDialogOpen(false);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!resetData.name.trim() || !resetData.phoneNumber.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: '입력 오류',
+        text: '이름과 휴대폰번호를 모두 입력해주세요.',
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const result = await resetPasswordByUserInfo({
+        name: resetData.name.trim(),
+        phoneNumber: resetData.phoneNumber.replace(/-/g, '')
+      });
+
+      if (result === true) {
+        handleCloseResetDialog();
+        Swal.fire({
+          icon: 'success',
+          title: '비밀번호 초기화 완료',
+          text: '비밀번호가 0000으로 초기화되었습니다.',
+        });
+      } else {
+        throw new Error('일치하는 사용자 정보를 찾을 수 없습니다.');
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: '초기화 실패',
+        text: error.message || '서버 오류가 발생했습니다.',
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // 컴포넌트 마운트 시 localStorage에서 저장된 아이디 불러오기
   useEffect(() => {
@@ -219,6 +286,10 @@ const Login = () => {
                   ),
                 }}
             />
+            <Typography variant="caption" color="error" sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <span style={{ color: "red", marginRight: 2 }}>*</span>
+              아이디는 휴대폰번호입니다
+            </Typography>
 
             <TextField
                 margin="normal"
@@ -268,9 +339,17 @@ const Login = () => {
                   }
                   label="아이디 저장"
               />
-              <Button variant="text" size="small" sx={{ color: getAccentColor() }}>
-                비밀번호 찾기
+
+              <Tooltip title="비밀번호를 0000으로 초기화합니다">
+              <Button 
+                variant="text" 
+                size="small" 
+                sx={{ color: getAccentColor() }}
+                onClick={handleOpenResetDialog}
+              >
+                비밀번호 초기화
               </Button>
+              </Tooltip>
             </Box>
 
             <Button
@@ -319,6 +398,54 @@ const Login = () => {
             </Typography>
           </Box>
         </Paper>
+
+        {/* 비밀번호 초기화 팝업 */}
+        <Dialog open={isResetDialogOpen} onClose={handleCloseResetDialog} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ textAlign: 'center', color: getAccentColor() }}>
+            비밀번호 초기화
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'text.secondary' }}>
+              이름과 휴대폰번호를 입력해주세요.
+            </Typography>
+            <TextField
+              fullWidth
+              label="이름"
+              name="name"
+              value={resetData.name}
+              onChange={handleResetDataChange}
+              disabled={isResetting}
+              margin="normal"
+              InputProps={{
+                startAdornment: <InputAdornment position="start"><AccountCircle /></InputAdornment>
+              }}
+            />
+            <TextField
+              fullWidth
+              label="휴대폰번호"
+              name="phoneNumber"
+              placeholder="010-1234-5678"
+              value={resetData.phoneNumber}
+              onChange={handleResetDataChange}
+              disabled={isResetting}
+              margin="normal"
+              InputProps={{
+                startAdornment: <InputAdornment position="start"><Phone /></InputAdornment>
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={handleCloseResetDialog} disabled={isResetting}>취소</Button>
+            <Button 
+              onClick={handlePasswordReset}
+              variant="contained"
+              disabled={isResetting}
+              sx={{ backgroundColor: getAccentColor() }}
+            >
+              {isResetting ? <CircularProgress size={20} /> : '초기화'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
   );
 };
