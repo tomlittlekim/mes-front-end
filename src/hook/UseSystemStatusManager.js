@@ -67,7 +67,7 @@ function useSystemStatusManager() {
         setUserGroup(userData ?? []);
     }
 
-    const commonData = async (list: []): [] => {
+    const commonData = async (list) => {
         return await list.filter(data => data?.compCd === 'default');
     }
 
