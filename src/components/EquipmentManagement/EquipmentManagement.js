@@ -483,6 +483,8 @@ const EquipmentManagement = (props) => {
           ...newRow,
           factoryName: selectedFactory.factoryName,
           factoryCode: selectedFactory.factoryCode,
+          lineId: '',
+          lineName: '',
         };
       }
     }
