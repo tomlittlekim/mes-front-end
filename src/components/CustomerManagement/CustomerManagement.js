@@ -50,6 +50,7 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessRegNo: '',
+      businessType: '',
     }
   });
 
@@ -166,6 +167,7 @@ const CustomerManagement = (props) => {
       vendorName: '',
       ceoName: '',
       businessRegNo: '',
+      businessType: '',
     });
   };
 
