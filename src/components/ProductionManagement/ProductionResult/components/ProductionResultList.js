@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
-import { Typography, Button, Stack, Select, MenuItem, TextField } from '@mui/material';
+import { Typography, Button, Stack, Select, MenuItem, TextField, Grid, Box } from '@mui/material';
 import { format } from 'date-fns';
 import { EnhancedDataGridWrapper } from '../../../Common';
 import AddIcon from '@mui/icons-material/Add';
@@ -12,6 +12,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import ko from "date-fns/locale/ko";
+import { DataGrid } from '@mui/x-data-grid';
 
 /**
  * 생산실적 목록 컴포넌트
@@ -27,6 +28,7 @@ const ProductionResultList = ({
   onCreateIndependentResult,
   onSave,
   onDelete,
+  onDefectInfoRegister,
   equipmentOptions,
   productOptions,
   warehouseOptions = [],
@@ -34,7 +36,8 @@ const ProductionResultList = ({
   setProductionResult,
   productionResult,
   tabId,
-  height = 350
+  height = 350,
+  defectInfosMap
 }) => {
   // 선택된 행들을 추적하기 위한 ref와 상태
   const selectedRowIdsRef = useRef([]);
@@ -493,6 +496,67 @@ const ProductionResultList = ({
         return value || null;
       }
     },
+    // 불량정보등록 버튼 컬럼
+    {
+      field: 'defectInfoAction',
+      headerName: '불량정보',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      renderCell: (params) => {
+        const defectQty = Number(params.row.defectQty) || 0;
+        
+        // 불량수량이 0 이하면 버튼 표시하지 않음
+        if (defectQty <= 0) {
+          return null;
+        }
+
+        // 신규 행이 아니면 버튼 표시하지 않음 (등록된 행은 수정 불가)
+        if (!params.row.isNew && params.row.prodResultId) {
+          return (
+            <Typography variant="caption" color="text.secondary">
+              등록완료
+            </Typography>
+          );
+        }
+
+        // 불량정보가 등록되어 있는지 확인
+        const hasDefectInfo = defectInfosMap && defectInfosMap[params.row.id] && 
+                              defectInfosMap[params.row.id].length > 0;
+
+        console.log('버튼 렌더링:', {
+          rowId: params.row.id,
+          defectQty,
+          hasDefectInfo,
+          defectInfosMap: defectInfosMap?.[params.row.id] || '없음'
+        });
+
+        return (
+          <Button
+            size="small"
+            variant={hasDefectInfo ? "contained" : "outlined"}
+            color={hasDefectInfo ? "success" : "warning"}
+            onClick={(e) => {
+              e.stopPropagation(); // 행 클릭 이벤트 방지
+              if (onDefectInfoRegister) {
+                onDefectInfoRegister(params.row);
+              }
+            }}
+            sx={{
+              minWidth: '80px',
+              fontSize: '0.75rem',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}
+          >
+            {hasDefectInfo ? '수정' : '등록'}
+          </Button>
+        );
+      }
+    },
     {
       field: 'createDate',
       headerName: '등록일시',
@@ -550,38 +614,61 @@ const ProductionResultList = ({
     }
     
     if (currentSelection && currentSelection.length > 0) {
-      // 선택된 생산실적들 중 실제 저장된 것들만 필터링 (prodResultId가 있는 것들)
+      // 선택된 생산실적들을 임시 행과 저장된 행으로 분리
       const selectedResults = productionResultList.filter(result => 
-        currentSelection.includes(result.id) && result.prodResultId
+        currentSelection.includes(result.id)
       );
       
-      if (selectedResults.length === 0) {
-        Swal.fire({
-          title: '알림',
-          text: '삭제할 수 있는 생산실적이 없습니다. 저장되지 않은 임시 데이터는 목록에서 직접 제거해주세요.',
-          icon: 'warning',
-          confirmButtonText: '확인'
-        });
-        return;
+      // 임시 행 (temp_ 로 시작하는 ID 또는 prodResultId가 없는 행)
+      const tempRows = selectedResults.filter(result => 
+        result.id.toString().startsWith('temp_') || !result.prodResultId
+      );
+      
+      // 저장된 행 (prodResultId가 있는 행)
+      const savedRows = selectedResults.filter(result => 
+        result.prodResultId && !result.id.toString().startsWith('temp_')
+      );
+      
+      // 임시 행이 있는 경우 바로 UI에서 제거
+      if (tempRows.length > 0) {
+        const tempRowIds = tempRows.map(row => row.id);
+        const updatedList = productionResultList.filter(row => !tempRowIds.includes(row.id));
+        setProductionResultList(updatedList);
+        
+        // 현재 선택된 생산실적이 삭제된 임시 행 중 하나라면 선택 해제
+        if (productionResult && tempRowIds.includes(productionResult.id)) {
+          setProductionResult(null);
+        }
       }
       
-      // 다중 삭제 확인 다이얼로그
-      Swal.fire({
-        title: '생산실적 삭제',
-        text: `선택된 ${selectedResults.length}건의 생산실적을 삭제하시겠습니까?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: '삭제',
-        cancelButtonText: '취소'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // prodResultId 목록 추출
-          const prodResultIds = selectedResults.map(result => result.prodResultId);
-          onDelete(prodResultIds); // 다중 삭제 함수 호출
-        }
-      });
+      // 저장된 행이 있는 경우 서버 삭제 진행
+      if (savedRows.length > 0) {
+        // 다중 삭제 확인 다이얼로그
+        Swal.fire({
+          title: '생산실적 삭제',
+          text: `선택된 ${savedRows.length}건의 생산실적을 삭제하시겠습니까?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // prodResultId 목록 추출
+            const prodResultIds = savedRows.map(result => result.prodResultId);
+            onDelete(prodResultIds); // 다중 삭제 함수 호출
+          }
+        });
+      } else if (tempRows.length > 0) {
+        // 임시 행만 삭제된 경우 완료 메시지 표시 (선택사항)
+        // Swal.fire({
+        //   title: '완료',
+        //   text: `${tempRows.length}개의 임시 항목이 제거되었습니다.`,
+        //   icon: 'success',
+        //   confirmButtonText: '확인'
+        // });
+      }
     } else {
       Swal.fire({
         title: '알림',
@@ -590,7 +677,7 @@ const ProductionResultList = ({
         confirmButtonText: '확인'
       });
     }
-  }, [onDelete, selectedRowIds, productionResultList]);
+  }, [onDelete, selectedRowIds, productionResultList, setProductionResultList, productionResult, setProductionResult]);
 
   // 생산실적 목록 그리드 버튼: 독립형 생산실적 버튼 추가
   const productionResultButtons = useMemo(() => {

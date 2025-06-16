@@ -23,13 +23,12 @@ export const useProductionResultManagement = (tabId) => {
   const [productOptions, setProductOptions] = useState([]);
   const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [isProductMaterialsLoaded, setIsProductMaterialsLoaded] = useState(false);
-  const { executeQuery } = useGraphQL();
+  const [defectInfosMap, setDefectInfosMap] = useState({});
 
-  // 작업지시 관련 상태 초기화 여부 추적
-  const isInitialDataLoaded = useRef(false);
-
-  // API 호출 중복 방지를 위한 ref
+  // 로딩 상태 추적 - 중복 호출 방지를 위한 ref
   const isLoadingRef = useRef(false);
+
+  const {executeQuery} = useGraphQL();
 
   // 작업지시 관련 훅
   const {
@@ -41,6 +40,9 @@ export const useProductionResultManagement = (tabId) => {
     refreshWorkOrderList,
     loadWorkOrders
   } = useProductionWorkOrder();
+
+  // API 호출 중복 방지를 위한 ref
+  const isInitialDataLoaded = useRef(false);
 
   // 제품 정보 로드 함수 - 메모이제이션 추가 및 중복 호출 방지
   const loadProductMaterials = useCallback(async (forceLoad = false) => { // forceLoad 파라미터 추가
@@ -206,14 +208,17 @@ export const useProductionResultManagement = (tabId) => {
     createIndependentResult,
     isIndependentModalOpen,
     closeIndependentModal,
-    handleSaveIndependentResult
+    handleSaveIndependentResult,
+    forceResetLoadingState, // 강제 상태 초기화 함수 추가
+    saveBatchResults, // 다중 저장 함수 추가
   } = useProductionResultOperations(
       selectedWorkOrder,
       setSelectedWorkOrder,
       workOrderList,
       refreshWorkOrderList,
       setProductionResultList,
-      setProductionResult
+      setProductionResult,
+      defectInfosMap
   );
 
   // 폼 핸들링 훅
@@ -277,10 +282,71 @@ export const useProductionResultManagement = (tabId) => {
     createIndependentResult();
   }, [createIndependentResult]);
 
-  // 저장 핸들러
+  // 저장 핸들러 - 다중 저장 지원
   const handleSave = useCallback(() => {
-    saveResult(productionResult, setProductionResult, setProductionResultList);
-  }, [saveResult, productionResult, setProductionResult, setProductionResultList]);
+    // 저장할 신규 행이 있는지 확인
+    const newRows = productionResultList.filter(row => 
+      row.isNew === true || 
+      row.id.toString().startsWith('temp_') || 
+      !row.prodResultId
+    );
+
+    if (newRows.length === 0) {
+      // 신규 행이 없으면 현재 선택된 행으로 단일 저장 시도
+      if (productionResult && (productionResult.isNew === true || 
+          productionResult.id.toString().startsWith('temp_') || 
+          !productionResult.prodResultId)) {
+        
+        // 단일 저장 시에도 불량정보 필수 검증
+        if (Number(productionResult.defectQty) > 0) {
+          // 불량정보가 이미 등록되어 있는지 확인
+          const hasDefectInfo = defectInfosMap[productionResult.id] && 
+                                defectInfosMap[productionResult.id].length > 0;
+          
+          if (!hasDefectInfo) {
+            // 불량정보가 없으면 모달 열기
+            openDefectInfoModal(productionResult);
+            return;
+          }
+          // 불량정보가 있으면 아래에서 바로 저장 진행
+        }
+        
+        saveResult(productionResult, setProductionResult, setProductionResultList);
+      } else {
+        Swal.fire({
+          title: '알림',
+          text: '저장할 신규 생산실적이 없습니다.',
+          icon: 'info',
+          confirmButtonText: '확인'
+        });
+      }
+      return;
+    }
+
+    if (newRows.length === 1) {
+      // 신규 행이 1개인 경우에도 불량정보 검증
+      const singleRow = newRows[0];
+      if (Number(singleRow.defectQty) > 0) {
+        // 불량정보가 이미 등록되어 있는지 확인
+        const hasDefectInfo = defectInfosMap[singleRow.id] && 
+                              defectInfosMap[singleRow.id].length > 0;
+        
+        if (!hasDefectInfo) {
+          // 불량정보가 없으면 해당 행을 선택하고 불량정보 모달을 직접 열기
+          setProductionResult(singleRow); // 해당 행을 선택
+          openDefectInfoModal(singleRow);
+          return;
+        }
+        // 불량정보가 있으면 아래에서 바로 저장 진행
+      }
+      
+      // 불량수량이 없거나 불량정보가 있으면 기존 단일 저장 로직 사용
+      saveResult(singleRow, setProductionResult, setProductionResultList);
+    } else {
+      // 신규 행이 여러 개인 경우 다중 저장 로직 사용 (불량정보 검증 포함)
+      saveBatchResults(productionResultList, setProductionResult, setProductionResultList, defectInfosMap);
+    }
+  }, [saveResult, saveBatchResults, productionResult, productionResultList, setProductionResult, setProductionResultList, defectInfosMap]);
 
   // 삭제 핸들러 (다중 삭제 지원)
   const handleDelete = useCallback((prodResultIds) => {
@@ -300,6 +366,30 @@ export const useProductionResultManagement = (tabId) => {
       setProductionResult(result);
     }
   }, [productionResultList]);
+
+  // 불량정보 저장 핸들러 래핑 (defectInfosMap 업데이트 포함)
+  const handleDefectInfoSave = useCallback((updatedDefectInfos) => {
+    if (currentProductionResult) {
+      console.log('불량정보 저장:', {
+        rowId: currentProductionResult.id,
+        defectInfos: updatedDefectInfos,
+        defectInfosLength: updatedDefectInfos?.length || 0
+      });
+      
+      // defectInfosMap 업데이트
+      setDefectInfosMap(prev => {
+        const newMap = {
+          ...prev,
+          [currentProductionResult.id]: updatedDefectInfos
+        };
+        console.log('업데이트된 defectInfosMap:', newMap);
+        return newMap;
+      });
+    }
+    
+    // 기존 저장 핸들러 호출
+    handleSaveDefectInfos(updatedDefectInfos);
+  }, [currentProductionResult, handleSaveDefectInfos]);
 
   // 초기 데이터 로드를 위한 useEffect - 중복 호출 방지 로직 추가
   useEffect(() => {
@@ -391,7 +481,7 @@ export const useProductionResultManagement = (tabId) => {
     isDefectInfoModalOpen,
     openDefectInfoModal,
     closeDefectInfoModal,
-    handleSaveDefectInfos,
+    handleDefectInfoSave,
     currentProductionResult,
     defectInfos,
 
@@ -406,7 +496,11 @@ export const useProductionResultManagement = (tabId) => {
     warehouseOptions, // 창고 옵션 목록
 
     // 리프레시 키
-    refreshKey
+    refreshKey,
+    
+    // 유틸리티 함수
+    forceResetLoadingState, // 강제 상태 초기화 함수
+    defectInfosMap, // 불량정보 맵
   };
 };
 

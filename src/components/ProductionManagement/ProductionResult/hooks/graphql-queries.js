@@ -77,10 +77,10 @@ export const PRODUCTION_RESULTS_QUERY = gql`
     }
 `;
 
-// 생산실적 저장 뮤테이션
+// 생산실적 저장 뮤테이션 (업데이트된 스키마 - 중첩 구조 지원)
 export const SAVE_PRODUCTION_RESULT_MUTATION = gql`
-    mutation SaveProductionResult($createdRows: [ProductionResultInput], $defectInfos: [DefectInfoInput]) {
-        saveProductionResult(createdRows: $createdRows, defectInfos: $defectInfos)
+    mutation SaveProductionResult($createdRows: [ProductionResultInput]) {
+        saveProductionResult(createdRows: $createdRows)
     }
 `;
 

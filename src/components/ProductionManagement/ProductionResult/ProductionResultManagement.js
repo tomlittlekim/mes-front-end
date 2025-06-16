@@ -77,7 +77,7 @@ const ProductionResultManagement = (props) => {
     isDefectInfoModalOpen,
     openDefectInfoModal,
     closeDefectInfoModal,
-    handleSaveDefectInfos,
+    handleDefectInfoSave,
     currentProductionResult,
     defectInfos,
     handleProductionResultEdit,
@@ -93,7 +93,10 @@ const ProductionResultManagement = (props) => {
     warehouseOptions, // 창고 옵션 목록
 
     // 리프레시 키
-    refreshKey
+    refreshKey,
+    
+    // 불량정보 맵
+    defectInfosMap
   } = useProductionResultManagement(props.tabId);
 
   // 도메인별 색상 설정 함수
@@ -190,6 +193,7 @@ const ProductionResultManagement = (props) => {
                     onCreateIndependentResult={handleCreateIndependentResult} // 독립 생산실적 모달 열기 함수
                     onSave={handleSave}
                     onDelete={handleDelete}
+                    onDefectInfoRegister={openDefectInfoModal} // 불량정보등록 버튼 클릭 핸들러
                     equipmentOptions={equipmentOptions}
                     productOptions={productOptions} // 제품 옵션 목록 확인
                     warehouseOptions={warehouseOptions} // 창고 옵션 목록 추가
@@ -198,6 +202,7 @@ const ProductionResultManagement = (props) => {
                     productionResult={productionResult}
                     tabId={props.tabId}
                     height={450}  // 높이 일치
+                    defectInfosMap={defectInfosMap} // 불량정보 맵 전달
                 />
               </Grid>
             </Grid>
@@ -258,14 +263,15 @@ const ProductionResultManagement = (props) => {
         </HelpModal>
 
         {/* 불량정보 모달 */}
-        <DefectInfoModal
-            open={isDefectInfoModalOpen}
-            onClose={closeDefectInfoModal}
-            onSave={handleSaveDefectInfos}
-            productionResult={currentProductionResult}
-            defectInfos={defectInfos}
-            defectTypes={defectTypes}
-        />
+        {isDefectInfoModalOpen && (
+            <DefectInfoModal
+                open={isDefectInfoModalOpen}
+                onClose={closeDefectInfoModal}
+                onSave={handleDefectInfoSave}
+                productionResult={currentProductionResult}
+                initialDefectInfos={defectInfos}
+            />
+        )}
 
         {/* 독립 생산실적 모달 */}
         <IndependentProductionModal
