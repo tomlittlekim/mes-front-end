@@ -54,6 +54,22 @@ export const useProductionResultOperations = (
   const cachedProductionResults = useRef([]);
   const isLoadingRef = useRef(false);
 
+  // ref를 통해 전역 맵에 추가하는 함수 - 내부 상태 참조
+  const setDefectInfosMapRef = useRef(null);
+
+  // 불량정보 맵 업데이트 함수 추가
+  const updateDefectInfosMap = useCallback((rowId, defectInfos) => {
+    if (setDefectInfosMapRef.current) {
+      setDefectInfosMapRef.current(prevMap => {
+        const newMap = {
+          ...prevMap,
+          [rowId]: defectInfos
+        };
+        return newMap;
+      });
+    }
+  }, []);
+
   // 강제로 로딩 상태를 초기화하는 함수
   const forceResetLoadingState = useCallback(() => {
     isLoadingRef.current = false;
@@ -295,6 +311,9 @@ export const useProductionResultOperations = (
       // 상태는 여기서 업데이트하지만, 바로 사용할 변수도 생성
       setDefectInfos(updatedDefectInfos);
 
+      // MuiGrid와 통일성을 위해 defectInfosMap에도 저장
+      updateDefectInfosMap(currentProductionResult.id, updatedDefectInfos);
+
       // 새로운 불량정보 배열로 업데이트
       const defectsForSave = updatedDefectInfos.map(info => ({
         prodResultId: currentProductionResult.prodResultId || '',
@@ -321,6 +340,9 @@ export const useProductionResultOperations = (
       // 모달 관련 상태 초기화
       setModalResolveReject({resolve: null, reject: null, saveAction: null});
       
+      // 독립 생산실적인지 확인 (workOrderId가 null인 경우)
+      const isIndependentResult = !currentProductionResult.workOrderId;
+      
       // 액션이 있으면 즉시 실행 - defectsForSave를 직접 전달
       if (currentSaveAction) {
         try {
@@ -332,6 +354,18 @@ export const useProductionResultOperations = (
           Message.showError({message: '불량정보 저장 중 오류가 발생했습니다.'});
         }
       } else {
+        // saveAction이 없는 경우 - MuiGrid 방식 또는 독립 생산실적
+        if (isIndependentResult) {
+          // 독립 생산실적인 경우 사용자에게 안내 메시지 표시
+          Swal.fire({
+            title: '불량정보 등록 완료',
+            html: `불량정보가 등록되었습니다.<br/><br/>생산실적을 저장하려면 <strong style="color: #1976d2;">"저장" 버튼</strong>을 클릭해주세요.`,
+            icon: 'success',
+            confirmButtonText: '확인',
+            confirmButtonColor: '#1976d2'
+          });
+        }
+        
         // saveAction이 없는 경우에도 로딩 상태 초기화
         isLoadingRef.current = false;
       }
@@ -344,7 +378,7 @@ export const useProductionResultOperations = (
       // 로딩 상태 확실히 초기화
       isLoadingRef.current = false;
     }
-  }, [currentProductionResult, modalResolveReject]);
+  }, [currentProductionResult, modalResolveReject, updateDefectInfosMap]);
 
   /**
    * 생산실적 저장 함수
@@ -418,11 +452,17 @@ export const useProductionResultOperations = (
             // 로딩 상태 설정
             isLoadingRef.current = true;
             
+            // 독립 생산실적인지 확인 (workOrderId가 없는 경우)
+            const workOrderInfo = selectedWorkOrder || {
+              workOrderId: currentRow.workOrderId,
+              productId: currentRow.productId
+            };
+            
             // 불량정보가 있으면 불량정보와 함께 저장
             await saveProductionResult(
               true,
               currentRow,
-              selectedWorkOrder,
+              workOrderInfo,
               defectInfos,
               () => {
                 // 성공 후 작업지시 목록 새로 조회 및 생산실적 목록 초기화
@@ -439,14 +479,20 @@ export const useProductionResultOperations = (
             return;
           }
           
+          // 독립 생산실적인지 확인 (workOrderId가 없는 경우)
+          const workOrderInfo = selectedWorkOrder || {
+            workOrderId: currentRow.workOrderId,
+            productId: currentRow.productId
+          };
+
           // 로딩 상태 설정
           isLoadingRef.current = true;
 
-          // 불량수량이 없는 경우 바로 저장
+          // 불량수량이 없는 경우 바로 저장 - MuiGrid saveResult와 동일한 방식
           await saveProductionResult(
               true,
               currentRow,
-              selectedWorkOrder,
+              workOrderInfo,
               [],
               () => {
                 // 성공 후 작업지시 목록 새로 조회 및 생산실적 목록 초기화
@@ -666,65 +712,31 @@ export const useProductionResultOperations = (
       return;
     }
     
-    // 생산실적 객체 생성
+    // 생산실적 객체 생성 - MuiGrid와 동일한 구조
     const prodResult = {
       ...newIndependentResult,
       id: `temp_${Date.now()}`, // 임시 ID 생성
       prodResultId: null,       // 서버에서 생성될 ID
-      flagActive: true
+      flagActive: true,
+      isNew: true,              // MuiGrid와 동일하게 신규 표시
+      state: 'NEW'              // 신규 상태 표시
     };
     
-    // 불량수량이 0보다 크면 불량정보 모달 표시
+    // MuiGrid와 통일성을 위해 생산실적을 목록에 먼저 추가
+    setProductionResultList(prevList => {
+      const newList = [prodResult];
+      return newList;
+    });
+    
+    // 불량수량이 0보다 크면 불량정보 등록 필요 - MuiGrid와 동일한 방식
     if (prodResult.defectQty > 0) {
-      // 불량정보 모달 표시 전에 현재 생산실적 정보 설정
-      setCurrentProductionResult(prodResult);
-      
-      // 불량정보 입력 후 저장 처리를 위한 콜백 설정
-      setModalResolveReject({
-        resolve: () => {
-          // 모달이 닫혔을 때 로딩 상태 초기화
-          isLoadingRef.current = false;
-        },
-        reject: () => {
-          // 모달 취소 시에도 로딩 상태 초기화
-          isLoadingRef.current = false;
-        },
-        saveAction: (directDefectInfos) => {
-          // 직접 전달된 불량정보 사용
-          if (!directDefectInfos || directDefectInfos.length === 0) {
-            Message.showWarning('불량수량이 입력되었으나 불량정보가 없습니다. 불량정보를 입력해주세요.');
-            isLoadingRef.current = false; // 경고 후 로딩 상태 초기화
-            return;
-          }
-          
-          isLoadingRef.current = true; // 실제 저장 시점에 로딩 상태 설정
-          
-          saveProductionResult(
-            true, // 새로운 생산실적
-            prodResult,
-            {productId: prodResult.productId}, // 작업지시 없이 제품ID만 사용
-            directDefectInfos, // 직접 전달된 불량정보만 사용
-            () => {
-              // 성공 후 상태 초기화
-              setTimeout(() => {
-                refreshWorkOrderList();
-                setSelectedWorkOrder(null);
-                setProductionResult(null);
-                setProductionResultList([]);
-                setDefectInfosForSave([]);
-                isLoadingRef.current = false;
-              }, 500);
-            }
-          );
-        }
-      });
-      
+      // MuiGrid와 동일하게 불량정보 모달 열기
       openDefectInfoModal(prodResult);
       return;
     }
     
-    // 불량수량이 없는 경우 바로 저장
-    isLoadingRef.current = true; // 저장 시작 시 로딩 상태 설정
+    // 불량수량이 없는 경우 바로 저장 - MuiGrid saveResult와 동일한 방식
+    isLoadingRef.current = true;
     
     saveProductionResult(
       true, // 새로운 생산실적
@@ -738,7 +750,6 @@ export const useProductionResultOperations = (
           setSelectedWorkOrder(null);
           setProductionResult(null);
           setProductionResultList([]);
-          setDefectInfosForSave([]);
           isLoadingRef.current = false;
         }, 500);
       }
@@ -750,14 +761,11 @@ export const useProductionResultOperations = (
   }, [
     saveProductionResult, 
     setIsIndependentModalOpen, 
-    openDefectInfoModal, 
-    setCurrentProductionResult, 
-    setModalResolveReject,
+    openDefectInfoModal,
+    setProductionResultList,
     refreshWorkOrderList,
     setSelectedWorkOrder,
-    setProductionResult,
-    setProductionResultList,
-    setDefectInfosForSave
+    setProductionResult
   ]);
 
   // 모달 닫기 함수
@@ -919,7 +927,9 @@ export const useProductionResultOperations = (
     saveBatchResults,
     deleteResult,
     // 유틸리티 함수들
-    forceResetLoadingState
+    forceResetLoadingState,
+    // DefectInfosMap 설정 함수 ref
+    setDefectInfosMapRef
   };
 };
 

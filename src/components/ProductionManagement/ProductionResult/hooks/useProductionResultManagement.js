@@ -203,23 +203,31 @@ export const useProductionResultManagement = (tabId) => {
     handleSaveDefectInfos,
     currentProductionResult,
     defectInfos,
-    // handleProductionResultEdit, // 수정 기능 제거
-    // 독립 생산실적 관련 핸들러 추가
-    createIndependentResult,
+    defectInfosForSave,
+    // 독립 생산실적 관련
     isIndependentModalOpen,
+    createIndependentResult,
     closeIndependentModal,
     handleSaveIndependentResult,
-    forceResetLoadingState, // 강제 상태 초기화 함수 추가
-    saveBatchResults, // 다중 저장 함수 추가
+    saveBatchResults,
+    // DefectInfosMap 설정 함수 ref
+    setDefectInfosMapRef
   } = useProductionResultOperations(
-      selectedWorkOrder,
-      setSelectedWorkOrder,
-      workOrderList,
-      refreshWorkOrderList,
-      setProductionResultList,
-      setProductionResult,
-      defectInfosMap
+    selectedWorkOrder,
+    setSelectedWorkOrder,
+    workOrderList,
+    refreshWorkOrderList,
+    setProductionResultList,
+    setProductionResult,
+    defectInfosMap
   );
+
+  // defectInfosMap setter를 Operations 훅에 전달
+  useEffect(() => {
+    if (setDefectInfosMapRef) {
+      setDefectInfosMapRef.current = setDefectInfosMap;
+    }
+  }, [setDefectInfosMapRef]);
 
   // 폼 핸들링 훅
   const {
@@ -282,9 +290,9 @@ export const useProductionResultManagement = (tabId) => {
     createIndependentResult();
   }, [createIndependentResult]);
 
-  // 저장 핸들러 - 다중 저장 지원
+  // 저장 핸들러 (다중 저장 지원)
   const handleSave = useCallback(() => {
-    // 저장할 신규 행이 있는지 확인
+    // 저장 가능한 행들만 필터링 (신규 행 또는 임시 행)
     const newRows = productionResultList.filter(row => 
       row.isNew === true || 
       row.id.toString().startsWith('temp_') || 
@@ -370,19 +378,12 @@ export const useProductionResultManagement = (tabId) => {
   // 불량정보 저장 핸들러 래핑 (defectInfosMap 업데이트 포함)
   const handleDefectInfoSave = useCallback((updatedDefectInfos) => {
     if (currentProductionResult) {
-      console.log('불량정보 저장:', {
-        rowId: currentProductionResult.id,
-        defectInfos: updatedDefectInfos,
-        defectInfosLength: updatedDefectInfos?.length || 0
-      });
-      
       // defectInfosMap 업데이트
       setDefectInfosMap(prev => {
         const newMap = {
           ...prev,
           [currentProductionResult.id]: updatedDefectInfos
         };
-        console.log('업데이트된 defectInfosMap:', newMap);
         return newMap;
       });
     }
@@ -498,9 +499,8 @@ export const useProductionResultManagement = (tabId) => {
     // 리프레시 키
     refreshKey,
     
-    // 유틸리티 함수
-    forceResetLoadingState, // 강제 상태 초기화 함수
-    defectInfosMap, // 불량정보 맵
+    // 불량정보 맵
+    defectInfosMap
   };
 };
 
