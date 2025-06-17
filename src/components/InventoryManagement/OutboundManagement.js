@@ -31,6 +31,14 @@ import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
 import { graphFetch } from "../../api/fetchConfig";
 import { toKSTISOString } from './InventoryUtils';
+import { 
+  getInventoryOutManagementList,
+  getInventoryOutList,
+  saveInventoryOutManagement,
+  deleteInventoryOutManagement,
+  saveInventoryOut,
+  deleteInventoryOut
+} from '../../api/standardInfo/inventoryApi';
 
 
 
@@ -95,6 +103,8 @@ const OutboundManagement = (props) => {
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDetail, setIsSavingDetail] = useState(false);
 
   const [outboundList, setOutboundList] = useState([]);
   const [selectedOutbound, setSelectedOutbound] = useState(null);
@@ -120,92 +130,6 @@ const OutboundManagement = (props) => {
     setValue('dateRange', { startDate, endDate });
   };
 
-  // GraphQL 쿼리 정의
-  const INVENTORY_OUT_QUERIES = {
-    GET_INVENTORY_OUT_MANAGEMENT_LIST: `
-      query getInventoryOutManagementList($filter: InventoryOutManagementFilter) {
-        getInventoryOutManagementList(filter: $filter) {
-          outManagementId
-          outType
-          factoryId
-          warehouseId
-          materialInfo
-          totalPrice
-          userName
-          createDate
-        }
-      }
-    `,
-    GET_INVENTORY_OUT_LIST: `
-      query getInventoryOutList($filter: InventoryOutFilter) {
-        getInventoryOutList(filter: $filter) {
-          outManagementId
-          outInventoryId
-          supplierName
-          manufacturerName
-          systemMaterialId
-          materialName
-          materialCategory
-          materialStandard
-          qty
-          unitPrice
-          unitVat
-          totalPrice
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `
-  }
-
-  // fetchGraphQL 함수 (ReceivingManagement와 동일하게 유지 또는 공통 유틸리티로 분리)
-  const fetchGraphQL = async (query, variables) => {
-    try {
-      console.log('GraphQL 요청 보냄:', { query, variables });
-      
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query,
-          variables
-        })
-      });
-
-      console.log('GraphQL 응답 상태:', response.status, response.statusText);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const responseText = await response.text();
-      console.log('GraphQL 응답 원본:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
-
-      if (responseText.trim()) {
-        const data = JSON.parse(responseText);
-        console.log('GraphQL 응답 파싱됨:', data);
-        
-        if (data.errors) {
-          console.error('GraphQL 에러:', data.errors);
-          throw new Error(data.errors[0].message || 'GraphQL 에러 발생');
-        }
-        
-        return data.data;
-      } else {
-        console.error('GraphQL 응답이 비어있습니다');
-        throw new Error('빈 응답이 반환되었습니다.');
-      }
-    } catch (error) {
-      console.error('GraphQL 요청 오류:', error);
-      throw error;
-    }
-  };
-
   // 검색 실행 함수
   const handleSearch = useCallback(async (data) => {
     console.log('현재 옵션:', { outTypeOptions, factoryTypeOptions, warehouseTypeOptions });
@@ -228,63 +152,35 @@ const OutboundManagement = (props) => {
 
       console.log('GraphQL 필터:', filter);
 
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: INVENTORY_OUT_QUERIES.GET_INVENTORY_OUT_MANAGEMENT_LIST,
-          variables: { filter }
-        })
-      });
+      const result = await getInventoryOutManagementList(filter);
       
-      console.log('응답 상태:', response.status, response.statusText);
-      
-      const responseText = await response.text();
-      console.log('응답 내용:', responseText.substring(0, 200));
-      
-      if (responseText.trim()) {
-        const result = JSON.parse(responseText);
+      if (result) {
         console.log('파싱된 결과:', result);
         
-        if (result.data && result.data.getInventoryOutManagementList) {
-          setOutboundList(result.data.getInventoryOutManagementList.map(item => ({
-            id: item.outManagementId,
-            outManagementId: item.outManagementId,
-            outType: item.outType,
-            factoryId: item.factoryId,
-            warehouseId: item.warehouseId,
-            materialInfo: item.materialInfo,
-            totalPrice: item.totalPrice,
-            userName: item.userName,
-            createDate: item.createDate
-          })));
-          
-          setSelectedOutbound(null);
-          setOutboundDetail([]);
-        } else {
-          console.error('응답 데이터가 예상 형식과 다릅니다:', result);
-          setOutboundList([]);
-          setSelectedOutbound(null);
-          setOutboundDetail([]);
-          
-          Swal.fire({
-            icon: 'info',
-            title: '알림',
-            text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.' + 
-                  (result.errors ? ` 오류: ${result.errors[0]?.message || '알 수 없는 오류'}` : '')
-          });
-        }
+        setOutboundList(result.map(item => ({
+          id: item.outManagementId,
+          outManagementId: item.outManagementId,
+          outType: item.outType,
+          factoryId: item.factoryId,
+          warehouseId: item.warehouseId,
+          materialInfo: item.materialInfo,
+          totalPrice: item.totalPrice,
+          userName: item.userName,
+          createDate: item.createDate
+        })));
+        
+        setSelectedOutbound(null);
+        setOutboundDetail([]);
       } else {
-        console.error('빈 응답을 받았습니다');
+        console.error('응답 데이터가 예상 형식과 다릅니다:', result);
         setOutboundList([]);
         setSelectedOutbound(null);
         setOutboundDetail([]);
         
         Swal.fire({
-          icon: 'error',
-          title: '오류 발생',
-          text: '서버로부터 빈 응답을 받았습니다.'
+          icon: 'info',
+          title: '알림',
+          text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.'
         });
       }
     } catch (error) {
@@ -313,31 +209,36 @@ const OutboundManagement = (props) => {
         outManagementId: params.row?.outManagementId || null,
       };
 
-      const result = await fetchGraphQL(
-        INVENTORY_OUT_QUERIES.GET_INVENTORY_OUT_LIST,
-        { filter }
-      );
+      const result = await getInventoryOutList(filter);
 
-      if (result && result.getInventoryOutList) {
-        const detailData = result.getInventoryOutList.map((item, index) => ({
-          id: item.outInventoryId || `detail_${item.outManagementId}_${index}`,
-          outManagementId: item.outManagementId,
-          outInventoryId: item.outInventoryId,
-          supplierName: item.supplierName,
-          manufactureName: item.manufacturerName,
-          systemMaterialId: item.systemMaterialId,
-          materialName: item.materialName,
-          materialCategory: item.materialCategory,
-          materialStandard: item.materialStandard,
-          qty: item.qty,
-          unitPrice: item.unitPrice,
-          unitVat: item.unitVat,
-          totalPrice: item.totalPrice,
-          createUser: item.createUser,
-          createDate: new Date(item.createDate),
-          updateUser: item.updateUser,
-          updateDate: new Date(item.updateDate)
-        }));
+      if (result) {
+        const detailData = result.map((item, index) => {
+          // totalPrice가 null인 경우 자동 계산
+          const qty = parseFloat(item.qty) || 0;
+          const unitPrice = parseFloat(item.unitPrice) || 0;
+          const unitVat = parseFloat(item.unitVat) || 0;
+          const calculatedTotalPrice = qty * (unitPrice + unitVat);
+          
+          return {
+            id: item.outInventoryId || `detail_${item.outManagementId}_${index}`,
+            outManagementId: item.outManagementId,
+            outInventoryId: item.outInventoryId,
+            supplierName: item.supplierName,
+            manufactureName: item.manufacturerName,
+            systemMaterialId: item.systemMaterialId,
+            materialName: item.materialName,
+            materialCategory: item.materialCategory,
+            materialStandard: item.materialStandard,
+            qty: item.qty,
+            unitPrice: item.unitPrice,
+            unitVat: item.unitVat,
+            totalPrice: item.totalPrice || calculatedTotalPrice,
+            createUser: item.createUser,
+            createDate: new Date(item.createDate),
+            updateUser: item.updateUser,
+            updateDate: new Date(item.updateDate)
+          };
+        });
         
         console.log('상세 데이터 설정:', detailData);
         setOutboundDetail(detailData);
@@ -426,16 +327,16 @@ const OutboundManagement = (props) => {
 
   // 마스터 저장
   const handleSave = () => {
+    // 이미 저장 중인 경우 중복 호출 방지
+    if (isSaving) {
+      console.log('이미 저장 중입니다. 중복 호출을 방지합니다.');
+      return;
+    }
+
     const newRows = addRows;
-    // const updatedRowsToSave = updatedRows;
     
     console.log('저장할 새 출고 목록:', newRows);
-    // console.log('수정할 출고 목록:', updatedRowsToSave);
 
-    // if (newRows.length === 0 && updatedRowsToSave.length === 0) {
-    //   Swal.fire({ icon: 'info', title: '알림', text: '저장할 변경사항이 없습니다.' });
-    //   return;
-    // }
     if (newRows.length === 0) {
       Swal.fire({ icon: 'info', title: '알림', text: '저장할 변경사항이 없습니다.' });
       return;
@@ -450,9 +351,8 @@ const OutboundManagement = (props) => {
     if (!validateRequiredFields(newRows, requiredFields)) {
       return;
     }
-    // if (!validateRequiredFields(updatedRowsToSave, requiredFields)) {
-    //   return;
-    // }
+
+    setIsSaving(true); // 저장 시작
 
     const createdRowsInput = newRows.map(row => ({
       outType: row.outType,
@@ -460,47 +360,25 @@ const OutboundManagement = (props) => {
       warehouseId: row.warehouseId,
     }));
 
-    // const updatedRowsInput = updatedRowsToSave.map(row => ({
-    //   outManagementId: row.outManagementId,
-    //   outType: row.outType,
-    //   factoryId: row.factoryId,
-    //   warehouseId: row.warehouseId,
-    // }));
-
-    // console.log('백엔드로 전송할 데이터:', { createdRowsInput, updatedRowsInput });
-
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: `
-          mutation saveInventoryOutManagement($createdRows: [InventoryOutManagementSaveInput]) {
-            saveInventoryOutManagement(createdRows: $createdRows)
-          }
-        `,
-        variables: {
-          createdRows: createdRowsInput.length > 0 ? createdRowsInput : null,
-          // updatedRows: updatedRowsInput.length > 0 ? updatedRowsInput : null
+    saveInventoryOutManagement({ createdRows: createdRowsInput })
+      .then(data => {
+        if (data.errors) {
+          console.error("GraphQL errors:", data.errors);
+          Swal.fire({ icon: 'error', title: '저장 실패', text: data.errors[0]?.message || '저장 중 오류 발생' });
+        } else {
+          Swal.fire({ icon: 'success', title: '성공', text: '저장되었습니다.' });
+          setAddRows([]);
+          setUpdatedRows([]);
+          handleSearch(getValues());
         }
       })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.errors) {
-        console.error("GraphQL errors:", data.errors);
-        Swal.fire({ icon: 'error', title: '저장 실패', text: data.errors[0]?.message || '저장 중 오류 발생' });
-      } else {
-        Swal.fire({ icon: 'success', title: '성공', text: '저장되었습니다.' });
-        setAddRows([]);
-        setUpdatedRows([]);
-        handleSearch(getValues());
-      }
-    })
-    .catch(error => {
-      console.error("Error saving inventory:", error);
-      Swal.fire({ icon: 'error', title: '오류', text: '저장 중 예외 발생: ' + error.message });
-    });
+      .catch(error => {
+        console.error("Error saving inventory:", error);
+        Swal.fire({ icon: 'error', title: '오류', text: '저장 중 예외 발생: ' + error.message });
+      })
+      .finally(() => {
+        setIsSaving(false); // 저장 완료
+      });
   }
 
   // 마스터 삭제
@@ -509,12 +387,6 @@ const OutboundManagement = (props) => {
       Swal.fire({ icon: 'warning', title: '알림', text: '삭제할 출고목록을 선택해주세요.' });
       return;
     }
-
-    const deleteInventoryMutation = `
-      mutation DeleteInventoryOutManagement($outManagementId: InventoryOutManagementDeleteInput!) {
-        deleteInventoryOutManagement(outManagementId: $outManagementId)
-      }
-    `;
 
     const variables = {
       outManagementId: { outManagementId: selectedOutbound.outManagementId }
@@ -526,11 +398,7 @@ const OutboundManagement = (props) => {
       confirmButtonText: '삭제', cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        fetch(GRAPHQL_URL, {
-          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: deleteInventoryMutation, variables })
-        })
-        .then((res) => res.json())
+        deleteInventoryOutManagement(variables)
         .then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
@@ -555,6 +423,12 @@ const OutboundManagement = (props) => {
 
   // 상세 저장
   const handleDetailSave = () => {
+    // 이미 저장 중인 경우 중복 호출 방지
+    if (isSavingDetail) {
+      console.log('이미 상세 저장 중입니다. 중복 호출을 방지합니다.');
+      return;
+    }
+
     const newRows = addDetailRows;
     const updatedRowsToSave = updatedDetailRows;
     
@@ -574,12 +448,15 @@ const OutboundManagement = (props) => {
     if (!validateRequiredFields(newRows, requiredDetailFields)) return;
     if (!validateRequiredFields(updatedRowsToSave, requiredDetailFields)) return;
 
+    setIsSavingDetail(true); // 상세 저장 시작
+
     const createdInventoryInputs = newRows.map(row => ({
       outManagementId: row.outManagementId,
       systemMaterialId: row.systemMaterialId,
       qty: String(parseFloat(row.qty) || 0),
       unitPrice: String(row.unitPrice || 0),
       unitVat: String(row.unitVat || 0),
+      totalPrice: String(row.totalPrice || 0),
     }));
 
     const updatedInventoryInputs = updatedRowsToSave.map(row => ({
@@ -589,25 +466,15 @@ const OutboundManagement = (props) => {
       qty: String(parseFloat(row.qty) || 0),
       unitPrice: String(row.unitPrice || 0),
       unitVat: String(row.unitVat || 0),
+      totalPrice: String(row.totalPrice || 0),
     }));
 
     console.log('백엔드로 전송할 상세 데이터:', { createdInventoryInputs, updatedInventoryInputs });
 
-    fetch(GRAPHQL_URL, {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: `
-          mutation saveInventoryOut($createdRows: [InventoryOutSaveInput], $updatedRows: [InventoryOutUpdateInput]) {
-            saveInventoryOut(createdRows: $createdRows, updatedRows: $updatedRows)
-          }
-        `,
-        variables: {
-          createdRows: createdInventoryInputs.length > 0 ? createdInventoryInputs : [],
-          updatedRows: updatedInventoryInputs.length > 0 ? updatedInventoryInputs : []
-        }
-      })
+    saveInventoryOut({
+      createdRows: createdInventoryInputs.length > 0 ? createdInventoryInputs : [],
+      updatedRows: updatedInventoryInputs.length > 0 ? updatedInventoryInputs : []
     })
-    .then(res => res.json())
     .then(data => {
       if (data.errors) {
         console.error("GraphQL errors:", data.errors);
@@ -624,6 +491,9 @@ const OutboundManagement = (props) => {
     .catch(error => {
       console.error("Error saving inventory detail:", error);
       Swal.fire({ icon: 'error', title: '오류', text: '상세 저장 중 예외 발생: ' + error.message });
+    })
+    .finally(() => {
+      setIsSavingDetail(false); // 상세 저장 완료
     });
   };
 
@@ -633,12 +503,6 @@ const OutboundManagement = (props) => {
       Swal.fire({ icon: 'warning', title: '알림', text: '삭제할 상세 항목을 선택해주세요.' });
       return;
     }
-
-    const deleteDetailInventoryMutation = `
-      mutation DeleteInventoryOut($outInventoryId: InventoryOutDeleteInput!) {
-        deleteInventoryOut(outInventoryId: $outInventoryId)
-      }
-    `;
 
     const variables = {
       outInventoryId: { outInventoryId: selectedDetailOutbound.outInventoryId }
@@ -650,11 +514,7 @@ const OutboundManagement = (props) => {
       confirmButtonText: '삭제', cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        fetch(GRAPHQL_URL, {
-          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: deleteDetailInventoryMutation, variables })
-        })
-        .then((res) => res.json())
+        deleteInventoryOut(variables)
         .then((data) => {
           if (data.errors) {
             console.error("GraphQL errors:", data.errors);
@@ -703,23 +563,31 @@ const OutboundManagement = (props) => {
   function handleDetailProcessRowUpdate(newRow, oldRow) {
     const isNewRow = oldRow.id.startsWith('NEW_');
 
-    setOutboundDetail(prev => prev.map(row => row.id === oldRow.id ? { ...row, ...newRow } : row));
+    // 총 금액 자동 계산
+    const qty = parseFloat(newRow.qty) || 0;
+    const unitPrice = parseFloat(newRow.unitPrice) || 0;
+    const unitVat = parseFloat(newRow.unitVat) || 0;
+    const totalPrice = qty * (unitPrice + unitVat);
+    
+    const updatedRow = { ...newRow, totalPrice };
+
+    setOutboundDetail(prev => prev.map(row => row.id === oldRow.id ? { ...row, ...updatedRow } : row));
 
     if (isNewRow) {
-      setAddDetailRows(prev => prev.map(row => row.id === newRow.id ? newRow : row));
+      setAddDetailRows(prev => prev.map(row => row.id === updatedRow.id ? updatedRow : row));
     } else {
       setUpdatedDetailRows(prev => {
-        const existingIndex = prev.findIndex(row => row.outInventoryId === newRow.outInventoryId);
+        const existingIndex = prev.findIndex(row => row.outInventoryId === updatedRow.outInventoryId);
         if (existingIndex !== -1) {
           const updated = [...prev];
-          updated[existingIndex] = newRow;
+          updated[existingIndex] = updatedRow;
           return updated;
         } else {
-          return [...prev, newRow];
+          return [...prev, updatedRow];
         }
       });
     }
-    return { ...oldRow, ...newRow };
+    return { ...oldRow, ...updatedRow };
   }
 
   // 코드 데이터 로딩 함수들 (Promise 반환)
@@ -908,16 +776,16 @@ const OutboundManagement = (props) => {
 
   // 출고 목록 그리드 버튼
   const outboundGridButtons = [
-    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> },
+    { label: '등록', onClick: handleAdd, icon: <AddIcon />, disabled: isSaving },
+    { label: isSaving ? '저장 중...' : '저장', onClick: handleSave, icon: <SaveIcon />, disabled: isSaving },
+    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon />, disabled: isSaving },
   ];
 
   // 출고 상세 그리드 버튼
   const detailedOutboundGridButtons = [
-    { label: '등록', onClick: handleDetailAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleDetailSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon /> },
+    { label: '등록', onClick: handleDetailAdd, icon: <AddIcon />, disabled: isSavingDetail },
+    { label: isSavingDetail ? '저장 중...' : '저장', onClick: handleDetailSave, icon: <SaveIcon />, disabled: isSavingDetail },
+    { label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon />, disabled: isSavingDetail },
   ];
 
   return (

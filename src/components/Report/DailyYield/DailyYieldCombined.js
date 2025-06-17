@@ -11,42 +11,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import ko from "date-fns/locale/ko"; 
 import DateRangePicker from '../../Common/DateRangePicker';
-import { GRAPHQL_URL } from '../../../config';
-
-// =====================================================================
-// GraphQL 쿼리 정의
-// =====================================================================
-const PERIODIC_PRODUCTION_QUERY = `
-  query periodicProduction($filter: PlanVsActualFilter) {
-    periodicProduction(filter: $filter) {
-      materialName
-      totalGoodQty
-      totalDefectQty
-      totalDefectRate
-      unit
-      productId
-    }
-  }
-`;
-
-const GET_DEFECT_DETAILS_QUERY = `
-  query getDefectInfo($productId: String) {
-    getDefectInfo(productId: $productId) {
-      codeName
-      codeDesc
-      defectQty
-    }
-  }
-`;
-
-const GET_MATERIALS_QUERY = `
-  query getMaterialNameAndSysId {
-    getMaterialNameAndSysId {
-      systemMaterialId
-      materialName
-    }
-  }
-`;
+import { getPeriodicProduction, getDefectInfo, getMaterialList } from '../../../api/standardInfo/inventoryApi';
 
 // =====================================================================
 // 커스텀 훅: usePeriodicProduction
@@ -69,22 +34,8 @@ export const useDailyYield = (tabId) => {
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
-        const response = await fetch(GRAPHQL_URL, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: GET_MATERIALS_QUERY
-          })
-        });
-        
-        const result = await response.json();
-        
-        if (result.errors) {
-          console.error('GraphQL Error:', result.errors);
-        } else if (result.data && result.data.getMaterialNameAndSysId) {
-          setMaterialList(result.data.getMaterialNameAndSysId);
-        }
+        const materials = await getMaterialList();
+        setMaterialList(materials);
       } catch (error) {
         console.error('Error fetching materials:', error);
       }
@@ -110,28 +61,7 @@ export const useDailyYield = (tabId) => {
       
       console.log('API Params:', filter);
 
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: PERIODIC_PRODUCTION_QUERY,
-          variables: { filter }
-        })
-      });
-      
-      const responseText = await response.text();
-      if (!responseText.trim()) {
-        throw new Error('빈 응답을 받았습니다');
-      }
-      const result = JSON.parse(responseText);
-
-      if (result.errors) {
-        console.error('GraphQL Error:', result.errors);
-        throw new Error(result.errors[0].message || 'GraphQL 데이터 조회 실패');
-      }
-
-      const periodicProductionData = result.data?.periodicProduction;
+      const periodicProductionData = await getPeriodicProduction(filter);
       if (!periodicProductionData || periodicProductionData.length === 0) {
         console.warn('No periodic production data found.');
         setReportData([]);
@@ -570,23 +500,7 @@ const DailyYieldCombined = (props) => {
     });
 
     try {
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: GET_DEFECT_DETAILS_QUERY,
-          variables: { productId: row.productId }
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.errors) {
-        throw new Error(result.errors[0].message);
-      }
-      
-      const defectData = result.data?.getDefectInfo;
+      const defectData = await getDefectInfo(row.productId);
 
       if (!defectData || defectData.length === 0) {
         setDefectDetailModal(prev => ({ ...prev, loading: false, defectCauses: [] }));

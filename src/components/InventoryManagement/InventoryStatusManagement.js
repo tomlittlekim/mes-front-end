@@ -16,6 +16,7 @@ import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
 import { GRAPHQL_URL } from '../../config';
+import { getInventoryStatusList } from '../../api/standardInfo/inventoryApi';
 
 
 const InventoryStatusManagement = (props) => {
@@ -149,7 +150,6 @@ const InventoryStatusManagement = (props) => {
     console.log('검색 데이터:', data);
 
     try {
-      // 필터 객체 생성 - 백엔드의 InventoryInManagementFilter와 일치
       const filter = {
         warehouseName: data.warehouseName || null,
         supplierName: data.supplierName || null,
@@ -159,30 +159,14 @@ const InventoryStatusManagement = (props) => {
 
       console.log('GraphQL 필터:', filter);
 
-      // 직접 fetch API를 사용하여 요청 (fetchGraphQL 함수 대신)
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: GET_INVENTORY_STATUS_LIST,
-          variables: { filter }
-        })
-      });
-      
-      console.log('응답 상태:', response.status, response.statusText);
-      
-      const responseText = await response.text();
-      console.log('응답 내용:', responseText.substring(0, 200));
-      
-      if (responseText.trim()) {
-        const result = JSON.parse(responseText);
+      try {
+        const result = await getInventoryStatusList(filter);
         console.log('파싱된 결과:', result);
         
-        if (result.data && result.data.getInventoryStatusList) {
+        if (result) {
           // 받아온 데이터로 상태 업데이트
-          setReceivingList(result.data.getInventoryStatusList.map(item => ({
-            id: item.systemMaterialId,
+          setReceivingList(result.map((item, index) => ({
+            id: item.systemMaterialId || `status_${index}_${Date.now()}`,
             warehouseName: item.warehouseName,
             supplierName: item.supplierName,
             manufacturerName: item.manufacturerName,
@@ -192,27 +176,24 @@ const InventoryStatusManagement = (props) => {
             qty: parseFloat(item.qty) || 0
           })));
           
-          // 선택 상태 초기화
         } else {
           console.error('응답 데이터가 예상 형식과 다릅니다:', result);
-          // 응답 데이터에 문제가 있거나 빈 배열이면 빈 배열로 설정
           setReceivingList([]);
           
           Swal.fire({
             icon: 'info',
             title: '알림',
-            text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.' + 
-                  (result.errors ? ` 오류: ${result.errors[0]?.message || '알 수 없는 오류'}` : '')
+            text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.'
           });
         }
-      } else {
-        console.error('빈 응답을 받았습니다');
-        setReceivingList([]);
+      } catch (error) {
+        console.error('데이터 조회 오류:', error);
+        setReceivingList([]); // 오류 발생 시 빈 배열로 설정
         
         Swal.fire({
           icon: 'error',
-          title: '오류 발생',
-          text: '서버로부터 빈 응답을 받았습니다.'
+          title: '데이터 조회 실패',
+          text: `오류: ${error.message || '알 수 없는 오류가 발생했습니다.'}`
         });
       }
     } catch (error) {
