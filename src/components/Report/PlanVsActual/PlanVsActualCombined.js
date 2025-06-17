@@ -11,7 +11,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import ko from "date-fns/locale/ko"; 
 import DateRangePicker from '../../Common/DateRangePicker';
-import { getPlanVsActual, getMaterialList } from '../../../api/standardInfo/reportApi';
+import { getPlanVsActual, getMaterialList } from '../../../api/standardInfo/inventoryApi';
 
 // =====================================================================
 // 커스텀 훅: usePlanVsActual

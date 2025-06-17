@@ -210,3 +210,81 @@ export const deleteInventoryOutManagement = (req) => graphFetch(deleteInventoryO
 export const saveInventoryOut = (req) => graphFetch(saveInventoryOutMutation, req);
 
 export const deleteInventoryOut = (req) => graphFetch(deleteInventoryOutMutation, req);
+
+// =============================
+//      Report APIs (레포트)
+// =============================
+
+// 주기별 생산 현황
+const periodicProductionQuery = `
+  query periodicProduction($filter: PlanVsActualFilter) {
+    periodicProduction(filter: $filter) {
+      materialName
+      totalGoodQty
+      totalDefectQty
+      totalDefectRate
+      unit
+      productId
+    }
+  }
+`;
+
+// 불량 상세 정보
+const getDefectInfoQuery = `
+  query getDefectInfo($productId: String) {
+    getDefectInfo(productId: $productId) {
+      codeName
+      codeDesc
+      defectQty
+    }
+  }
+`;
+
+// 계획대비 실적
+const planVsActualQuery = `
+  query planVsActual($filter: PlanVsActualFilter) {
+    planVsActual(filter: $filter) {
+      prodPlanId
+      planQty
+      totalOrderQty
+      completedOrderQty
+      achievementRate
+      materialName
+      systemMaterialId
+    }
+  }
+`;
+
+// 자재 목록
+const getMaterialsQuery = `
+  query getMaterialNameAndSysId {
+    getMaterialNameAndSysId {
+      systemMaterialId
+      materialName
+    }
+  }
+`;
+
+// 주기별 생산 현황 조회
+export const getPeriodicProduction = async (filter = {}) => {
+  const response = await graphFetch(periodicProductionQuery, { filter });
+  return response.periodicProduction;
+};
+
+// 불량 상세 정보 조회
+export const getDefectInfo = async (productId) => {
+  const response = await graphFetch(getDefectInfoQuery, { productId });
+  return response.getDefectInfo;
+};
+
+// 계획대비 실적 조회
+export const getPlanVsActual = async (filter = {}) => {
+  const response = await graphFetch(planVsActualQuery, { filter });
+  return response.planVsActual;
+};
+
+// 자재 목록 조회
+export const getMaterialList = async () => {
+  const response = await graphFetch(getMaterialsQuery, {});
+  return response.getMaterialNameAndSysId;
+};
