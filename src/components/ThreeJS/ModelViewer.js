@@ -240,7 +240,7 @@ const ModelViewer = ({ tabId }) => {
     scene.add(directionalLight);
 
     const loader = new GLTFLoader();
-    const modelPath = '/models/testtt.glb';
+    const modelPath = '/models/ccc.glb';
     loader.load(
       modelPath,
       (gltf) => {
