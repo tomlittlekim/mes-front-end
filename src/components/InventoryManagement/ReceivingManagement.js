@@ -1036,33 +1036,23 @@ const ReceivingManagement = (props) => {
     }
   `;
 
-  return new Promise((resolve, reject) => {
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query
-      })
-    }).then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        }).then((data) => {
+    return new Promise((resolve, reject) => {
+      graphFetch(query, {})
+        .then((data) => {
           if (data.errors) {
             console.error(data.errors);
             reject(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridFactory.map((row) => ({
+            const options = data.getGridFactory.map((row) => ({
               value: row.factoryId,
               label: row.factoryName
             }));
             setFactoryTypeOptions(options);
             resolve(options);
           }
-        }).catch((err) => {
+        })
+        .catch((err) => {
           console.error(err);
           reject(err);
         });
@@ -1080,33 +1070,23 @@ const ReceivingManagement = (props) => {
     }
   `;
 
-  return new Promise((resolve, reject) => {
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query
-      })
-    }).then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        }).then((data) => {
+    return new Promise((resolve, reject) => {
+      graphFetch(query, {})
+        .then((data) => {
           if (data.errors) {
             console.error(data.errors);
             reject(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getGridWarehouse.map((row) => ({
+            const options = data.getGridWarehouse.map((row) => ({
               value: row.warehouseId,
               label: row.warehouseName
             }));
             setWarehouseTypeOptions(options);
             resolve(options);
           }
-        }).catch((err) => {
+        })
+        .catch((err) => {
           console.error(err);
           reject(err);
         });
@@ -1127,33 +1107,23 @@ const ReceivingManagement = (props) => {
     }
   `;
 
-  return new Promise((resolve, reject) => {
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // 쿠키 자동 전송 설정
-      body: JSON.stringify({
-        query
-      })
-    }).then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        }).then((data) => {
+    return new Promise((resolve, reject) => {
+      graphFetch(query, {})
+        .then((data) => {
           if (data.errors) {
             console.error(data.errors);
             reject(data.errors);
           } else {
             // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.data.getMaterialCode.map((row) => ({
+            const options = data.getMaterialCode.map((row) => ({
               value: row.systemMaterialId,
               label: row.materialName
             }));
             setMaterialTypeOptions(options);
             resolve(options);
           }
-        }).catch((err) => {
+        })
+        .catch((err) => {
           console.error(err);
           reject(err);
         });

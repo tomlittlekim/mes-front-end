@@ -606,11 +606,10 @@ const OutboundManagement = (props) => {
   function fetchGridFactory() {
     const query = `query getGridFactory { getGridFactory { factoryId factoryName factoryCode } }`;
     return new Promise((resolve, reject) => {
-      fetch(GRAPHQL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ query }) })
-        .then(response => { if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`); return response.json(); })
+      graphFetch(query, {})
         .then(data => {
           if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.data.getGridFactory.map(row => ({ value: row.factoryId, label: row.factoryName })); setFactoryTypeOptions(options); resolve(options); }
+          else { const options = data.getGridFactory.map(row => ({ value: row.factoryId, label: row.factoryName })); setFactoryTypeOptions(options); resolve(options); }
         })
         .catch(err => { console.error(err); reject(err); });
     });
@@ -619,11 +618,10 @@ const OutboundManagement = (props) => {
   function fetchGridWarehouse() {
     const query = `query getGridWarehouse { getGridWarehouse { warehouseId warehouseName warehouseType } }`;
     return new Promise((resolve, reject) => {
-      fetch(GRAPHQL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ query }) })
-        .then(response => { if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`); return response.json(); })
+      graphFetch(query, {})
         .then(data => {
           if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.data.getGridWarehouse.map(row => ({ value: row.warehouseId, label: row.warehouseName })); setWarehouseTypeOptions(options); resolve(options); }
+          else { const options = data.getGridWarehouse.map(row => ({ value: row.warehouseId, label: row.warehouseName })); setWarehouseTypeOptions(options); resolve(options); }
         })
         .catch(err => { console.error(err); reject(err); });
     });
@@ -632,11 +630,10 @@ const OutboundManagement = (props) => {
   function fetchGridMaterial() {
     const query = `query getMaterialCode { getMaterialCode { supplierId manufacturerName systemMaterialId materialName materialCategory unit } }`;
     return new Promise((resolve, reject) => {
-      fetch(GRAPHQL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ query }) })
-        .then(response => { if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`); return response.json(); })
+      graphFetch(query, {})
         .then(data => {
           if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.data.getMaterialCode.map(row => ({ value: row.systemMaterialId, label: row.materialName })); setMaterialTypeOptions(options); resolve(options); }
+          else { const options = data.getMaterialCode.map(row => ({ value: row.systemMaterialId, label: row.materialName })); setMaterialTypeOptions(options); resolve(options); }
         })
         .catch(err => { console.error(err); reject(err); });
     });
@@ -767,7 +764,27 @@ const OutboundManagement = (props) => {
     },
     { field: 'unitPrice', headerName: '단위 금액', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true },
     { field: 'unitVat', headerName: '부가세', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true },
-    { field: 'totalPrice', headerName: '총금액', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: true }, // 클라이언트 계산 시 editable: true
+    { field: 'totalPrice', headerName: '총금액', width: 70, headerAlign: 'center', align: 'center', type: 'number', editable: false,
+      renderCell: (params) => {
+        const value = params.value;
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              height: '100%',
+              width: '100%',
+              pr: 1
+            }}
+          >
+            <Typography variant="body2">
+              {parseFloat(value || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+            </Typography>
+          </Box>
+        );
+      }
+    },
     { field: 'createUser', headerName: '등록자', width: 120, headerAlign: 'center', align: 'center', editable: false },
     { field: 'createDate', headerName: '등록일', width: 120, headerAlign: 'center', align: 'center', type: 'dateTime', editable: false },
     { field: 'updateUser', headerName: '수정자', width: 120, headerAlign: 'center', align: 'center', editable: false },
