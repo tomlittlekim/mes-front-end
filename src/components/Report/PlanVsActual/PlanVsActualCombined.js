@@ -11,33 +11,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import ko from "date-fns/locale/ko"; 
 import DateRangePicker from '../../Common/DateRangePicker';
-import { GRAPHQL_URL } from '../../../config';
-
-// =====================================================================
-// GraphQL 쿼리 정의
-// =====================================================================
-const PLAN_VS_ACTUAL_QUERY = `
-  query planVsActual($filter: PlanVsActualFilter) {
-    planVsActual(filter: $filter) {
-      prodPlanId
-      planQty
-      totalOrderQty
-      completedOrderQty
-      achievementRate
-      materialName
-      systemMaterialId
-    }
-  }
-`;
-
-const GET_MATERIALS_QUERY = `
-  query getMaterialNameAndSysId {
-    getMaterialNameAndSysId {
-      systemMaterialId
-      materialName
-    }
-  }
-`;
+import { getPlanVsActual, getMaterialList } from '../../../api/standardInfo/reportApi';
 
 // =====================================================================
 // 커스텀 훅: usePlanVsActual
@@ -60,22 +34,8 @@ export const usePlanVsActual = (tabId) => {
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
-        const response = await fetch(GRAPHQL_URL, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: GET_MATERIALS_QUERY
-          })
-        });
-        
-        const result = await response.json();
-        
-        if (result.errors) {
-          console.error('GraphQL Error:', result.errors);
-        } else if (result.data && result.data.getMaterialNameAndSysId) {
-          setMaterialList(result.data.getMaterialNameAndSysId);
-        }
+        const materials = await getMaterialList();
+        setMaterialList(materials);
       } catch (error) {
         console.error('Error fetching materials:', error);
       }
@@ -101,28 +61,7 @@ export const usePlanVsActual = (tabId) => {
       
       console.log('API Params:', filter);
 
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: PLAN_VS_ACTUAL_QUERY,
-          variables: { filter }
-        })
-      });
-      
-      const responseText = await response.text();
-      if (!responseText.trim()) {
-        throw new Error('빈 응답을 받았습니다');
-      }
-      const result = JSON.parse(responseText);
-
-      if (result.errors) {
-        console.error('GraphQL Error:', result.errors);
-        throw new Error(result.errors[0].message || 'GraphQL 데이터 조회 실패');
-      }
-
-      const planVsActualData = result.data?.planVsActual;
+      const planVsActualData = await getPlanVsActual(filter);
       if (!planVsActualData || planVsActualData.length === 0) {
         console.warn('No plan vs actual data found.');
         setReportData([]);

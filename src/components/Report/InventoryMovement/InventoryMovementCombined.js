@@ -12,26 +12,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import ko from "date-fns/locale/ko"; 
 import DateRangePicker from '../../Common/DateRangePicker';
-import { GRAPHQL_URL } from '../../../config';
-
-// =====================================================================
-// GraphQL 쿼리 정의
-// =====================================================================
-const GET_INVENTORY_HISTORY_LIST = `
-  query getInventoryHistoryList($filter: InventoryHistoryFilter) {
-    getInventoryHistoryList(filter: $filter) {
-      inOutType
-      warehouseName
-      supplierName
-      manufacturerName
-      materialName
-      changeQty
-      currentQty
-      unit
-      createDate
-    }
-  }
-`;
+import { getInventoryHistoryList } from '../../../api/standardInfo/reportApi';
 
 // =====================================================================
 // 커스텀 훅: useInventoryMovement
@@ -77,28 +58,7 @@ export const useInventoryMovement = (tabId) => {
       
       console.log('API Params:', filter);
 
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: GET_INVENTORY_HISTORY_LIST,
-          variables: { filter }
-        })
-      });
-      
-      const responseText = await response.text();
-      if (!responseText.trim()) {
-        throw new Error('빈 응답을 받았습니다');
-      }
-      const result = JSON.parse(responseText);
-
-      if (result.errors) {
-        console.error('GraphQL Error:', result.errors);
-        throw new Error(result.errors[0].message || 'GraphQL 데이터 조회 실패');
-      }
-
-      const historyData = result.data?.getInventoryHistoryList;
+      const historyData = await getInventoryHistoryList(filter);
       if (!historyData) {
         console.warn('No inventory history data found.');
         setReportData([]);
@@ -722,7 +682,20 @@ const InventoryMovement = (props) => {
       editable: false,
       renderCell: (params) => {
         const value = params.value;
-        const color = value > 0 ? theme.palette.success.main : value < 0 ? theme.palette.error.main : 'inherit';
+        const isOutbound = params.row?.inOutType === 'OUT';
+        
+        let displayValue;
+        let color;
+        
+        if (isOutbound) {
+          // 출고인 경우: 앞에 - 붙이고 빨간색으로 표시
+          displayValue = `-${Math.abs(parseFloat(value)).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
+          color = theme.palette.error.main;
+        } else {
+          // 입고인 경우: 그대로 표시하고 초록색으로 표시
+          displayValue = parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+          color = theme.palette.success.main;
+        }
     
         return (
           <Box
@@ -736,7 +709,7 @@ const InventoryMovement = (props) => {
             }}
           >
             <Typography sx={{ color, fontWeight: '' }}>
-              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
+              {displayValue}
             </Typography>
           </Box>
         );

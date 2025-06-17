@@ -23,9 +23,9 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
-import { GRAPHQL_URL } from '../../config';
 import ko from "date-fns/locale/ko";
 import { toKSTISOString } from './InventoryUtils';
+import { getInventoryHistoryList } from '../../api/standardInfo/inventoryApi';
 
 
 
@@ -101,22 +101,6 @@ const InventoryHistoryManagement = (props) => {
   const [addRows,setAddRows] = useState([]);
   const [updatedDetailRows, setUpdatedDetailRows] = useState([]); // 수정된 필드만 저장하는 객체
 
-  const GET_INVENTORY_HISTORY_LIST = `
-    query getInventoryHistoryList($filter: InventoryHistoryFilter) {
-      getInventoryHistoryList(filter: $filter) {
-        inOutType
-        warehouseName
-        supplierName
-        manufacturerName
-        materialName
-        changeQty
-        currentQty
-        unit
-        createDate
-      }
-    }
-  `
-
   const handleDateRangeChange = (startDate, endDate) => {
     setValue('dateRange', { startDate, endDate });
   };
@@ -147,61 +131,29 @@ const InventoryHistoryManagement = (props) => {
 
       console.log('GraphQL 필터:', filter);
 
-      // 직접 fetch API를 사용하여 요청 (fetchGraphQL 함수 대신)
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: GET_INVENTORY_HISTORY_LIST,
-          variables: { filter }
-        })
-      });
+      const result = await getInventoryHistoryList(filter);
       
-      console.log('응답 상태:', response.status, response.statusText);
-      
-      const responseText = await response.text();
-      console.log('응답 내용:', responseText.substring(0, 200));
-      
-      if (responseText.trim()) {
-        const result = JSON.parse(responseText);
+      if (result) {
         console.log('파싱된 결과:', result);
         
-          if (result.data && result.data.getInventoryHistoryList) {
-          // 받아온 데이터로 상태 업데이트
-          setReceivingList(result.data.getInventoryHistoryList.map((item, index) => ({
-            id: `${index}`,
-            inOutType: item.inOutType,
-            warehouseName: item.warehouseName,
-            supplierName: item.supplierName,
-            manufacturerName: item.manufacturerName,
-            materialName: item.materialName,
-            unit: item.unit,
-            changeQty: parseFloat(item.changeQty) || 0,
-            createDate: item.createDate,
-          })));
-          
-          // 선택 상태 초기화
-        } else {
-          console.error('응답 데이터가 예상 형식과 다릅니다:', result);
-          // 응답 데이터에 문제가 있거나 빈 배열이면 빈 배열로 설정
-          setReceivingList([]);
-          
-          Swal.fire({
-            icon: 'info',
-            title: '알림',
-            text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.' + 
-                  (result.errors ? ` 오류: ${result.errors[0]?.message || '알 수 없는 오류'}` : '')
-          });
-        }
+        setReceivingList(result.map((item, index) => ({
+          id: `${index}`,
+          inOutType: item.inOutType,
+          warehouseName: item.warehouseName,
+          supplierName: item.supplierName,
+          manufacturerName: item.manufacturerName,
+          materialName: item.materialName,
+          unit: item.unit,
+          changeQty: parseFloat(item.changeQty) || 0,
+          createDate: item.createDate,
+        })));
       } else {
-        console.error('빈 응답을 받았습니다');
+        console.error('응답 데이터가 예상 형식과 다릅니다:', result);
         setReceivingList([]);
-        
         Swal.fire({
-          icon: 'error',
-          title: '오류 발생',
-          text: '서버로부터 빈 응답을 받았습니다.'
+          icon: 'info',
+          title: '알림',
+          text: '데이터를 가져오지 못했습니다. 백엔드 연결을 확인해주세요.'
         });
       }
     } catch (error) {
@@ -328,7 +280,20 @@ const InventoryHistoryManagement = (props) => {
       editable: false,
       renderCell: (params) => {
         const value = params.value;
-        const color = value > 0 ? '#4caf50' : value < 0 ? '#f44336' : 'inherit';
+        const isOutbound = params.row?.inOutType === 'OUT';
+        
+        let displayValue;
+        let color;
+        
+        if (isOutbound) {
+          // 출고인 경우: 앞에 - 붙이고 빨간색으로 표시
+          displayValue = `-${Math.abs(parseFloat(value)).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
+          color = '#f44336';
+        } else {
+          // 입고인 경우: 그대로 표시하고 초록색으로 표시
+          displayValue = parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+          color = '#4caf50';
+        }
     
         return (
           <Box
@@ -341,7 +306,7 @@ const InventoryHistoryManagement = (props) => {
             }}
           >
             <Typography sx={{ color, fontWeight: '' }}>
-              {parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}
+              {displayValue}
             </Typography>
           </Box>
         );

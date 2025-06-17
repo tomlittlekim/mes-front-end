@@ -96,6 +96,8 @@ const ReceivingManagement = (props) => {
 
   // 상태 관리
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDetail, setIsSavingDetail] = useState(false);
 
   const [receivingList, setReceivingList] = useState([]);
   const [newReceivingList, setNewReceivingList] = useState([]);
@@ -441,6 +443,12 @@ const ReceivingManagement = (props) => {
   };
 
   const handleSave = () => {
+    // 이미 저장 중인 경우 중복 호출 방지
+    if (isSaving) {
+      console.log('이미 저장 중입니다. 중복 호출을 방지합니다.');
+      return;
+    }
+
     // 그리드에 있는 새 행 데이터 필터링 (NEW_로 시작하는 ID)
     const newRows = receivingList.filter(row => row.id.toString().startsWith('NEW_'));
     
@@ -488,6 +496,8 @@ const ReceivingManagement = (props) => {
     if (!validateRequiredFields(addRows, requiredFields)) {
       return;
     }
+
+    setIsSaving(true); // 저장 시작
 
     // 기존 API 호출 코드
     // fetch(GRAPHQL_URL, {
@@ -537,6 +547,9 @@ const ReceivingManagement = (props) => {
         text: '저장 중 예외가 발생했습니다: ' + error.message,
         confirmButtonText: '확인'
       });
+    })
+    .finally(() => {
+      setIsSaving(false); // 저장 완료
     });
   }
 
@@ -607,6 +620,12 @@ const ReceivingManagement = (props) => {
   };
 
   const handleDetailSave = () => {
+    // 이미 저장 중인 경우 중복 호출 방지
+    if (isSavingDetail) {
+      console.log('이미 상세 저장 중입니다. 중복 호출을 방지합니다.');
+      return;
+    }
+
     // 새로 추가된 행 필터링 (addRows 대신 receivingDetail에서 직접 가져옴)
     const newRows = receivingDetail.filter(row => row.id.toString().startsWith('NEW_'));
     
@@ -705,6 +724,8 @@ const ReceivingManagement = (props) => {
     console.log('백엔드로 전송할 새 데이터:', createdInventoryInputs);
     console.log('백엔드로 전송할 수정 데이터:', updatedInventoryInputs);
 
+    setIsSavingDetail(true); // 상세 저장 시작
+
     // API 호출
     fetch(GRAPHQL_URL, {
       method: 'POST',
@@ -791,6 +812,9 @@ const ReceivingManagement = (props) => {
         text: '저장 중 예외가 발생했습니다: ' + error.message,
         confirmButtonText: '확인'
       });
+    })
+    .finally(() => {
+      setIsSavingDetail(false); // 상세 저장 완료
     });
   };
 
@@ -926,47 +950,48 @@ const ReceivingManagement = (props) => {
   function handleDetailProcessRowUpdate(newRow, oldRow) {
     const isNewRow = oldRow.id.startsWith('NEW_');
 
+    // 총 금액 자동 계산
+    const qty = parseFloat(newRow.qty) || 0;
+    const unitPrice = parseFloat(newRow.unitPrice) || 0;
+    const unitVat = parseFloat(newRow.unitVat) || 0;
+    const totalPrice = qty * (unitPrice + unitVat);
+    
+    const updatedRow = { ...newRow, totalPrice };
+
     setReceivingDetail((prev) => {
       return prev.map((row) =>
-          //기존 행이면 덮어씌우기 새로운행이면 새로운행 추가
-          row.id === oldRow.id ? { ...row, ...newRow } : row
+          row.id === oldRow.id ? { ...row, ...updatedRow } : row
       );
     });
 
     if (isNewRow) {
-      // 신규 행인 경우 addRows 상태에 추가 (같은 id가 있으면 덮어씀)
       setAddDetailRows((prevAddRows) => {
         const existingIndex = prevAddRows.findIndex(
-            (row) => row.id === newRow.id
+            (row) => row.id === updatedRow.id
         );
         if (existingIndex !== -1) {
           const updated = [...prevAddRows];
-          updated[existingIndex] = newRow;
+          updated[existingIndex] = updatedRow;
           return updated;
         } else {
-          return [...prevAddRows, newRow];
+          return [...prevAddRows, updatedRow];
         }
       });
     }else {
       setUpdatedDetailRows(prevUpdatedRows => {
-        // 같은 factoryId를 가진 기존 행이 있는지 확인
-        const existingIndex = prevUpdatedRows.findIndex(row => row.inInventoryId === newRow.inInventoryId);
+        const existingIndex = prevUpdatedRows.findIndex(row => row.inInventoryId === updatedRow.inInventoryId);
 
         if (existingIndex !== -1) {
-
-          // 기존에 같은 factoryId가 있다면, 해당 객체를 새 값(newRow)으로 대체
           const updated = [...prevUpdatedRows];
-          updated[existingIndex] = newRow;
+          updated[existingIndex] = updatedRow;
           return updated;
         } else {
-
-          // 없다면 새로 추가
-          return [...prevUpdatedRows, newRow];
+          return [...prevUpdatedRows, updatedRow];
         }
       });
     }
 
-    return { ...oldRow, ...newRow };
+    return { ...oldRow, ...updatedRow };
   }
 
   function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
@@ -1434,16 +1459,16 @@ const ReceivingManagement = (props) => {
 
   // 입고 목록 그리드 버튼
   const receivingGridButtons = [
-    { label: '등록', onClick: handleAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon /> },
+    { label: '등록', onClick: handleAdd, icon: <AddIcon />, disabled: isSaving },
+    { label: isSaving ? '저장 중...' : '저장', onClick: handleSave, icon: <SaveIcon />, disabled: isSaving },
+    { label: '삭제', onClick: handleDelete, icon: <DeleteIcon />, disabled: isSaving },
   ];
 
   // 입고 상세 그리드 버튼
   const detailedReceivingGridButtons = [
-    { label: '등록', onClick: handleDetailAdd, icon: <AddIcon /> },
-    { label: '저장', onClick: handleDetailSave, icon: <SaveIcon /> },
-    { label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon /> },
+    { label: '등록', onClick: handleDetailAdd, icon: <AddIcon />, disabled: isSavingDetail },
+    { label: isSavingDetail ? '저장 중...' : '저장', onClick: handleDetailSave, icon: <SaveIcon />, disabled: isSavingDetail },
+    { label: '삭제', onClick: handleDetailDelete, icon: <DeleteIcon />, disabled: isSavingDetail },
   ];
 
   return (
@@ -1622,7 +1647,7 @@ const ReceivingManagement = (props) => {
           <Grid item xs={12} md={5}>
           <EnhancedDataGridWrapper
               title="입고 목록"
-              key={refreshKey}  // refreshKey가 변경되면 전체 그리드가 재마운트됩니다.
+              key={refreshKey}
               rows={receivingList}
               columns={receivingColumns}
               buttons={receivingGridButtons}
@@ -1631,9 +1656,10 @@ const ReceivingManagement = (props) => {
               tabId={props.tabId + "-factories"}
               gridProps={{
                 editMode: 'cell',
-                onProcessUpdate: handleProcessRowUpdate,
+                processRowUpdate: handleProcessRowUpdate,
+                onProcessRowUpdateError: (error) => console.error("Row update error:", error),
                 columnVisibilityModel: {
-                  inInventoryId: false, // 특정 컬럼 숨기기
+                  inInventoryId: false,
                 },
               }}
               />
@@ -1643,7 +1669,7 @@ const ReceivingManagement = (props) => {
           <Grid item xs={12} md={7}>
           <EnhancedDataGridWrapper
               title="상세 정보"
-              key={refreshKey + 1}  // 강제 리렌더링 위해 key 변경
+              key={refreshKey + 1}
               rows={receivingDetail}
               columns={detailedReceivingColumns.filter(col => col.field !== 'inInventoryId')}
               buttons={detailedReceivingGridButtons}
@@ -1652,7 +1678,8 @@ const ReceivingManagement = (props) => {
               tabId={props.tabId + "-factories"}
               gridProps={{
                 editMode: 'cell',
-                onProcessUpdate: handleDetailProcessRowUpdate
+                processRowUpdate: handleDetailProcessRowUpdate,
+                onProcessRowUpdateError: (error) => console.error("Detail row update error:", error)
               }}
               />
           </Grid>
