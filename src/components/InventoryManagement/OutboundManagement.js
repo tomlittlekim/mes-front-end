@@ -11,12 +11,11 @@ import {
   Box, 
   Typography, 
   useTheme,
-  Stack,
   IconButton,
   alpha
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -26,10 +25,8 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
-import { GRAPHQL_URL } from '../../config';
 import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
-import { graphFetch } from "../../api/fetchConfig";
 import { toKSTISOString } from './InventoryUtils';
 import { 
   getInventoryOutManagementList,
@@ -37,7 +34,11 @@ import {
   saveInventoryOutManagement,
   deleteInventoryOutManagement,
   saveInventoryOut,
-  deleteInventoryOut
+  deleteInventoryOut,
+  getGridCodes,
+  getGridFactory,
+  getGridWarehouse,
+  getMaterialCode
 } from '../../api/standardInfo/inventoryApi';
 
 
@@ -195,7 +196,7 @@ const OutboundManagement = (props) => {
         text: `오류: ${error.message || '알 수 없는 오류가 발생했습니다.'}`
       });
     }
-  }, []);
+  }, [factoryTypeOptions, warehouseTypeOptions, outTypeOptions]);
 
   // 출고 선택 핸들러 Row 클릭
   const handleOutboundSelect = async (params) => {
@@ -590,71 +591,23 @@ const OutboundManagement = (props) => {
     return { ...oldRow, ...updatedRow };
   }
 
-  // 코드 데이터 로딩 함수들 (Promise 반환)
-  function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
-    const query = `query getGridCodes($codeClassId: String!) { getGridCodes(codeClassId: $codeClassId) { codeId codeName } }`;
-    return new Promise((resolve, reject) => {
-      graphFetch(query, { codeClassId })
-        .then((data) => {
-          if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.getGridCodes.map(row => ({ value: row.codeId, label: row.codeName })); setOptions(options); resolve(options); }
-        })
-        .catch(err => { console.error(err); reject(err); });
-    });
-  }
-
-  function fetchGridFactory() {
-    const query = `query getGridFactory { getGridFactory { factoryId factoryName factoryCode } }`;
-    return new Promise((resolve, reject) => {
-      fetch(GRAPHQL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ query }) })
-        .then(response => { if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`); return response.json(); })
-        .then(data => {
-          if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.data.getGridFactory.map(row => ({ value: row.factoryId, label: row.factoryName })); setFactoryTypeOptions(options); resolve(options); }
-        })
-        .catch(err => { console.error(err); reject(err); });
-    });
-  }
-
-  function fetchGridWarehouse() {
-    const query = `query getGridWarehouse { getGridWarehouse { warehouseId warehouseName warehouseType } }`;
-    return new Promise((resolve, reject) => {
-      fetch(GRAPHQL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ query }) })
-        .then(response => { if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`); return response.json(); })
-        .then(data => {
-          if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.data.getGridWarehouse.map(row => ({ value: row.warehouseId, label: row.warehouseName })); setWarehouseTypeOptions(options); resolve(options); }
-        })
-        .catch(err => { console.error(err); reject(err); });
-    });
-  }
-
-  function fetchGridMaterial() {
-    const query = `query getMaterialCode { getMaterialCode { supplierId manufacturerName systemMaterialId materialName materialCategory unit } }`;
-    return new Promise((resolve, reject) => {
-      fetch(GRAPHQL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ query }) })
-        .then(response => { if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`); return response.json(); })
-        .then(data => {
-          if (data.errors) { console.error(data.errors); reject(data.errors); }
-          else { const options = data.data.getMaterialCode.map(row => ({ value: row.systemMaterialId, label: row.materialName })); setMaterialTypeOptions(options); resolve(options); }
-        })
-        .catch(err => { console.error(err); reject(err); });
-    });
-  }
-
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
     const loadCodeData = async () => {
       setIsLoading(true);
       try {
-        await fetchGridCodesByCodeClassId("CD20250410151400958", setOutTypeOptions); // 출고 유형 코드 로드
-        await fetchGridFactory();
-        await fetchGridWarehouse();
-        await fetchGridMaterial();
+        const [codes, factories, warehouses, materials] = await Promise.all([
+          getGridCodes("CD20250410151400958"),
+          getGridFactory(),
+          getGridWarehouse(),
+          getMaterialCode()
+        ]);
 
-        console.log("코드 데이터 로드 완료:", { outTypeOptions, factoryTypeOptions, warehouseTypeOptions, materialTypeOptions });
-
-        // 코드 로드 후 검색 실행 (딜레이 없이)
+        setOutTypeOptions(codes.map(c => ({ value: c.codeId, label: c.codeName })));
+        setFactoryTypeOptions(factories.map(f => ({ value: f.factoryId, label: f.factoryName })));
+        setWarehouseTypeOptions(warehouses.map(w => ({ value: w.warehouseId, label: w.warehouseName })));
+        setMaterialTypeOptions(materials.map(m => ({ value: m.systemMaterialId, label: m.materialName })));
+        
         handleSearch(getValues()); 
 
       } catch (error) {
