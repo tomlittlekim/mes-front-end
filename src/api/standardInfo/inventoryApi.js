@@ -288,3 +288,77 @@ export const getMaterialList = async () => {
   const response = await graphFetch(getMaterialsQuery, {});
   return response.getMaterialNameAndSysId;
 };
+
+// =============================
+//      코드/마스터 데이터 API
+// =============================
+
+// 코드 조회
+const getGridCodesQuery = `
+  query getGridCodes($codeClassId: String!) {
+    getGridCodes(codeClassId: $codeClassId) {
+      codeId
+      codeName
+    }
+  }
+`;
+
+// 공장 조회
+const getGridFactoryQuery = `
+  query getGridFactory {
+    getGridFactory {
+      factoryId
+      factoryName
+      factoryCode
+    }
+  }
+`;
+
+// 창고 조회
+const getGridWarehouseQuery = `
+  query getGridWarehouse {
+    getGridWarehouse {
+      warehouseId
+      warehouseName
+      warehouseType
+    }
+  }
+`;
+
+// 자재 코드 조회
+const getMaterialCodeQuery = `
+  query getMaterialCode {
+    getMaterialCode {
+      supplierId
+      manufacturerName
+      systemMaterialId
+      materialName
+      materialCategory
+      unit
+    }
+  }
+`;
+
+// 코드 목록 조회
+export const getGridCodes = async (codeClassId) => {
+  const response = await graphFetch(getGridCodesQuery, { codeClassId });
+  return response.getGridCodes;
+};
+
+// 공장 목록 조회
+export const getGridFactory = async () => {
+  const response = await graphFetch(getGridFactoryQuery, {});
+  return response.getGridFactory;
+};
+
+// 창고 목록 조회
+export const getGridWarehouse = async () => {
+  const response = await graphFetch(getGridWarehouseQuery, {});
+  return response.getGridWarehouse;
+};
+
+// 자재 코드 목록 조회
+export const getMaterialCode = async () => {
+  const response = await graphFetch(getMaterialCodeQuery, {});
+  return response.getMaterialCode;
+};
