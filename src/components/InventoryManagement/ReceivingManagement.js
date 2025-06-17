@@ -26,12 +26,10 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Swal from 'sweetalert2';
 import { useDomain, DOMAINS } from '../../contexts/DomainContext';
 import HelpModal from '../Common/HelpModal';
-import { GRAPHQL_URL } from '../../config';
 import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
-import {graphFetch} from "../../api/fetchConfig";
 import { toKSTISOString } from './InventoryUtils';
-import { getInventoryInManagementList , getInventoryInList , saveInventoryInManagement , deleteInventoryInManagement, deleteInventoryIn } from '../../api/standardInfo/inventoryApi';
+import { getInventoryInManagementList , getInventoryInList , saveInventoryInManagement , deleteInventoryInManagement, deleteInventoryIn, getGridCodes, getGridFactory, getGridWarehouse, getMaterialCode, saveInventoryIn } from '../../api/standardInfo/inventoryApi';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -128,101 +126,6 @@ const ReceivingManagement = (props) => {
     setValue('dateRange', { startDate, endDate });
   };
 
-  // GraphQL 쿼리 정의
-  const INVENTORY_IN_QUERIES = {
-    GET_INVENTORY_IN_MANAGEMENT_LIST: `
-      query getInventoryInManagementList($filter: InventoryInManagementFilter) {
-        getInventoryInManagementList(filter: $filter) {
-          inManagementId
-          inType
-          factoryId
-          warehouseId
-          materialInfo
-          totalPrice
-          hasInvoice
-          userName
-          createDate
-        }
-      }
-    `,
-    GET_INVENTORY_IN_LIST: `
-      query getInventoryInList($filter: InventoryInFilter) {
-        getInventoryInList(filter: $filter) {
-          inManagementId
-          inInventoryId
-          supplierName
-          manufacturerName
-          systemMaterialId
-          materialName
-          materialCategory
-          materialStandard
-          qty
-          unitPrice
-          unitVat
-          totalPrice
-          createUser
-          createDate
-          updateUser
-          updateDate
-        }
-      }
-    `
-  }
-
-  // // 천 단위 구분 포맷터 함수
-  // const priceFormatter = (params) => {
-  //   if (params.value == null) return '';
-  //   return params.value.toLocaleString('ko-KR');
-  // };
-
-  const fetchGraphQL = async (query, variables) => {
-    try {
-      console.log('GraphQL 요청 보냄:', { query, variables });
-      
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query,
-          variables
-        })
-      });
-
-      console.log('GraphQL 응답 상태:', response.status, response.statusText);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // 응답 텍스트 먼저 확인
-      const responseText = await response.text();
-      console.log('GraphQL 응답 원본:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
-
-      // 텍스트가 비어있지 않은 경우에만 JSON 파싱
-      if (responseText.trim()) {
-        const data = JSON.parse(responseText);
-        console.log('GraphQL 응답 파싱됨:', data);
-        
-        // GraphQL 에러 확인
-        if (data.errors) {
-          console.error('GraphQL 에러:', data.errors);
-          throw new Error(data.errors[0].message || 'GraphQL 에러 발생');
-        }
-        
-        return data.data;
-      } else {
-        console.error('GraphQL 응답이 비어있습니다');
-        throw new Error('빈 응답이 반환되었습니다.');
-      }
-    } catch (error) {
-      console.error('GraphQL 요청 오류:', error);
-      throw error;
-    }
-  };
-  
   // 검색 실행 함수
   const handleSearch = useCallback(async (data) => {
     const filter = {
@@ -235,41 +138,15 @@ const ReceivingManagement = (props) => {
       startDate: data.dateRange?.startDate ? toKSTISOString(new Date(data.dateRange.startDate)) : null,
       endDate: data.dateRange?.endDate ? toKSTISOString(new Date(data.dateRange.endDate)) : null,
     };
-    console.log('인벤매니지먼트리스트',await getInventoryInManagementList(filter));
-    console.log(inTypeOptions);
     setUpdatedDetailRows([]);
     setAddRows([]);
 
-    console.log('검색 데이터:', data);
-
     try {
-      // 필터 객체 생성 - 백엔드의 InventoryInManagementFilter와 일치
-      
-      console.log('GraphQL 필터:', filter);
-
       // 직접 fetch API를 사용하여 요청 (fetchGraphQL 함수 대신)
       const response = await getInventoryInManagementList(filter);
-      // const response = await fetch(GRAPHQL_URL, {
-      //   method: 'POST',
-      //   credentials: 'include',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     query: INVENTORY_IN_QUERIES.GET_INVENTORY_IN_MANAGEMENT_LIST,
-      //     variables: { filter }
-      //   })
-      // });
-      
-      console.log('응답 상태:', response.status, response.statusText);
-
-      // reponse 테스트 데이터랑 responseTest랑 데이터 같은거 확인
-      // console.log('responseTest:', responseTest);
-      // console.log('response테스트 데이터:', JSON.parse(await response.text()).data.getInventoryInManagementList);      
-      
-      // const responseText = await response.text();
       
       if (response) {
         const result = response;
-        console.log('파싱된 결과:', result);
         
         if (response) {
           // 받아온 데이터로 상태 업데이트 - ID 필드를 그대로 사용
@@ -734,25 +611,10 @@ const ReceivingManagement = (props) => {
     setIsSavingDetail(true); // 상세 저장 시작
 
     // API 호출
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query: `
-          mutation saveInventoryIn($createdRows: [InventoryInSaveInput], $updatedRows: [InventoryInUpdateInput]) {
-            saveInventoryIn(createdRows: $createdRows, updatedRows: $updatedRows)
-          }
-        `,
-        variables: {
-          createdRows: createdInventoryInputs,
-          updatedRows: updatedInventoryInputs
-        }
-      })
+    saveInventoryIn({
+      createdRows: createdInventoryInputs,
+      updatedRows: updatedInventoryInputs
     })
-    .then(res => res.json())
     .then(data => {
       if (data.errors) {
         console.error("GraphQL errors:", data.errors);
@@ -778,12 +640,9 @@ const ReceivingManagement = (props) => {
             inManagementId: selectedReceiving.inManagementId || null
           };
           
-          fetchGraphQL(
-            INVENTORY_IN_QUERIES.GET_INVENTORY_IN_LIST,
-            { filter }
-          ).then(result => {
-            if (result && result.getInventoryInList) {
-              const detailData = result.getInventoryInList.map((item, index) => {
+          getInventoryInList(filter).then(result => {
+            if (result) {
+              const detailData = result.map((item, index) => {
                 const qty = parseFloat(item.qty) || 0;
                 const unitPrice = parseFloat(item.unitPrice) || 0;
                 const unitVat = parseFloat(item.unitVat) || 0;
@@ -991,181 +850,35 @@ const ReceivingManagement = (props) => {
     return { ...oldRow, ...updatedRow };
   }
 
-  function fetchGridCodesByCodeClassId(codeClassId, setOptions) {
-    const query = `
-    query getGridCodes($codeClassId: String!) {
-      getGridCodes(codeClassId: $codeClassId) {
-        codeId
-        codeName
-      }
-    }
-  `;
-
-    return new Promise((resolve, reject) => {
-      graphFetch(
-          query,
-          {codeClassId:codeClassId})
-      .then((data) => {
-            if (data.errors) {
-              console.error(data.errors);
-              reject(data.errors);
-            } else {
-              const options = data.getGridCodes.map((row) => ({
-                value: row.codeId,
-                label: row.codeName,
-              }));
-              setOptions(options);
-              resolve(options);
-            }
-          })
-      .catch((err) => {
-        console.error(err);
-        reject(err);
-      });
-    });
-  }
-
-  function fetchGridFactory() {
-    const query = `
-    query getGridFactory {
-      getGridFactory {
-        factoryId
-        factoryName
-        factoryCode
-      }
-    }
-  `;
-
-    return new Promise((resolve, reject) => {
-      graphFetch(query, {})
-        .then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-            reject(data.errors);
-          } else {
-            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getGridFactory.map((row) => ({
-              value: row.factoryId,
-              label: row.factoryName
-            }));
-            setFactoryTypeOptions(options);
-            resolve(options);
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          reject(err);
-        });
-    });
-  }
-
-  function fetchGridWarehouse() {
-    const query = `
-    query getGridWarehouse {
-      getGridWarehouse {
-        warehouseId
-        warehouseName
-        warehouseType
-      }
-    }
-  `;
-
-    return new Promise((resolve, reject) => {
-      graphFetch(query, {})
-        .then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-            reject(data.errors);
-          } else {
-            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getGridWarehouse.map((row) => ({
-              value: row.warehouseId,
-              label: row.warehouseName
-            }));
-            setWarehouseTypeOptions(options);
-            resolve(options);
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          reject(err);
-        });
-    });
-  }
-
-  function fetchGridMaterial() {
-    const query = `
-    query getMaterialCode {
-      getMaterialCode {
-        supplierId
-        manufacturerName
-        systemMaterialId
-        materialName
-        materialCategory
-        unit
-      }
-    }
-  `;
-
-    return new Promise((resolve, reject) => {
-      graphFetch(query, {})
-        .then((data) => {
-          if (data.errors) {
-            console.error(data.errors);
-            reject(data.errors);
-          } else {
-            // API에서 받은 데이터를 select 옵션 배열로 가공합니다.
-            const options = data.getMaterialCode.map((row) => ({
-              value: row.systemMaterialId,
-              label: row.materialName
-            }));
-            setMaterialTypeOptions(options);
-            resolve(options);
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          reject(err);
-        });
-    });
-  }
-
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
-    // 먼저 코드 데이터를 로드
     const loadCodeData = async () => {
+      setIsLoading(true);
       try {
+        const [codes, factories, warehouses, materials] = await Promise.all([
+          getGridCodes("CD20250409164927041"),
+          getGridFactory(),
+          getGridWarehouse(),
+          getMaterialCode()
+        ]);
 
-        // 입고 유형 코드 로드
-        await fetchGridCodesByCodeClassId("CD20250409164927041", setInTypeOptions);
-        // 공장 데이터 로드
-        await fetchGridFactory();
-        // 창고 데이터 로드
-        await fetchGridWarehouse();
-        // 자재 타입 코드 로드
-        await fetchGridMaterial();
+        setInTypeOptions(codes.map(c => ({ value: c.codeId, label: c.codeName })));
+        setFactoryTypeOptions(factories.map(f => ({ value: f.factoryId, label: f.factoryName })));
+        setWarehouseTypeOptions(warehouses.map(w => ({ value: w.warehouseId, label: w.warehouseName })));
+        setMaterialTypeOptions(materials.map(m => ({ value: m.systemMaterialId, label: m.materialName })));
 
-        console.log("코드 데이터 로드 완료:", { 
-          inTypeOptions, 
-          factoryTypeOptions, 
-          warehouseTypeOptions 
-        });
-
-        // 모든 코드 데이터가 로드된 후 검색 실행
-        setTimeout(() => {
-          handleSearch({});
-          setIsLoading(false);
-        }, 300);
+        handleSearch(getValues());
       } catch (error) {
         console.error("코드 데이터 로드 오류:", error);
+        Swal.fire({ icon: 'error', title: '코드 로딩 실패', text: '필수 코드 정보를 가져오지 못했습니다.' });
+      } finally {
         setIsLoading(false);
       }
     };
 
     loadCodeData();
-    
-    return () => {}; // 클린업 함수
-  }, [handleSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 입고 목록 그리드 컬럼 정의
   const receivingColumns = [
