@@ -44,9 +44,9 @@ const ModelViewer = ({ tabId }) => {
 
   // 관심 지점(Point of Interest) 데이터 정의
   const pointsOfInterestData = [
-    { id: 'point1', position3D: new THREE.Vector3(-6.673079694028458, 1.188442585181138, 4.602528073794443), baseText: '1', deviceNumber: '001' },
-    { id: 'point2', position3D: new THREE.Vector3(-5.265677971408536, 0.4369102407435346, 5.60017773724662), baseText: '2', deviceNumber: '002' },
-    { id: 'point3', position3D: new THREE.Vector3(4.8119280895793946, 1.0851206174651207, -2.307622247417798), baseText: '3', deviceNumber: '003' },
+    { id: 'point1', position3D: new THREE.Vector3(-2.7299824809894284, -0.27237625163658863, -4.314808416788175), baseText: '1', deviceNumber: '001' },
+    { id: 'point2', position3D: new THREE.Vector3(1.7003679051161473, -0.5681640649922682, -4.890643372412229), baseText: '2', deviceNumber: '002' },
+    { id: 'point3', position3D: new THREE.Vector3(8.609266807791741, -0.5948561952463649, 2.8991550064344365), baseText: '3', deviceNumber: '003' },
   ];
 
   // IOT 데이터 fetch 함수 (IotChart와 동일)
@@ -63,7 +63,7 @@ const ModelViewer = ({ tabId }) => {
     graphFetch(query).then((apiResponse) => {
       // 1. API 응답 자체가 없는 경우 처리
       if (!apiResponse) {
-        console.error('IOT 데이터 fetch 실패: 응답 데이터가 없습니다.');
+        console.error('IOT 데이터 fetch 실패 데이터가 없습니다.');
         return;
       }
       // 2. API 응답 내에 errors 필드가 있는지 확인
@@ -202,8 +202,8 @@ const ModelViewer = ({ tabId }) => {
 
     camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 1000);
     // 초기 카메라 위치 설정
-    camera.position.set(-0.00001186967904497516, 11.89124935229853, 7.159123744649583e-7);
-    camera.rotation.set(-1.5707962665899209, -9.98186035494785e-7, -1.510554921748329);
+    camera.position.set(3.8851270759648884, 0.10072583026928666, 19.1734179922868735);
+    camera.rotation.set(-0.026341629497861275, 0.5185637717693896, 0.013058065479292993);
 
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -226,6 +226,9 @@ const ModelViewer = ({ tabId }) => {
     controls.screenSpacePanning = false;
     controls.minDistance = 1;
     controls.maxDistance = 500;
+    // 상하 시점 고정 (좌우로만 회전)
+    // controls.minPolarAngle = Math.PI / 2;
+    // controls.maxPolarAngle = Math.PI / 2;
     // 초기 타겟 위치 설정
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
@@ -237,7 +240,7 @@ const ModelViewer = ({ tabId }) => {
     scene.add(directionalLight);
 
     const loader = new GLTFLoader();
-    const modelPath = '/models/eightpin_office.glb';
+    const modelPath = '/models/testtt.glb';
     loader.load(
       modelPath,
       (gltf) => {
@@ -337,7 +340,9 @@ const ModelViewer = ({ tabId }) => {
       const intersectsModel = raycaster.intersectObjects(scene.children, true);
       if (intersectsModel.length > 0) {
         const point = intersectsModel[0].point;
-        // 클릭한 좌표 정보는 개발 목적으로만 사용하므로 제거
+        console.log('클릭된 3D 모델 좌표:', point);
+        console.log('현재 카메라 위치:', camera.position);
+        console.log('현재 카메라 회전:', camera.rotation);
       }
     };
 

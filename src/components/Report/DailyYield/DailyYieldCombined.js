@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { Box, IconButton, Stack, Typography, useTheme, alpha, Grid, Button, Chip, FormControl, InputLabel, MenuItem, Select, List, ListItem, ListItemIcon, Checkbox, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, IconButton, Stack, Typography, useTheme, alpha, Grid, Button, Chip, FormControl, InputLabel, MenuItem, Select, List, ListItem, ListItemIcon, Checkbox, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpModal from '../../Common/HelpModal';
 import { SearchCondition, EnhancedDataGridWrapper } from '../../Common';
@@ -23,6 +23,18 @@ const PERIODIC_PRODUCTION_QUERY = `
       totalGoodQty
       totalDefectQty
       totalDefectRate
+      unit
+      productId
+    }
+  }
+`;
+
+const GET_DEFECT_DETAILS_QUERY = `
+  query getDefectInfo($productId: String) {
+    getDefectInfo(productId: $productId) {
+      codeName
+      codeDesc
+      defectQty
     }
   }
 `;
@@ -146,7 +158,9 @@ export const useDailyYield = (tabId) => {
         totalGoodQty: item.totalGoodQty,
         totalDefectQty: item.totalDefectQty,
         totalDefectRate: item.totalDefectRate,
-        totalQty: item.totalGoodQty + item.totalDefectQty
+        totalQty: item.totalGoodQty + item.totalDefectQty,
+        unit: item.unit,
+        productId: item.productId
       }));
 
       console.log('Processed Grid Data:', processedGridData);
@@ -512,6 +526,14 @@ const DailyYieldCombined = (props) => {
     selectedMaterials: [], // 다중 선택을 위한 배열
   });
 
+  // 불량 상세 사유 모달 상태
+  const [defectDetailModal, setDefectDetailModal] = useState({
+    open: false,
+    loading: false,
+    materialName: '',
+    defectCauses: [],
+  });
+
   // 선택된 자재 목록 (검색 조건에 사용)
   const [selectedSearchMaterials, setSelectedSearchMaterials] = useState([]);
 
@@ -532,6 +554,76 @@ const DailyYieldCombined = (props) => {
   const getTextColor = useCallback(() => isDarkMode ? '#fff' : 'rgba(0, 0, 0, 0.87)', [isDarkMode]);
   const getBgColor = useCallback(() => isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5', [isDarkMode]);
   const getBorderColor = useCallback(() => isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e0e0e0', [isDarkMode]);
+
+  // 불량 상세 모달 열기 및 데이터 조회
+  const handleOpenDefectDetail = async (row) => {
+    if (!row.productId) {
+      Message.showInfo("이 제품의 ID가 없어 상세 불량 내역을 조회할 수 없습니다.");
+      return;
+    }
+
+    setDefectDetailModal({
+      open: true,
+      loading: true,
+      materialName: row.materialName,
+      defectCauses: [],
+    });
+
+    try {
+      const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: GET_DEFECT_DETAILS_QUERY,
+          variables: { productId: row.productId }
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.errors) {
+        throw new Error(result.errors[0].message);
+      }
+      
+      const defectData = result.data?.getDefectInfo;
+
+      if (!defectData || defectData.length === 0) {
+        setDefectDetailModal(prev => ({ ...prev, loading: false, defectCauses: [] }));
+      } else {
+        const aggregatedDefects = defectData.reduce((acc, current) => {
+          const { codeName, codeDesc, defectQty } = current;
+          if (!acc[codeName]) {
+            acc[codeName] = {
+              reason: codeName,
+              desc: codeDesc,
+              qty: 0,
+            };
+          }
+          acc[codeName].qty += parseFloat(defectQty) || 0;
+          return acc;
+        }, {});
+
+        const formattedDefects = Object.values(aggregatedDefects);
+        setDefectDetailModal(prev => ({ ...prev, loading: false, defectCauses: formattedDefects }));
+      }
+
+    } catch (error) {
+      console.error('Error fetching defect details:', error);
+      Message.showError("불량 내역 조회 중 오류가 발생했습니다.");
+      setDefectDetailModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // 불량 상세 모달 닫기
+  const handleCloseDefectDetail = () => {
+    setDefectDetailModal({
+      open: false,
+      loading: false,
+      materialName: '',
+      defectCauses: [],
+    });
+  };
 
   // 자재 선택 모달 열기
   const handleOpenMaterialSelect = () => {
@@ -640,6 +732,14 @@ const DailyYieldCombined = (props) => {
       align: 'left',
       editable: false,
       flex: 1,
+    },
+    { 
+      field: 'unit', 
+      headerName: '규격', 
+      width: 120, 
+      headerAlign: 'center', 
+      align: 'left',
+      editable: false,
     },
     { 
       field: 'totalGoodQty', 
@@ -866,6 +966,7 @@ const DailyYieldCombined = (props) => {
                 },
               },
               density: 'standard',
+              onRowDoubleClick: (params) => handleOpenDefectDetail(params.row), // 더블클릭 이벤트 핸들러 추가
               paginationPosition: 'bottom',
               paginationModel: {
                 pageSize: 10,
@@ -898,6 +999,9 @@ const DailyYieldCombined = (props) => {
         </Typography>
         <Typography component="div" color={getTextColor()} paragraph>
           • 차트에는 양품 수량만 표시되며, 상세 정보는 그리드에서 확인할 수 있습니다.
+        </Typography>
+        <Typography component="div" color={getTextColor()} paragraph>
+          • 그리드의 행을 더블클릭하면 상세 불량 사유를 확인할 수 있습니다.
         </Typography>
       </HelpModal>
 
@@ -963,6 +1067,52 @@ const DailyYieldCombined = (props) => {
         <DialogActions>
           <Button onClick={handleCloseMaterialSelect}>취소</Button>
           <Button onClick={handleComplete} variant="contained">선택 완료</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 불량 상세 사유 모달 */}
+      <Dialog open={defectDetailModal.open} onClose={handleCloseDefectDetail} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Typography component="span" variant="h6" sx={{ fontWeight: 'bold' }}>{defectDetailModal.materialName}</Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0, minHeight: '150px' }}>
+          {defectDetailModal.loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <CircularProgress />
+            </Box>
+          ) : defectDetailModal.defectCauses && defectDetailModal.defectCauses.length > 0 ? (
+            <List sx={{ width: '100%', py: 0 }}>
+              {defectDetailModal.defectCauses.map((defect, index) => (
+                <ListItem key={index} divider sx={{ py: 2 }}>
+                  <Grid container alignItems="center" spacing={2}>
+                    <Grid item xs={9}>
+                      <ListItemText
+                        primary={defect.reason}
+                        secondary={defect.reason !== defect.desc ? defect.desc : null}
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                        secondaryTypographyProps={{ variant: 'body2', color: 'text.secondary', mt: 0.5 }}
+                      />
+                    </Grid>
+                    <Grid item xs={3} sx={{ textAlign: 'right' }}>
+                        <Chip
+                            label={`수량: ${defect.qty.toLocaleString()}`}
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                        />
+                    </Grid>
+                  </Grid>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Typography sx={{ p: 2, textAlign: 'center' }}>표시할 불량 사유가 없습니다.</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDefectDetail} variant="contained">닫기</Button>
         </DialogActions>
       </Dialog>
     </Box>

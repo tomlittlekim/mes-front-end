@@ -31,6 +31,7 @@ import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
 import {graphFetch} from "../../api/fetchConfig";
 import { toKSTISOString } from './InventoryUtils';
+import { getInventoryInManagementList , getInventoryInList , saveInventoryInManagement , deleteInventoryInManagement } from '../../api/standardInfo/inventoryApi';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -222,6 +223,17 @@ const ReceivingManagement = (props) => {
   
   // 검색 실행 함수
   const handleSearch = useCallback(async (data) => {
+    const filter = {
+      inManagementId: data.inManagementId || null,
+      inType: data.inType || null,
+      factoryName: data.factoryName || null,
+      warehouseName: data.warehouseName || null,
+      createUser: data.createUser || null,
+      hasInvoice: data.hasInvoice || null,
+      startDate: data.dateRange?.startDate ? toKSTISOString(new Date(data.dateRange.startDate)) : null,
+      endDate: data.dateRange?.endDate ? toKSTISOString(new Date(data.dateRange.endDate)) : null,
+    };
+    console.log('인벤매니지먼트리스트',await getInventoryInManagementList(filter));
     console.log(inTypeOptions);
     setUpdatedDetailRows([]);
     setAddRows([]);
@@ -230,42 +242,36 @@ const ReceivingManagement = (props) => {
 
     try {
       // 필터 객체 생성 - 백엔드의 InventoryInManagementFilter와 일치
-      const filter = {
-        inManagementId: data.inManagementId || null,
-        inType: data.inType || null,
-        factoryName: data.factoryName || null,
-        warehouseName: data.warehouseName || null,
-        createUser: data.createUser || null,
-        hasInvoice: data.hasInvoice || null,
-        startDate: data.dateRange?.startDate ? toKSTISOString(new Date(data.dateRange.startDate)) : null,
-        endDate: data.dateRange?.endDate ? toKSTISOString(new Date(data.dateRange.endDate)) : null,
-      };
-
+      
       console.log('GraphQL 필터:', filter);
 
       // 직접 fetch API를 사용하여 요청 (fetchGraphQL 함수 대신)
-      const response = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: INVENTORY_IN_QUERIES.GET_INVENTORY_IN_MANAGEMENT_LIST,
-          variables: { filter }
-        })
-      });
+      const response = await getInventoryInManagementList(filter);
+      // const response = await fetch(GRAPHQL_URL, {
+      //   method: 'POST',
+      //   credentials: 'include',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     query: INVENTORY_IN_QUERIES.GET_INVENTORY_IN_MANAGEMENT_LIST,
+      //     variables: { filter }
+      //   })
+      // });
       
       console.log('응답 상태:', response.status, response.statusText);
+
+      // reponse 테스트 데이터랑 responseTest랑 데이터 같은거 확인
+      // console.log('responseTest:', responseTest);
+      // console.log('response테스트 데이터:', JSON.parse(await response.text()).data.getInventoryInManagementList);      
       
-      const responseText = await response.text();
-      console.log('응답 내용:', responseText.substring(0, 200));
+      // const responseText = await response.text();
       
-      if (responseText.trim()) {
-        const result = JSON.parse(responseText);
+      if (response) {
+        const result = response;
         console.log('파싱된 결과:', result);
         
-        if (result.data && result.data.getInventoryInManagementList) {
+        if (response) {
           // 받아온 데이터로 상태 업데이트 - ID 필드를 그대로 사용
-          setReceivingList(result.data.getInventoryInManagementList.map(item => ({
+          setReceivingList(result.map(item => ({
             id: item.inManagementId,
             inManagementId: item.inManagementId,
             inType: item.inType,
@@ -283,7 +289,6 @@ const ReceivingManagement = (props) => {
           setReceivingDetail([]);
         } else {
           console.error('응답 데이터가 예상 형식과 다릅니다:', result);
-          // 응답 데이터에 문제가 있거나 빈 배열이면 빈 배열로 설정
           setReceivingList([]);
           setSelectedReceiving(null);
           setReceivingDetail([]);
@@ -335,14 +340,11 @@ const ReceivingManagement = (props) => {
       };
 
       // GraphQL 요청 보내기
-      const result = await fetchGraphQL(
-        INVENTORY_IN_QUERIES.GET_INVENTORY_IN_LIST,
-        { filter }
-      );
+      const result = await getInventoryInList(filter);
 
-      if (result && result.getInventoryInList) {
+      if (result) {
         // 받아온 데이터로 상태 업데이트
-        const detailData = result.getInventoryInList.map((item, index) => ({
+        const detailData = result.map((item, index) => ({
           id: item.inInventoryId || `detail_${item.inManagementId}_${index}`,
           inManagementId: item.inManagementId,
           inInventoryId: item.inInventoryId,
@@ -488,24 +490,24 @@ const ReceivingManagement = (props) => {
     }
 
     // 기존 API 호출 코드
-    fetch(GRAPHQL_URL, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query: `
-          mutation saveInventoryInManagement($createdRows: [InventoryInManagementSaveInput]) {
-            saveInventoryInManagement(createdRows: $createdRows)
-          }
-        `,
-        variables: {
-          createdRows: createdRows
-        }
-      })
-    })
-    .then(res => res.json())
+    // fetch(GRAPHQL_URL, {
+    //   method: 'POST',
+    //   credentials: 'include',
+    //   headers: {
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify({
+    //     query: `
+    //       mutation saveInventoryInManagement($createdRows: [InventoryInManagementSaveInput]) {
+    //         saveInventoryInManagement(createdRows: $createdRows)
+    //       }
+    //     `,
+    //     variables: {
+    //       createdRows: createdRows
+    //     }
+    //   })
+    // })
+    saveInventoryInManagement({createdRows: createdRows})
     .then(data => {
       if (data.errors) {
         console.error("GraphQL errors:", data.errors);
@@ -549,12 +551,6 @@ const ReceivingManagement = (props) => {
       return;
     }
 
-    const deleteInventoryMutation = `
-      mutation DeleteInventoryInManagement($inManagementId: InventoryInManagementDeleteInput!) {
-        deleteInventoryInManagement(inManagementId: $inManagementId)
-      }
-    `;
-
     const variables = {
       inManagementId: {
         inManagementId: selectedReceiving.inManagementId,
@@ -572,18 +568,7 @@ const ReceivingManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            query: deleteInventoryMutation,
-            variables: variables
-          })
-        })
-            .then((res) => res.json())
+        deleteInventoryInManagement(variables)
             .then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -1158,6 +1143,7 @@ const ReceivingManagement = (props) => {
     // 먼저 코드 데이터를 로드
     const loadCodeData = async () => {
       try {
+
         // 입고 유형 코드 로드
         await fetchGridCodesByCodeClassId("CD20250409164927041", setInTypeOptions);
         // 공장 데이터 로드
