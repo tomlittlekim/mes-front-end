@@ -31,7 +31,7 @@ import Message from '../../utils/message/Message';
 import ko from "date-fns/locale/ko";
 import {graphFetch} from "../../api/fetchConfig";
 import { toKSTISOString } from './InventoryUtils';
-import { getInventoryInManagementList , getInventoryInList , saveInventoryInManagement , deleteInventoryInManagement } from '../../api/standardInfo/inventoryApi';
+import { getInventoryInManagementList , getInventoryInList , saveInventoryInManagement , deleteInventoryInManagement, deleteInventoryIn } from '../../api/standardInfo/inventoryApi';
 
 const ReceivingManagement = (props) => {
   // 현재 테마 가져오기
@@ -346,25 +346,32 @@ const ReceivingManagement = (props) => {
 
       if (result) {
         // 받아온 데이터로 상태 업데이트
-        const detailData = result.map((item, index) => ({
-          id: item.inInventoryId || `detail_${item.inManagementId}_${index}`,
-          inManagementId: item.inManagementId,
-          inInventoryId: item.inInventoryId,
-          supplierName: item.supplierName,
-          manufactureName: item.manufacturerName,
-          systemMaterialId: item.systemMaterialId,
-          materialName: item.materialName,
-          materialCategory: item.materialCategory,
-          materialStandard: item.materialStandard,
-          qty: parseFloat(item.qty) || 0,
-          unitPrice: item.unitPrice,
-          unitVat: item.unitVat,
-          totalPrice: item.totalPrice,
-          createUser: item.createUser,
-          createDate: new Date(item.createDate),
-          updateUser: item.updateUser,
-          updateDate: new Date(item.updateDate)
-        }));
+                      const detailData = result.map((item, index) => {
+                const qty = parseFloat(item.qty) || 0;
+                const unitPrice = parseFloat(item.unitPrice) || 0;
+                const unitVat = parseFloat(item.unitVat) || 0;
+                const calculatedTotalPrice = qty * (unitPrice + unitVat);
+                
+                return {
+                  id: item.inInventoryId || `detail_${item.inManagementId}_${index}`,
+                  inManagementId: item.inManagementId,
+                  inInventoryId: item.inInventoryId,
+                  supplierName: item.supplierName,
+                  manufactureName: item.manufacturerName,
+                  systemMaterialId: item.systemMaterialId,
+                  materialName: item.materialName,
+                  materialCategory: item.materialCategory,
+                  materialStandard: item.materialStandard,
+                  qty: qty,
+                  unitPrice: unitPrice,
+                  unitVat: unitVat,
+                  totalPrice: item.totalPrice || calculatedTotalPrice, // 백엔드에서 null이면 자동 계산값 사용
+                  createUser: item.createUser,
+                  createDate: new Date(item.createDate),
+                  updateUser: item.updateUser,
+                  updateDate: new Date(item.updateDate)
+                };
+              });
         
         console.log('상세 데이터 설정:', detailData);
         setReceivingDetail(detailData);
@@ -776,25 +783,32 @@ const ReceivingManagement = (props) => {
             { filter }
           ).then(result => {
             if (result && result.getInventoryInList) {
-              const detailData = result.getInventoryInList.map((item, index) => ({
-                id: item.inInventoryId || `detail_${item.inManagementId}_${index}`,
-                inManagementId: item.inManagementId,
-                inInventoryId: item.inInventoryId,
-                supplierName: item.supplierName,
-                manufactureName: item.manufacturerName,
-                systemMaterialId: item.systemMaterialId,
-                materialName: item.materialName,
-                materialCategory: item.materialCategory,
-                materialStandard: item.materialStandard,
-                qty: parseFloat(item.qty) || 0,
-                unitPrice: item.unitPrice,
-                unitVat: item.unitVat,
-                totalPrice: item.totalPrice,
-                createUser: item.createUser,
-                createDate: new Date(item.createDate),
-                updateUser: item.updateUser,
-                updateDate: new Date(item.updateDate)
-              }));
+              const detailData = result.getInventoryInList.map((item, index) => {
+                const qty = parseFloat(item.qty) || 0;
+                const unitPrice = parseFloat(item.unitPrice) || 0;
+                const unitVat = parseFloat(item.unitVat) || 0;
+                const calculatedTotalPrice = qty * (unitPrice + unitVat);
+                
+                return {
+                  id: item.inInventoryId || `detail_${item.inManagementId}_${index}`,
+                  inManagementId: item.inManagementId,
+                  inInventoryId: item.inInventoryId,
+                  supplierName: item.supplierName,
+                  manufactureName: item.manufacturerName,
+                  systemMaterialId: item.systemMaterialId,
+                  materialName: item.materialName,
+                  materialCategory: item.materialCategory,
+                  materialStandard: item.materialStandard,
+                  qty: qty,
+                  unitPrice: unitPrice,
+                  unitVat: unitVat,
+                  totalPrice: item.totalPrice || calculatedTotalPrice, // 백엔드에서 null이면 자동 계산값 사용
+                  createUser: item.createUser,
+                  createDate: new Date(item.createDate),
+                  updateUser: item.updateUser,
+                  updateDate: new Date(item.updateDate)
+                };
+              });
               
               setReceivingDetail(detailData);
             }
@@ -830,12 +844,6 @@ const ReceivingManagement = (props) => {
       return;
     }
 
-    const deleteDetailInventoryMutation = `
-      mutation DeleteInventoryIn($inInventoryId: InventoryInDeleteInput!) {
-        deleteInventoryIn(inInventoryId: $inInventoryId)
-      }
-    `;
-
     const variables = {
       inInventoryId: {
         inInventoryId: selectedDetailReceiving.inInventoryId,
@@ -853,18 +861,7 @@ const ReceivingManagement = (props) => {
       cancelButtonText: '취소'
     }).then((result) => {
       if (result.isConfirmed) {
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            query: deleteDetailInventoryMutation,
-            variables: variables
-          })
-        })
-            .then((res) => res.json())
+        deleteInventoryIn(variables)
             .then((data) => {
               if (data.errors) {
                 console.error("GraphQL errors:", data.errors);
@@ -883,7 +880,7 @@ const ReceivingManagement = (props) => {
               }
             })
             .catch((error) => {
-              console.error("Error deleting factory:", error);
+              console.error("Error deleting detail:", error);
               Swal.fire({
                 icon: 'error',
                 title: '삭제 실패',
@@ -891,8 +888,8 @@ const ReceivingManagement = (props) => {
               });
             })
             .finally(() => {
-              // 로컬 상태에서 삭제된 항목 제거
-              setReceivingDetail(prevDetail => prevDetail.filter(item => item.inInventoryId !== selectedDetailReceiving.inInventoryId));
+              // 로컬 상태에서 삭제된 항목 제거 (id 기준으로 통일)
+              setReceivingDetail(prevDetail => prevDetail.filter(item => item.id !== selectedDetailReceiving.id));
               setSelectedDetailReceiving(null);
               // 컴포넌트 강제 리렌더링
               setRefreshKey(prevKey => prevKey + 1);
@@ -1428,7 +1425,28 @@ const ReceivingManagement = (props) => {
       width: 70, 
       headerAlign: 'center',
       align: 'center',
-      type: 'number', editable: true },
+      type: 'number', 
+      editable: false,
+      renderCell: (params) => {
+        const value = params.value;
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              height: '100%',
+              width: '100%',
+              pr: 1
+            }}
+          >
+            <Typography variant="body2">
+              {parseFloat(value || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+            </Typography>
+          </Box>
+        );
+      }
+    },
     { field: 'createUser', 
       headerName: '등록자', 
       width: 120, 
